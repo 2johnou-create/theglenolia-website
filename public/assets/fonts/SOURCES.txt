@@ -1,0 +1,9 @@
+THE GLENOLIA web font subsets
+
+English: Noto Sans Regular and Noto Serif Display Regular, from the approved project font collection.
+Traditional Chinese: Noto Sans TC Regular and Noto Serif TC Regular, from the approved project font collection.
+Japanese: Noto Sans JP and Noto Serif JP, instantiated at weight 400 from official Noto CJK variable sources:
+https://github.com/notofonts/noto-cjk/blob/main/Sans/Variable/TTF/Subset/NotoSansJP-VF.ttf
+https://github.com/notofonts/noto-cjk/blob/main/Serif/Variable/TTF/Subset/NotoSerifJP-VF.ttf
+
+Subset for the current site content, with no changes to glyph outlines. SIL Open Font License 1.1. Licence files are retained alongside these fonts.
