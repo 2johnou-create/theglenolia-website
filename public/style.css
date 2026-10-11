@@ -32,3 +32,4 @@ html[data-reduce-motion=true]{scroll-behavior:auto}html[data-reduce-motion=true]
 .button > span[aria-hidden], .text-link > span[aria-hidden], .menu-toggle > span {font-family: system-ui, sans-serif;}
 .page-intro > .lead {max-width:70ch}.vision .name-equation {margin-top:30px;font-size:27px}
 .landscape::after {background:linear-gradient(transparent 15%,#2f4a3cdb 80%,#2f4a3ce8)}
+.hero-art {isolation:auto;z-index:0}.home-hero {perspective:1000px}
