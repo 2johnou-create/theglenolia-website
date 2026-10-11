@@ -1,7 +1,7 @@
 {
   "name": "glenolia-newsletter",
   "main": "newsletter-worker.mjs",
-  "compatibility_date": "2026-10-12",
+  "compatibility_date": "2026-10-01",
   "vars": {
     "ALLOWED_ORIGINS": "https://theglenolia.com.au",
     "BREVO_LIST_ID": "",

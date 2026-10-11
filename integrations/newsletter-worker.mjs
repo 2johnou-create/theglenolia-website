@@ -38,7 +38,7 @@ export async function handleRequest(request, env, fetcher = fetch) {
     const recipientKey=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
     const recipientRate=await env.RECIPIENT_LIMITER.limit({key:recipientKey});
     if (!recipientRate.success) return json(429,{error:'rate_limit'},origin);
-    const response=await fetcher('https://api.brevo.com/v3/contacts/doubleOptinConfirmation',{method:'POST',headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email:email.trim(),includeListIds:[list],templateId:template,redirectionUrl:baseOrigin+'/'+prefix+'confirmed/',contactPixelTrackingConsent:false,attributes:{FIRSTNAME:firstName.trim(),LANGUAGE:language,INTERESTS:[...new Set(interests)].join(','),CONSENT_AT:new Date().toISOString(),CONSENT_VERSION:version}}),signal:AbortSignal.timeout(10000)});
+    const response=await fetcher('https://api.brevo.com/v3/contacts/doubleOptinConfirmation',{method:'POST',redirect:'error',headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email:email.trim(),includeListIds:[list],templateId:template,redirectionUrl:baseOrigin+'/'+prefix+'confirmed/',contactPixelTrackingConsent:false,attributes:{FIRSTNAME:firstName.trim(),LANGUAGE:language,INTERESTS:[...new Set(interests)].join(','),CONSENT_AT:new Date().toISOString(),CONSENT_VERSION:version}}),signal:AbortSignal.timeout(10000)});
     // Never report success unless the provider accepted the confirmation request.
     if (!response.ok) return json(502,{error:'provider'},origin);
     return json(200,{status:'confirmation_sent'},origin);

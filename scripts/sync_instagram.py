@@ -21,10 +21,14 @@ class CDNRedirect(HTTPRedirectHandler):
         if not safe_cdn(newurl): raise ValueError('Unexpected media host')
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
+class NoAPIRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise ValueError('API redirect refused to protect authorisation')
+
 def read(url, token=None):
     if token:
         if urlsplit(url).hostname!='graph.instagram.com': raise ValueError('Unexpected API host')
-        response=urlopen(Request(url,headers={'Authorization':'Bearer '+token}),timeout=20)
+        response=build_opener(NoAPIRedirect()).open(Request(url,headers={'Authorization':'Bearer '+token}),timeout=20)
         maximum=1_000_000
     else:
         if not safe_cdn(url): raise ValueError('Unexpected media host')
