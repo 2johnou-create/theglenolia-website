@@ -8,6 +8,7 @@
     "ADMIN_EMAIL": "john@theglenolia.com.au",
     "ACCESS_AUD": "",
     "SENDING_READY": "false",
+    "OWNER_NOTIFICATIONS_ENABLED": "false",
     "MAX_RECIPIENTS": "250",
     "BREVO_LIST_ID": "",
     "BREVO_LIST_EN": "",

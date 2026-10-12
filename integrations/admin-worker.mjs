@@ -1,6 +1,7 @@
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
 import {html,css,js} from './admin-assets.mjs';
+import {runOwnerNotifications} from './owner-notifications.mjs';
 const localeKeys={'en-AU':'EN','zh-Hant':'ZH',ja:'JA'};
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
 const json=(status,body)=>new Response(JSON.stringify(body),{status,headers:{...headers,'Content-Type':'application/json; charset=utf-8'}});
@@ -88,14 +89,15 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
  if(request.method==='GET'&&['/','/admin.css','/admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
- if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true'});
+ if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true',ownerNotificationsEnabled:env.OWNER_NOTIFICATIONS_ENABLED==='true'});
  if(!env.BREVO_API_KEY||!env.DB||!positive(env.BREVO_LIST_ID))return json(503,{error:'not_connected'});
  try{
   if(path==='/api/subscribers'&&request.method==='GET'){
    const offset=Number(url.searchParams.get('offset')||0);
    if(!Number.isSafeInteger(offset)||offset<0||offset>100000)return json(400,{error:'offset'});
    const result=await brevo(env,`/contacts/lists/${Number(env.BREVO_LIST_ID)}/contacts?limit=50&offset=${offset}&sort=desc`,{},fetcher);
-   return json(200,{count:result.count,offset,contacts:(result.contacts||[]).map(c=>({email:c.email,firstName:c.attributes?.FIRSTNAME||'',language:c.attributes?.LANGUAGE||'',interests:c.attributes?.INTERESTS||'',consentAt:c.attributes?.CONSENT_AT||'',status:c.emailBlacklisted?'Unsubscribed':c.attributes?.CONSENT_VERSION==='2026-10-12-v1'?'Subscribed':'Review consent'}))});
+   const notifications=env.OWNER_NOTIFICATIONS_ENABLED==='true'?{enabled:true,owner:env.ADMIN_EMAIL,review:Number((await env.DB.prepare("SELECT COUNT(*) AS count FROM owner_notifications WHERE phase='needs_review'").first()).count)}:{enabled:false};
+   return json(200,{count:result.count,offset,notifications,contacts:(result.contacts||[]).map(c=>({email:c.email,firstName:c.attributes?.FIRSTNAME||'',language:c.attributes?.LANGUAGE||'',interests:c.attributes?.INTERESTS||'',consentAt:c.attributes?.CONSENT_AT||'',status:c.emailBlacklisted?'Unsubscribed':c.attributes?.CONSENT_VERSION==='2026-10-12-v1'?'Subscribed':'Review consent'}))});
   }
   if(path==='/api/editions'&&request.method==='GET'){
    const rows=(await env.DB.prepare('SELECT id FROM editions').all()).results;
@@ -153,4 +155,9 @@ export async function runScheduler(env,fetcher=runtimeFetch,now=Date.now()){
  }
  return results;
 }
-export default {fetch(request,env,ctx){return handleAdmin(request,env,ctx);},scheduled(controller,env,ctx){ctx.waitUntil(runScheduler(env).then(results=>console.log('Glenolia schedule check',JSON.stringify(results))));}};
+export default {fetch(request,env,ctx){return handleAdmin(request,env,ctx);},scheduled(controller,env,ctx){
+ ctx.waitUntil(Promise.allSettled([
+  runScheduler(env).then(results=>console.log('Glenolia schedule check',JSON.stringify(results))),
+  runOwnerNotifications(env).then(result=>console.log('Glenolia owner notification check',JSON.stringify(result)))
+ ]).then(results=>{for(const r of results)if(r.status==='rejected')console.warn('Glenolia background check failed');}));
+}};

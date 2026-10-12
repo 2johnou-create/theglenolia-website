@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '24'
       - run: node integrations/build-admin.mjs
-      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs
+      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs
       - run: python scripts/build.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
