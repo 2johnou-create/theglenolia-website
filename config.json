@@ -2,7 +2,7 @@
   "canonicalOrigin": "https://theglenolia.com.au",
   "instagramUrl": "https://www.instagram.com/theglenolia/",
   "instagramHandle": "theglenolia",
-  "newsletterEndpoint": "https://glenolia-newsletter.theglenolia.workers.dev",
+  "newsletterEndpoint": "https://glenolia-newsletter.theglenolia.workers.dev/subscribe",
   "newsletterReady": true,
   "contactEmail": "info@theglenolia.com.au",
   "openingTarget": "2027-09",

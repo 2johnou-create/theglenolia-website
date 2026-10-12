@@ -54,6 +54,6 @@ for path in DIST.rglob('*'):
 for lang,c in content.items():
  if set(c)!=set(content['en']):errors.append(lang+': translation keys do not match')
  if len(c['milestones'])!=4 or len(c['directions'])!=4 or len(c['faqs'])!=5:errors.append(lang+': incomplete content')
-if config['newsletterReady'] and (not config['newsletterEndpoint'].startswith('https://') or not config['contactEmail']):errors.append('Registration needs a real secure endpoint and verified contact email')
+if config['newsletterReady'] and (not config['newsletterEndpoint'].startswith('https://') or urlsplit(config['newsletterEndpoint']).path!='/subscribe' or not config['contactEmail']):errors.append('Registration needs a real secure endpoint and verified contact email')
 result={'pages':checked,'errors':errors,'newsletterConnected':config['newsletterReady'],'instagramHandle':config['instagramHandle'],'staticBytes':sum(p.stat().st_size for p in DIST.rglob('*') if p.is_file()),'result':'pass' if not errors else 'fail'}
 print(json.dumps(result,indent=2));sys.exit(bool(errors))
