@@ -5,6 +5,9 @@
   "vars": {
     "ALLOWED_ORIGINS": "https://theglenolia.com.au",
     "BREVO_LIST_ID": "",
+    "BREVO_LIST_EN": "",
+    "BREVO_LIST_ZH": "",
+    "BREVO_LIST_JA": "",
     "BREVO_TEMPLATE_EN": "",
     "BREVO_TEMPLATE_ZH": "",
     "BREVO_TEMPLATE_JA": ""

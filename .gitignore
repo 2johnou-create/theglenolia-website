@@ -5,3 +5,9 @@ __pycache__/
 .env
 .env.*
 !.env.example
+node_modules/
+.wrangler/
+.dev.vars*
+wrangler.local*.jsonc
+admin-assets.mjs
+edm-previews/

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker, {handleRequest} from './newsletter-worker.mjs';
-const env={BREVO_API_KEY:'test-only-key',BREVO_LIST_ID:'1',BREVO_TEMPLATE_EN:'2',BREVO_TEMPLATE_ZH:'3',BREVO_TEMPLATE_JA:'4',RATE_LIMITER:{limit:async()=>({success:true})},RECIPIENT_LIMITER:{limit:async()=>({success:true})}};
+const env={BREVO_API_KEY:'test-only-key',BREVO_LIST_ID:'1',BREVO_LIST_EN:'11',BREVO_LIST_ZH:'12',BREVO_LIST_JA:'13',BREVO_TEMPLATE_EN:'2',BREVO_TEMPLATE_ZH:'3',BREVO_TEMPLATE_JA:'4',RATE_LIMITER:{limit:async()=>({success:true})},RECIPIENT_LIMITER:{limit:async()=>({success:true})}};
 const payload={email:'audit@example.com',firstName:'Test',language:'en-AU',interests:['coffee'],consent:true,consentVersion:'2026-10-12-v1',website:''};
 const request=(p=payload,origin='https://theglenolia.com.au')=>new Request('https://api.example.com/subscribe',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(p)});
 test('rejects foreign origins before contacting the provider',async()=>{let called=false;const r=await handleRequest(request(payload,'https://untrusted.example'),env,async()=>{called=true;});assert.equal(r.status,403);assert.equal(called,false);});

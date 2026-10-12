@@ -1,0 +1,24 @@
+{
+  "name": "glenolia-admin",
+  "main": "admin-worker.mjs",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "ADMIN_EMAIL": "john@theglenolia.com.au",
+    "ACCESS_AUD": "",
+    "SENDING_READY": "false",
+    "MAX_RECIPIENTS": "250",
+    "BREVO_LIST_ID": "",
+    "BREVO_LIST_EN": "",
+    "BREVO_LIST_ZH": "",
+    "BREVO_LIST_JA": "",
+    "BREVO_SENDER_ID": ""
+  },
+  "triggers": {"crons": ["*/5 * * * *"]},
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "glenolia-admin",
+    "database_id": "REPLACE_WITH_DATABASE_ID"
+  }]
+}

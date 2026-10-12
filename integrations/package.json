@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "wrangler": "4.149.0"
+  },
+  "scripts": {
+    "build": "node build-admin.mjs",
+    "test": "node --test newsletter.test.mjs admin.test.mjs"
+  },
+  "name": "theglenolia",
+  "private": true
+}

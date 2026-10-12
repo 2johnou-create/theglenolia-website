@@ -18,7 +18,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: node --test integrations/newsletter.test.mjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: node integrations/build-admin.mjs
+      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs
       - run: python scripts/build.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}

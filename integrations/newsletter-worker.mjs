@@ -5,7 +5,8 @@ const consentVersion = '2026-10-12-v1';
 const baseOrigin = 'https://theglenolia.com.au';
 const json = (status, body, origin) => new Response(JSON.stringify(body), {status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','Access-Control-Allow-Origin':origin,'Vary':'Origin','X-Content-Type-Options':'nosniff'}});
 
-export async function handleRequest(request, env, fetcher = fetch) {
+const runtimeFetch=(...args)=>globalThis.fetch(...args);
+export async function handleRequest(request, env, fetcher = runtimeFetch) {
   const origin = request.headers.get('Origin');
   const allowedOrigins = (env.ALLOWED_ORIGINS || baseOrigin).split(',').map(x=>x.trim());
   if (!origin || !allowedOrigins.includes(origin)) return json(403, {error:'origin'}, baseOrigin);
@@ -32,13 +33,15 @@ export async function handleRequest(request, env, fetcher = fetch) {
   if (typeof email !== 'string' || email.length>254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || consent !== true || version !== consentVersion || !locales[language] || typeof firstName !== 'string' || firstName.length>80 || !Array.isArray(interests) || interests.length>4 || interests.some(x=>!allowedInterests.has(x))) return json(400,{error:'invalid'},origin);
   const [locale,prefix]=locales[language];
   const template=Number(env['BREVO_TEMPLATE_'+locale]);const list=Number(env.BREVO_LIST_ID);
-  if (!Number.isSafeInteger(template) || template<1 || !Number.isSafeInteger(list) || list<1) return json(503,{error:'not_ready'},origin);
+  const languageList=Number(env['BREVO_LIST_'+locale]);
+  const otherLists=['EN','ZH','JA'].filter(x=>x!==locale).map(x=>Number(env['BREVO_LIST_'+x]));
+  if (!Number.isSafeInteger(template) || template<1 || !Number.isSafeInteger(list) || list<1 || !Number.isSafeInteger(languageList) || languageList<1 || otherLists.some(x=>!Number.isSafeInteger(x)||x<1) || new Set([list,languageList,...otherLists]).size!==4) return json(503,{error:'not_ready'},origin);
   try {
     const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(email.trim().toLowerCase()));
     const recipientKey=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
     const recipientRate=await env.RECIPIENT_LIMITER.limit({key:recipientKey});
     if (!recipientRate.success) return json(429,{error:'rate_limit'},origin);
-    const response=await fetcher('https://api.brevo.com/v3/contacts/doubleOptinConfirmation',{method:'POST',redirect:'error',headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email:email.trim(),includeListIds:[list],templateId:template,redirectionUrl:baseOrigin+'/'+prefix+'confirmed/',contactPixelTrackingConsent:false,attributes:{FIRSTNAME:firstName.trim(),LANGUAGE:language,INTERESTS:[...new Set(interests)].join(','),CONSENT_AT:new Date().toISOString(),CONSENT_VERSION:version}}),signal:AbortSignal.timeout(10000)});
+    const response=await fetcher('https://api.brevo.com/v3/contacts/doubleOptinConfirmation',{method:'POST',redirect:'manual',headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email:email.trim(),includeListIds:[list,languageList],excludeListIds:otherLists,templateId:template,redirectionUrl:baseOrigin+'/'+prefix+'confirmed/',contactPixelTrackingConsent:false,attributes:{FIRSTNAME:firstName.trim(),LANGUAGE:language,INTERESTS:[...new Set(interests)].join(','),CONSENT_AT:new Date().toISOString(),CONSENT_VERSION:version}}),signal:AbortSignal.timeout(10000)});
     // Never report success unless the provider accepted the confirmation request.
     if (!response.ok) return json(502,{error:'provider'},origin);
     return json(200,{status:'confirmation_sent'},origin);

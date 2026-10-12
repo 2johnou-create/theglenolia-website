@@ -1,48 +1,54 @@
 # THE GLENOLIA — public website
 
-Light, responsive, three-language information website. The original A-v1 identity and five brand colours are retained. English, Traditional Chinese and Japanese are separate crawlable pages, with language links preserving the current topic.
+A light, responsive information website in English, Traditional Chinese and Japanese. Native A-v1 artwork, the five selected palette values, Noto typography and the existing magnolia hero are preserved. September 2027 remains a target opening, subject to readiness and required approvals. The approved founder wording remains unchanged; John Ou leads the coffee project alongside plantation consultants.
 
-The café and farm experiences are in preparation. September 2027 is a **target opening**, not a confirmed opening date. Founder copy is faithfully reused from the approved public introduction. Supplied aerial footage is used as silent background motion; botanical/still-life imagery is labelled as illustrative concepts.
+## Live services
 
-## Build
+- Website: https://theglenolia.com.au/ — standalone GitHub Pages repository.
+- Owner entry: https://theglenolia.com.au/admin/ — protected Cloudflare workspace, exact owner john@theglenolia.com.au, six-hour sessions.
+- Registration: a Cloudflare endpoint sends Brevo double-opt-in email in the selected language. Admission to the confirmed list requires the email link. No API credentials are sent to the visitor.
+- Business email: Google Workspace, with verified incoming routing for info@theglenolia.com.au and partner@theglenolia.com.au.
+- Partner invitation: the In the making page links to the partner mailbox with a localized expression-of-interest subject. It opens the visitor’s email app.
+- Instagram: the official @theglenolia account is linked. Automatic feed import still needs Meta account authorization; no invented posts appear.
+- Google Business Profile: account creation/verification remains separate from completed Workspace setup.
 
-Python 3.12 or newer, standard library only:
+## Owner workflow
+
+Sign in to the admin with the existing Cloudflare account for john@theglenolia.com.au. Subscribers displays the website confirmation list, language, interests, consent date and unsubscribed status; search filters the current page and pagination covers additional records.
+
+Monthly eDMs contains October, November and December 2026, each in three languages. Their delivery plans use the last calendar day at 10:00 am Australia/Sydney. Choose an edition, review each language and saved preview, then confirm its schedule. Scheduled editions lock in this editor. Use Brevo to pause or change an already queued campaign.
+
+The cloud timer checks explicitly enrolled editions every five minutes. A language with no active confirmed subscribers waits rather than inventing recipients. When subscribers join, the timer queues the matching campaign for the saved time. Delivery uses the current language list; Brevo suppresses unsubscribed contacts. Waiting lists that remain empty at sending time are marked accordingly. Ambiguous provider outcomes stop for review, retain the provider ID when available and are never blindly retried.
+
+The configured audience allowance is 250, leaving room within the current free daily email allowance for confirmation messages. The timer suspends already queued campaigns when audience growth or consent issues fail preflight; review the Brevo plan and paused campaign before resuming. No paid upgrade is automatic. The first three editions contain introductory, trial-learning and local-community invitations, with no invented progress or harvest claims. Later editions need current project facts and checked translations.
+
+## Build and check
+
+Use Node 24 and Python 3.12 or newer:
 
 ```sh
+node integrations/build-admin.mjs
+node --test integrations/newsletter.test.mjs integrations/admin.test.mjs
 python scripts/build.py
 python scripts/audit.py
-python -m http.server 8791 --directory dist
 ```
 
-`content.json` holds aligned editorial in all three languages. `config.json` contains public configuration, never secrets. `public/` holds optimised assets, licences and browser code. GitHub Actions builds and deploys only `dist/`.
+`content.json` contains the original reviewed copy. `content-additions.json` contains the coffee, partner, monthly-registration, privacy and owner-entry additions. `config.json` is public configuration only. GitHub Actions publishes only `dist/`; admin source is deployed separately to its Worker.
 
-For the temporary GitHub Pages repository URL, set the repository variable `SITE_BASE_PATH` to `/theglenolia-website`. After the official domain is connected, remove that variable and redeploy. Canonical metadata always identifies the intended official domain, `https://theglenolia.com.au`.
-The temporary preview is marked `noindex`; the official-domain build permits indexing.
+## Backend deployment
 
-## Connection status
+Wrangler is pinned in `integrations/package.json`. Copy the example configurations to ignored local files, set the account/database/Access audience and provider bindings, then deploy. Store BREVO_API_KEY as a Worker secret. A new database uses `admin-schema.sql`; an existing pre-scheduler database needs `migrations/001-audience-scheduler.sql` once, preserving its previous campaign table. Account identifiers, DNS backups, provider credentials, subscriber records and operational evidence are private and are excluded from this repository.
 
-- Official domain: `theglenolia.com.au`; DNS connection pending.
-- Alias domains: `glenolia.com.au`, `glenolia.com`; permanent forward-only redirects pending.
-- Email: `info@theglenolia.com.au`; Workspace provisioning and verification pending. The site does not display an unverified mailbox.
-- Instagram: official account link `@theglenolia` is connected. Automatic import needs professional-account API authorisation. No invented posts are displayed.
-- Newsletter: registration UI is prepared and currently disabled. Connect the managed email provider, confirmation flow and privacy details, test delivery and unsubscribe, then set `newsletterReady` to `true`.
+Google and Brevo DKIM coexist in GoDaddy DNS. Preserve the existing Google MX, single SPF record and DMARC quarantine policy. Primary/alias domain connection is complete; alternate-domain homepage redirects do not preserve deep page paths. Use the official domain for page links.
 
-## Editorial maintenance
+## Editorial and media maintenance
 
-Update confirmed milestones after they occur. Do not infer plantings, harvests, facilities, product origins, visitor access or operational readiness from proposals or imagery. Keep the opening date a target until confirmed. Preserve the founder wording and reviewed language tone. Rebuild font subsets when new characters are added; source and licence notices are in `public/assets/fonts/`.
+Do not infer planting, harvest, product origin, facility readiness or public visiting access from proposals or concept images. IPR107, NR25 and Marsellesa are the accepted first-block direction; Paraíso is a separate early trial, and NR25’s identity is unresolved. Keep the café vegetarian standard and the approved founder attribution. Rebuild font subsets when new public characters are added.
 
-Native logo files are byte-for-byte copies. The `*-web.svg` presentations adjust only SVG viewport padding and declared dimensions to retain clearspace while making the outlined wordmark readable. No outline, mask, spacing, leaf geometry or colour changes. Smaller screens use the supplied compact mark without a tagline rather than squeezing the primary logo below its provisional minimum.
+Native logo geometry and outlines remain unchanged. Web SVG presentations adjust viewport padding/dimensions only. The supplied aerial footage is silent background motion, with still fallback, pause, visibility/data-saving and reduced-motion controls. Approved botanical imagery is identified as illustrative concepts.
 
-## Authorised Instagram import
+## Authorized Instagram import
 
-`scripts/sync_instagram.py` verifies the authorised username, imports up to six real posts and caches resized images. Instagram scripts and tracking are not embedded in the visitor page. Video posts appear as still thumbnails linking to the original post. Captions stay in their original language unless reviewed translations are added under `captions` (`en`, `zh`, `ja`).
+`scripts/sync_instagram.py` verifies the authorized account, imports up to six real posts and caches resized images. No Instagram script or tracking is embedded. Video posts link through their still thumbnails. Reviewed caption translations may be added under `captions` (`en`, `zh`, `ja`).
 
-Connect a professional account through Meta's Instagram Login with the minimum `instagram_business_basic` permission. Put the token in the repository secret `INSTAGRAM_ACCESS_TOKEN`, and the account ID plus current supported API version in repository variables `INSTAGRAM_USER_ID` and `INSTAGRAM_API_VERSION`. Test the manual import before setting `INSTAGRAM_FEED_ENABLED=true`. The workflow refreshes daily. Renew tokens before they expire; failed imports preserve the last valid feed. This prepared integration is not claimed as a live feed until account authorisation succeeds.
-
-## Newsletter API
-
-`integrations/newsletter-worker.mjs` is a prepared Cloudflare Worker for Brevo double opt-in. It enforces allowed origins, payload limits, current explicit consent and rate limiting, and reports confirmation sent only after provider acceptance. Copy `wrangler.example.jsonc` to a private deployment config; provision its rate-limit bindings, list, EN/Traditional Chinese/JP confirmation templates and contact attributes. Store the API key as a Worker secret. Authentication records for the transactional/newsletter sender must be added alongside Google's records without creating duplicate SPF records.
-
-Before opening registration, identify the operating entity and provider in the privacy notice, add a verified contact mailbox, test all three language confirmations, list admission, newsletter delivery and unsubscribe. Keep `newsletterReady=false` until those checks pass. The current disabled state prevents collection into an unconfigured service.
-
-The website has no advertising or analytics scripts. Background video loads only when its area is visible and motion is permitted, with a still fallback and a pause control. Website hosting is an information stage; review hosting requirements before adding commercial booking or checkout features.
+Connect a professional account with Meta’s minimum `instagram_business_basic` permission. Save the token as repository secret INSTAGRAM_ACCESS_TOKEN and account ID/current supported version as repository variables. Test manual import before enabling the feed workflow. Failed imports preserve the last valid feed; authorization is not yet complete.

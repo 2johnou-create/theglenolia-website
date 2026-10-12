@@ -2,9 +2,13 @@
 from pathlib import Path
 from html import escape as e
 import json, shutil, os
+from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = json.loads((ROOT / 'content.json').read_text())
+ADDITIONS = json.loads((ROOT / 'content-additions.json').read_text())
+for key in CONTENT:
+    CONTENT[key].update(ADDITIONS[key])
 CONFIG = json.loads((ROOT / 'config.json').read_text())
 DIST = ROOT / 'dist'
 if DIST.exists():
@@ -15,7 +19,7 @@ ORIGIN = CONFIG['canonicalOrigin'].rstrip('/')
 BASE_PATH = os.environ.get('SITE_BASE_PATH', '').rstrip('/')
 if BASE_PATH and (not BASE_PATH.startswith('/') or '..' in BASE_PATH):
     raise ValueError('SITE_BASE_PATH must be a safe absolute URL path')
-ROUTES = {'home':'', 'about':'about/', 'making':'in-the-making/', 'progress':'progress/', 'register':'register/', 'privacy':'privacy/', 'confirmed':'confirmed/'}
+ROUTES = {'home':'', 'about':'about/', 'making':'in-the-making/', 'coffee':'coffee-trial/', 'progress':'progress/', 'register':'register/', 'privacy':'privacy/', 'confirmed':'confirmed/', 'admin':'admin/'}
 
 def url(c, page):
     return '/' + c['prefix'] + ROUTES[page]
@@ -43,8 +47,13 @@ def vision(c, full=False, place=False):
     return f'''<section class="section vision" id="vision"><div class="vision-intro">{label(c['location'] if place else c['visionLabel'])}<h2>{e(heading)}</h2><p class="lead">{e(intro)}</p>{f'<p class="name-equation">{e(c["storySmall"])}</p>' if place else ''}{'' if full else button(url(c,'about'),c['storyLink'],'text-link')}</div><div class="values">{vals}</div></section>'''
 
 def directions(c, full=False):
-    rows=''.join(f'''<article class="direction {'full' if full else ''}" data-depth><div class="direction-image">{image(d['image'],d['alt'])}</div><div class="direction-copy">{label(f'0{i+1} · '+c['planned'])}<h3>{e(d['title'])}</h3><p>{e(d['body'] if full else d['short'])}</p></div></article>''' for i,d in enumerate(c['directions']))
+    rows=''.join(f'''<article class="direction {'full' if full else ''}" data-depth><div class="direction-image">{image(d['image'],d['alt'])}</div><div class="direction-copy">{label(f'0{i+1} · '+c['planned'])}<h3>{e(d['title'])}</h3><p>{e(d['body'] if full else d['short'])}</p>{button(url(c,'coffee'),c['coffeeLink'],'text-link') if i==1 else ''}</div></article>''' for i,d in enumerate(c['directions']))
     return f'''<section class="section making"><div class="section-heading"><div>{label(c['makingLabel'])}<h2>{e(c['makingTitle'])}</h2></div><p>{e(c['makingIntro'])}</p></div><div class="directions">{rows}</div><p class="small concept-note">{e(c['conceptNote'])}</p>{f'<p class="small vegetarian-note">{e(c["vegetarianNote"])}</p>' if full else button(url(c,'making'),c['explore'],'text-link')}</section>'''
+
+def partners(c):
+    address=CONFIG['partnerEmail']
+    href='mailto:'+address+'?subject='+quote(c['partnerSubject'])
+    return f'''<section class="section partner-invitation" id="local-partners"><div>{label(c['partnerLabel'])}<h2>{e(c['partnerTitle'])}</h2><p class="lead">{e(c['partnerIntro'])}</p></div><div><p>{e(c['partnerPrompt'])}</p>{button(href,c['partnerAction'])}<a class="partner-email" href="mailto:{address}">{address}</a><p class="small">{e(c['partnerNote'])}</p></div></section>'''
 
 def timeline(c, full=False):
     items=''.join(f'''<li class="milestone"><div class="timeline-date"><span>{e(m['date'])}</span><small>{e(m['state'])}</small></div><div><h3>{e(m['title'])}</h3><p>{e(m['body'])}</p></div></li>''' for m in c['milestones'])
@@ -67,13 +76,13 @@ def signup(c, form=False):
 
 def footer(c):
     contact=f'<a href="mailto:{e(CONFIG["contactEmail"])}">{e(CONFIG["contactEmail"])}</a>' if CONFIG['contactEmail'] else f'<span>{e(c["contactPending"])}</span>'
-    return f'''<footer class="footer"><div class="footer-brand"><a href="{url(c,'home')}"><img class="footer-logo-full" src="/assets/logos/logo-{'zh' if c['lang']=='zh-Hant' else 'en'}-web.svg" alt="THE GLENOLIA — {e(c['tagline'] if c['lang']=='zh-Hant' else 'A place to grow and gather.')}" width="660" height="390" loading="lazy"><img class="footer-logo-compact" src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="660" height="335" loading="lazy"></a><p>{e(c['footerLine'])}</p></div><div class="footer-info"><p>{e(c['location'])}</p><p>{e(c['footerStatus'])}</p><p>{e(c['target'])}</p>{contact}<nav aria-label="{e(c['privacy'])}"><a href="{url(c,'privacy')}">{e(c['privacy'])}</a><button data-motion-toggle data-off="{e(c['motionOff'])}" data-on="{e(c['motionOn'])}" type="button">{e(c['motionOff'])}</button><a href="#top">{e(c['top'])} ↑</a></nav><p class="small">© 2026 THE GLENOLIA</p></div></footer>'''
+    return f'''<footer class="footer"><div class="footer-brand"><a href="{url(c,'home')}"><img class="footer-logo-full" src="/assets/logos/logo-{'zh' if c['lang']=='zh-Hant' else 'en'}-web.svg" alt="THE GLENOLIA — {e(c['tagline'] if c['lang']=='zh-Hant' else 'A place to grow and gather.')}" width="660" height="390" loading="lazy"><img class="footer-logo-compact" src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="660" height="335" loading="lazy"></a><p>{e(c['footerLine'])}</p></div><div class="footer-info"><p>{e(c['location'])}</p><p>{e(c['footerStatus'])}</p><p>{e(c['target'])}</p>{contact}<nav aria-label="{e(c['privacy'])}"><a href="{url(c,'privacy')}">{e(c['privacy'])}</a><button data-motion-toggle data-off="{e(c['motionOff'])}" data-on="{e(c['motionOn'])}" type="button">{e(c['motionOff'])}</button><a href="#top">{e(c['top'])} ↑</a><a href="{url(c,'admin')}">{e(c['adminLabel'])}</a></nav><p class="small">© 2026 THE GLENOLIA</p></div></footer>'''
 
 def build_page(key, page):
     c=CONTENT[key]
-    titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'progress':c['nav'][2], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle']}
+    titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'coffee':c['coffeeTitle'], 'progress':c['nav'][2], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle'],'admin':c['adminLabel']}
     page_title=titles[page] if page=='home' else titles[page]+' | The Glenolia'
-    descriptions={'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'progress':c['dateNote'],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText']}
+    descriptions={'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'coffee':c['coffeeIntro'],'progress':c['dateNote'],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText'],'admin':c['adminIntro']}
     description=descriptions[page]
     canon=ORIGIN+url(c,page)
     alternates=''.join(f'<link rel="alternate" hreflang="{v["lang"]}" href="{ORIGIN+url(v,page)}">' for v in CONTENT.values())+f'<link rel="alternate" hreflang="x-default" href="{ORIGIN+url(CONTENT["en"],page)}">'
@@ -86,15 +95,21 @@ def build_page(key, page):
     elif page=='about':
         body=f'''<section class="page-intro section">{label(c['nav'][0])}<h1>{e(c['visionTitle'])}</h1><p class="lead">{e(c['visionIntro'])}</p></section><section class="landscape-section">{motion(c,True)}</section>'''+vision(c,True,True)+f'''<section class="section foundation"><div>{label(c['status'])}<h2>{e(c['foundationTitle'])}</h2><p class="lead">{e(c['foundationIntro'])}</p><div class="foundation-items">{''.join('<article><h3>'+e(x['title'])+'</h3><p>'+e(x['body'])+'</p></article>' for x in c['foundation'])}</div></div><div class="foundation-art" data-depth>{image('magnolia.webp','')}{image('shoot.webp','')}</div></section>'''+signup(c)
     elif page=='making':
-        body=f'<section class="page-intro section">{label(c["status"])}<h1>{e(c["nav"][1])}</h1><p class="lead">{e(c["dateNote"])}</p></section>'+directions(c,True)+faq(c)+signup(c)
+        body=f'<section class="page-intro section">{label(c["status"])}<h1>{e(c["nav"][1])}</h1><p class="lead">{e(c["dateNote"])}</p></section>'+directions(c,True)+partners(c)+faq(c)+signup(c)
+    elif page=='coffee':
+        body=f'<section class="page-intro section coffee-intro">{label(c["coffeeLabel"])}<h1>{e(c["coffeeTitle"])}</h1><p class="lead">{e(c["coffeeIntro"])}</p></section><section class="section coffee-details"><div class="coffee-art">'+image('shoot.webp',c['directions'][1]['alt'])+f'<p class="small">{e(c["conceptNote"])}</p></div><div>'+''.join(f'<article><h2>{e(x["title"])}</h2><p>{e(x["body"])}</p></article>' for x in c['coffeeSections'])+'</div></section>'+signup(c)
     elif page=='progress':
         body=f'<section class="page-intro section">{label(c["status"])}<h1>{e(c["nav"][2])}</h1><p class="lead">{e(c["dateNote"])}</p></section>'+timeline(c,True)+journal(c)+signup(c)
     elif page=='register': body=signup(c,True)+faq(c)
     elif page=='privacy':
         body=f'<section class="page-intro section prose">{label(c["privacyDate"])}<h1>{e(c["privacyTitle"])}</h1><p class="lead">{e(c["privacyIntro"])}</p>'+''.join(f'<section><h2>{e(x["title"])}</h2><p>{e(x["body"])}</p></section>' for x in c['privacySections'])+'</section>'
+    elif page=='admin':
+        admin=CONFIG.get('adminUrl','')
+        action=button(e(admin),c['adminAction']) if admin else f'<p class="admin-pending" role="status">{e(c["adminPending"])}</p>'
+        body=f'<section class="page-intro section prose">{label(c["adminLabel"])}<h1>{e(c["adminTitle"])}</h1><p class="lead">{e(c["adminIntro"])}</p>{action}<p class="small admin-privacy">{e(c["adminPrivacy"])}</p></section>'
     else: body=f'<section class="page-intro section prose"><h1>{e(c["confirmTitle"])}</h1><p class="lead">{e(c["confirmText"])}</p>{button(url(c,"home"),c["home"])}</section>'
     schema={'@context':'https://schema.org','@graph':[{'@type':'Organization','@id':ORIGIN+'/#organization','name':'THE GLENOLIA','url':ORIGIN,'logo':ORIGIN+'/assets/logos/logo-en-tagline.svg'}, {'@type':'WebSite','@id':ORIGIN+'/#website','name':'THE GLENOLIA','url':ORIGIN,'inLanguage':['en-AU','zh-Hant','ja']},{'@type':'WebPage','@id':canon,'url':canon,'name':page_title,'description':c['description'],'inLanguage':c['lang'],'isPartOf':{'@id':ORIGIN+'/#website'}}]}
-    result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page=='confirmed' else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
+    result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page in ['confirmed','admin'] else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
     if BASE_PATH:
         result=result.replace('href="/', f'href="{BASE_PATH}/').replace('src="/', f'src="{BASE_PATH}/').replace('data-desktop="/',f'data-desktop="{BASE_PATH}/').replace('data-mobile="/',f'data-mobile="{BASE_PATH}/').replace('srcset="/',f'srcset="{BASE_PATH}/').replace(', /assets/', f', {BASE_PATH}/assets/')
     result=result.replace('content="'+c['lang'].replace('-', '_')+'"', 'content="'+{'en':'en_AU','zh':'zh_TW','ja':'ja_JP'}[key]+'"')
@@ -109,7 +124,7 @@ urls=[]
 for key in CONTENT:
     for page in ROUTES:
         canon=build_page(key,page)
-        if page!='confirmed': urls.append(canon)
+        if page not in ['confirmed','admin']: urls.append(canon)
 (DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+u+'</loc><lastmod>'+CONFIG['updated']+'</lastmod></url>' for u in urls)+'</urlset>')
 (DIST/'robots.txt').write_text('User-agent: *\nAllow: /\n'+('' if BASE_PATH else 'Sitemap: '+ORIGIN+'/sitemap.xml\n'))
 (DIST/'CNAME').write_text('theglenolia.com.au\n')

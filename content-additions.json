@@ -1,0 +1,224 @@
+{
+  "en": {
+    "coffeeLabel": "THE COFFEE PROJECT",
+    "coffeeTitle": "A growing trial. A patient beginning.",
+    "coffeeIntro": "Our coffee project is led by John Ou, working alongside coffee plantation consultants. We are preparing a trial that puts observation and care for this land first.",
+    "coffeeLink": "Explore the coffee trial",
+    "coffeeSections": [
+      {
+        "title": "The first-block direction",
+        "body": "Following the consultants’ recommendations, we have selected IPR107, NR25 and Marsellesa for the first-block planting direction. These are selections for the planned trial; they do not mean that the trees are already planted or producing coffee."
+      },
+      {
+        "title": "A separate early trial",
+        "body": "Paraíso is part of a separate early trial direction. We will share its progress when nursery and planting records are available. It is separate from the three first-block selections."
+      },
+      {
+        "title": "What we hope to learn",
+        "body": "Our planned observations include establishment, seasonal growth and how the trees respond to local conditions. We want to record what happens, learn with our consultants and share useful observations as the trial develops."
+      },
+      {
+        "title": "From records to stories",
+        "body": "We will distinguish plans from completed work in every update. Planting dates, flowering, harvest and any future estate-grown coffee will be described only when supported by records. Growing takes time; there is no harvest date or yield promise."
+      }
+    ],
+    "partnerLabel": "LOCAL GROWERS & MAKERS",
+    "partnerTitle": "Let’s grow local connections.",
+    "partnerIntro": "We would love to hear from nearby farmers, growers and makers who share our care for the land and community. As The Glenolia takes shape, we hope to build thoughtful connections and introduce the people behind local products.",
+    "partnerPrompt": "Tell us your name, business, location, what you grow or make, and how you would like to work together. An expression of interest starts a conversation; products and arrangements will be agreed individually.",
+    "partnerAction": "Express your interest",
+    "partnerSubject": "Local provider expression of interest — The Glenolia",
+    "partnerNote": "Email partner@theglenolia.com.au. Your enquiry will be used to respond to you; it will not subscribe you to the newsletter.",
+    "adminLabel": "OWNER ACCESS",
+    "adminTitle": "Keep the growing story in touch.",
+    "adminIntro": "The private workspace for subscriber lists, monthly editions and email scheduling.",
+    "adminAction": "Sign in to the admin workspace",
+    "adminPending": "The private workspace is being connected. Account setup must be completed before subscriber management and sending are available.",
+    "adminPrivacy": "Subscriber details are held in the protected email service. Only the authorised owner can access them.",
+    "heroConceptAlt": "Illustrative concept of a separate young coffee tree and magnolia branch",
+    "heroConceptNote": "Botanical concept · not a planting record",
+    "signupIntro": "Opening notices and a monthly letter from The Glenolia. Coffee, growing, workshops and local stories, shared as plans take shape.",
+    "signupNote": "A letter at month-end, plus opening notices. Unsubscribe at any time.",
+    "consent": "I agree to receive The Glenolia’s monthly newsletter and opening notices by email. I can unsubscribe at any time.",
+    "privacyDate": "Updated 12 October 2026",
+    "privacyIntro": "How we look after the information you share with The Glenolia.",
+    "privacySections": [
+      {
+        "title": "Registering for updates",
+        "body": "We collect your email address, preferred language, any optional first name and selected interests, and the time and version of your consent. Registration uses an email confirmation link. Your address joins the mailing audience only after you confirm it."
+      },
+      {
+        "title": "What we send",
+        "body": "We use your confirmed subscription to send our monthly letter and opening notices. You can unsubscribe through the link in each newsletter, or contact info@theglenolia.com.au. Unsubscribing stops marketing emails; a suppression record may be retained to respect that choice."
+      },
+      {
+        "title": "Where information is processed",
+        "body": "Brevo stores subscriber records and delivers confirmation emails and newsletters. Cloudflare handles the registration request, protects the owner’s admin workspace and stores newsletter drafts and scheduling records. The public site is hosted on GitHub Pages. These services may process information outside Australia."
+      },
+      {
+        "title": "Email enquiries",
+        "body": "Messages to info@theglenolia.com.au and partner@theglenolia.com.au are handled through our Google Workspace email account. We use enquiry details to reply and discuss your request. A partnership enquiry does not subscribe you to marketing emails."
+      },
+      {
+        "title": "Technical information",
+        "body": "Hosting, security and email providers may process network addresses, request logs and delivery information to operate and protect these services. Brevo may record delivery, open and link activity. We do not currently use advertising cookies or analytics scripts on the public website."
+      },
+      {
+        "title": "Your choices",
+        "body": "Please share only information relevant to your enquiry. We keep subscription information while it is needed for updates, consent records and unsubscribe preferences, and enquiry information while it is needed for the conversation. To ask about access, corrections or deletion, email info@theglenolia.com.au."
+      },
+      {
+        "title": "Instagram",
+        "body": "The website links to @theglenolia on Instagram. Opening Instagram takes you to Meta’s service and its own privacy settings. A live Instagram feed is not currently connected."
+      }
+    ]
+  },
+  "zh": {
+    "coffeeLabel": "咖啡種植計畫",
+    "coffeeTitle": "從試種開始，耐心觀察成長。",
+    "coffeeIntro": "咖啡種植計畫由 John Ou 帶領，與咖啡種植顧問共同推進。我們正準備試種，先用心了解這片土地，再記錄每一步生長。",
+    "coffeeLink": "了解咖啡試種計畫",
+    "coffeeSections": [
+      {
+        "title": "首個種植區的方向",
+        "body": "依照顧問建議，我們選定 IPR107、NR25 與 Marsellesa 作為首個種植區的試種方向。這項選擇屬於規劃階段，並不代表樹苗已種下，或已開始生產咖啡。"
+      },
+      {
+        "title": "獨立的早期試種",
+        "body": "Paraíso 屬於另一項早期試種方向，與首個種植區的三項選擇分開進行。有了育苗與種植紀錄後，我們會再分享實際進展。"
+      },
+      {
+        "title": "希望從觀察中學習",
+        "body": "計畫中的觀察包括定植後的適應情況、四季生長，以及咖啡樹對當地環境的反應。我們希望如實記錄，與顧問一起學習，並在試種逐步發展時分享有用的觀察。"
+      },
+      {
+        "title": "有了紀錄，再分享故事",
+        "body": "每次更新，都會清楚區分計畫與已完成的工作。種植日期、開花、收成，以及未來可能的農場自產咖啡，均須有紀錄支持才會公布。生長需要時間，目前沒有收成日期或產量承諾。"
+      }
+    ],
+    "partnerLabel": "在地農友與職人",
+    "partnerTitle": "從在地出發，一起連結社區。",
+    "partnerIntro": "如果你是在地農友、種植者或職人，也關心土地與社區，我們很期待認識你。隨著 The Glenolia 逐步成形，希望建立用心的合作，讓更多人認識在地產品背後的人與故事。",
+    "partnerPrompt": "歡迎告訴我們你的姓名、商家名稱、所在地、種植或製作的產品，以及期待的合作方式。意向登記是交流的起點，產品與合作安排將另行討論確認。",
+    "partnerAction": "表達合作意向",
+    "partnerSubject": "The Glenolia 在地供應合作意向",
+    "partnerNote": "請寄信至 partner@theglenolia.com.au。我們只會用你的詢問資料回覆與聯繫，不會因此將你加入電子報名單。",
+    "adminLabel": "管理者專區",
+    "adminTitle": "讓成長的故事，持續與大家相連。",
+    "adminIntro": "管理訂閱名單、每月電子報與寄送排程的私人工作區。",
+    "adminAction": "登入管理工作區",
+    "adminPending": "私人工作區正在連接中。帳號設定完成後，才可管理訂閱名單及寄送電子報。",
+    "adminPrivacy": "訂閱資料保存在受保護的電子郵件服務中，僅供獲授權的管理者存取。",
+    "heroConceptAlt": "各自獨立的年輕咖啡樹與木蘭枝條概念示意",
+    "heroConceptNote": "植物概念示意 · 並非種植紀錄",
+    "signupIntro": "每月一封來自 The Glenolia 的信，以及開放消息。隨著計畫逐漸成形，與你分享咖啡、種植、工作坊和地方故事。",
+    "signupNote": "每月底寄送一封電子報，另有開放通知。你可隨時取消訂閱。",
+    "consent": "我願意透過電子郵件接收 The Glenolia 的每月電子報與開放通知，並可隨時取消訂閱。",
+    "privacyDate": "更新日期：2026 年 10 月 12 日",
+    "privacyIntro": "了解 The Glenolia 如何處理你與我們分享的資料。",
+    "privacySections": [
+      {
+        "title": "訂閱消息",
+        "body": "我們收集你的電子郵件地址、偏好語言、選填的名字與興趣項目，以及同意的時間與版本。登記後會寄送確認連結；只有在你點選確認後，地址才會加入寄送名單。"
+      },
+      {
+        "title": "我們寄送的內容",
+        "body": "確認訂閱後，我們會寄送每月電子報與開放通知。你可點選每封電子報中的取消訂閱連結，或聯繫 info@theglenolia.com.au。取消後將停止行銷郵件；為尊重你的選擇，我們可能保留停止寄送的紀錄。"
+      },
+      {
+        "title": "資料在哪裡處理",
+        "body": "Brevo 保存訂閱資料並寄送確認信與電子報。Cloudflare 處理登記請求、保護管理者工作區，並保存電子報草稿與排程紀錄。公開網站由 GitHub Pages 提供託管服務。這些服務可能在澳洲境外處理資料。"
+      },
+      {
+        "title": "電子郵件詢問",
+        "body": "寄至 info@theglenolia.com.au 與 partner@theglenolia.com.au 的郵件，由我們的 Google Workspace 帳號處理。我們會使用詢問資料回覆與討論你的需求。合作詢問不會自動加入行銷郵件名單。"
+      },
+      {
+        "title": "技術資料",
+        "body": "網站、資安與電子郵件服務可能處理網路位址、請求紀錄與寄送資訊，以維持運作及保護服務。Brevo 可能記錄寄送、開信與連結點選情況。目前公開網站未使用廣告 Cookie 或流量分析程式。"
+      },
+      {
+        "title": "你的選擇",
+        "body": "請只提供與詢問相關的資料。訂閱資料會在消息寄送、同意紀錄及取消訂閱偏好所需期間保留；詢問資料則在交流所需期間保留。如需詢問資料存取、更正或刪除，請寄信至 info@theglenolia.com.au。"
+      },
+      {
+        "title": "Instagram",
+        "body": "網站提供 @theglenolia 的 Instagram 連結。開啟後會進入 Meta 的服務，並適用其隱私設定。目前尚未連接即時 Instagram 動態。"
+      }
+    ]
+  },
+  "ja": {
+    "coffeeLabel": "コーヒー栽培の計画",
+    "coffeeTitle": "試験栽培から、ゆっくりと。",
+    "coffeeIntro": "コーヒー栽培の計画は John Ou が中心となり、コーヒー農園の専門コンサルタントと進めています。この土地を大切にしながら、まずは観察と学びを重ねる試験栽培を準備しています。",
+    "coffeeLink": "試験栽培の計画を読む",
+    "coffeeSections": [
+      {
+        "title": "最初の区画で目指すこと",
+        "body": "専門家の提案を受け、最初の区画の栽培候補として IPR107、NR25、Marsellesa を選びました。これは試験栽培の計画上の選定であり、植え付けやコーヒーの生産がすでに始まったことを示すものではありません。"
+      },
+      {
+        "title": "別の初期試験について",
+        "body": "Paraíso は、最初の区画の三つの候補とは別に検討している初期試験の一つです。苗や植え付けの記録が整い次第、実際の進捗をお伝えします。"
+      },
+      {
+        "title": "観察から学ぶこと",
+        "body": "植え付け後の定着、季節ごとの生育、地域の環境への反応などを観察する予定です。起きたことを記録し、専門家と学びながら、試験の進展に合わせて役立つ気づきを共有していきたいと考えています。"
+      },
+      {
+        "title": "記録に基づいて伝える",
+        "body": "更新では、計画と実施済みの作業を分けてお伝えします。植え付け日、開花、収穫、将来の農園産コーヒーについては、記録で確認できた段階でご紹介します。栽培には時間がかかるため、収穫時期や収量のお約束はしていません。"
+      }
+    ],
+    "partnerLabel": "地域の農家と作り手の皆さまへ",
+    "partnerTitle": "地域のつながりを、一緒に。",
+    "partnerIntro": "土地と地域を大切にする近隣の農家、生産者、作り手の皆さまと、お話しできることを楽しみにしています。The Glenolia の準備を進めながら、地域の品々と、その背景にいる人を紹介できる関係を育てていきたいと考えています。",
+    "partnerPrompt": "お名前、事業名、所在地、育てているものや作っているもの、ご希望の連携についてお知らせください。まずは対話から始め、商品や具体的な取引条件は個別に相談して決めていきます。",
+    "partnerAction": "連携について問い合わせる",
+    "partnerSubject": "The Glenolia 地域の生産者・作り手からのお問い合わせ",
+    "partnerNote": "partner@theglenolia.com.au へメールでご連絡ください。お問い合わせの情報は返信と連絡のために使用し、ニュースレターへの登録は行いません。",
+    "adminLabel": "管理者専用",
+    "adminTitle": "育っていく物語を、届けるために。",
+    "adminIntro": "購読者の一覧、月ごとのニュースレター、配信予定を管理する専用ワークスペースです。",
+    "adminAction": "管理ワークスペースにログイン",
+    "adminPending": "管理ワークスペースの接続を準備しています。アカウントの設定完了後に、購読者の管理とメール配信をご利用いただけます。",
+    "adminPrivacy": "購読者の情報は保護されたメールサービスに保存し、権限のある管理者だけがアクセスできます。",
+    "heroConceptAlt": "別々に配置された若いコーヒーの木とマグノリアの枝のイメージ",
+    "heroConceptNote": "植物のイメージ · 栽培記録ではありません",
+    "signupIntro": "月に一度、The Glenoliaからのお便りと、開業のお知らせをお届けします。コーヒー栽培、ワークショップ、地域の物語。計画が形になっていく様子を、少しずつお伝えします。",
+    "signupNote": "月末のお便りと、開業のお知らせをお届けします。配信はいつでも停止できます。",
+    "consent": "The Glenoliaの毎月のニュースレターと開業のお知らせをメールで受け取ることに同意します。配信はいつでも停止できます。",
+    "privacyDate": "更新日：2026年10月12日",
+    "privacyIntro": "The Glenoliaにお寄せいただく情報の取り扱いについて。",
+    "privacySections": [
+      {
+        "title": "お便りの登録",
+        "body": "メールアドレス、希望言語、任意のお名前と関心のある項目、同意の日時と版を記録します。登録後に確認用リンクをメールでお送りします。リンクで登録を確認された後に、配信対象のリストへ追加します。"
+      },
+      {
+        "title": "お届けする内容",
+        "body": "登録を確認された方へ、毎月のお便りと開業のお知らせをお送りします。各ニュースレターの配信停止リンク、または info@theglenolia.com.auへのご連絡で停止できます。停止後はマーケティングメールを送りません。その選択を守るため、配信停止の記録を保持する場合があります。"
+      },
+      {
+        "title": "情報を処理するサービス",
+        "body": "Brevoが購読者の情報を保存し、確認メールとニュースレターを配信します。Cloudflareは登録リクエストの処理、管理者用ワークスペースの保護、お便りの下書きと配信予定の保存に使用します。公開サイトはGitHub Pagesで運営しています。これらのサービスでは、オーストラリア国外で情報を処理する場合があります。"
+      },
+      {
+        "title": "メールでのお問い合わせ",
+        "body": "info@theglenolia.com.auとpartner@theglenolia.com.auへのメールは、当方のGoogle Workspaceアカウントで受け取ります。内容は返信やご相談のために使用します。連携のお問い合わせだけで、ニュースレターに登録されることはありません。"
+      },
+      {
+        "title": "技術的な情報",
+        "body": "サイト運営、セキュリティ、メール配信の各サービスは、運営と保護のためにネットワークアドレス、リクエストの記録、配信情報などを処理する場合があります。Brevoでは、配信、開封、リンクのクリック状況が記録される場合があります。公開サイトでは現在、広告用Cookieやアクセス解析スクリプトを使用していません。"
+      },
+      {
+        "title": "情報についてのご相談",
+        "body": "お問い合わせに必要な情報のみをお寄せください。購読者情報はお知らせの配信、同意の記録、配信停止の希望を管理するために必要な期間、問い合わせ情報は対話に必要な期間保持します。情報の確認、訂正、削除についてはinfo@theglenolia.com.auへご連絡ください。"
+      },
+      {
+        "title": "Instagram",
+        "body": "サイトから@theglenoliaのInstagramへ移動できます。InstagramではMetaのサービスとプライバシー設定が適用されます。現在、Instagramの投稿フィードは接続していません。"
+      }
+    ]
+  }
+}
