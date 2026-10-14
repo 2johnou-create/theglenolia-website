@@ -21,12 +21,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: npm ci --ignore-scripts
       - run: node integrations/build-admin.mjs
       - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs
       - run: python scripts/build.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
+      - run: npm run build:progress
       - run: python scripts/audit.py
+        env:
+          SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
+      - run: python scripts/audit-progress.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
       - uses: actions/configure-pages@v5

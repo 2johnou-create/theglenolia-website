@@ -1,0 +1,7 @@
+{
+  "name": "theglenolia-website",
+  "private": true,
+  "type": "module",
+  "scripts": {"build:progress": "node scripts/build-progress.mjs"},
+  "devDependencies": {"esbuild": "0.25.11", "three": "0.180.0"}
+}

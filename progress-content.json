@@ -1,0 +1,422 @@
+{
+  "config": {
+    "currentStage": 0,
+    "updated": "2026-10-14",
+    "openingTarget": "September 2027",
+    "stages": [
+      "da-approved",
+      "construction",
+      "decoration",
+      "opening"
+    ]
+  },
+  "copy": {
+    "en": {
+      "lang": "en-AU",
+      "progress": "Progress page",
+      "nav": [
+        "Our story",
+        "In the making",
+        "Our progress"
+      ],
+      "register": "Register for updates",
+      "kicker": "THE GLENOLIA · IN THE MAKING",
+      "title": "A little world,<br>taking shape.",
+      "intro": "A closer look at the place we are preparing. Explore the miniature farm, meet its busy little team, and step inside the café.",
+      "current": "CURRENT MILESTONE",
+      "approved": "DA approved",
+      "update": "Project update · 14 October 2026",
+      "next": "Planning the work ahead",
+      "farm": "Around the farm",
+      "cafe": "Inside the café",
+      "view": "Choose a scene",
+      "illustrative": "Illustrative miniature · Activities and layouts show our vision for the work ahead.",
+      "drag": "Drag to look around",
+      "pause": "Pause animation",
+      "play": "Play animation",
+      "reset": "Reset view",
+      "loading": "Gathering our little world…",
+      "fallback": "The animated scene needs a browser with 3D support. The project status and scene notes are available below.",
+      "sound": "A quiet little world. No sound needed.",
+      "stageKicker": "FROM PLANS TO A PLACE",
+      "stageTitle": "One chapter at a time.",
+      "stageIntro": "DA approval is our current milestone. The next chapters will appear here as the work progresses.",
+      "stages": [
+        "DA approved",
+        "Construction",
+        "Decoration",
+        "Opening"
+      ],
+      "states": [
+        "Current stage",
+        "Next chapter",
+        "Ahead of us",
+        "Target · Sep 2027"
+      ],
+      "reviewLabel": "Explore a future-stage illustration",
+      "future": "Future-stage illustration",
+      "now": "Showing today’s milestone",
+      "stageText": [
+        "Our development application (DA) has been approved. We are preparing the next steps for the landscape, café renovation and coffee trial.",
+        "A preview of the construction chapter: site works, an active café shell and a little team finding their rhythm.",
+        "A preview of the finishing chapter: café details, paths and planting coming together.",
+        "A preview of a first welcome. September 2027 remains our target, subject to readiness."
+      ],
+      "hotspots": [
+        "Coffee trial",
+        "Café renovation",
+        "Landscape"
+      ],
+      "zoneTitle": [
+        "A patient beginning.",
+        "A café, taking shape.",
+        "Room to grow."
+      ],
+      "zoneBody": [
+        "John Ou is leading the coffee trial with plantation consultants. The little plants show the trial direction; planting observations will be shared as they become available.",
+        "Peek inside a cutaway café renovation concept. There is room for coffee, conversation and shared learning; fit-out details are still being developed.",
+        "Landscape works and visitor paths are part of the next chapter. The miniature shows how those spaces might come together."
+      ],
+      "zoneLinks": [
+        "Explore the coffee trial",
+        "Step inside the café",
+        "Follow the landscape"
+      ],
+      "interiorTags": [
+        "Coffee bar",
+        "Shared learning",
+        "Renovation"
+      ],
+      "interiorTitle": "Before the first coffee.",
+      "interiorBody": "Bare frames, a workbench, little ladders and a team getting things ready. An early-renovation illustration of the space we are preparing.",
+      "noteTitle": "The real milestone. The little-world story.",
+      "noteBody": "DA approved is the confirmed project stage supplied by John. The animated people, equipment and planting are storytelling concepts. We will update the scenes as actual works and milestones are confirmed.",
+      "target": "Working towards September 2027",
+      "targetNote": "Opening date and visiting details will be shared once confirmed.",
+      "footer": "A place to grow and gather.",
+      "homeKicker": "FOLLOW THE LITTLE WORLD",
+      "homeTitle": "Watch our next chapter take shape.",
+      "homeBody": "DA approved. Explore a playful miniature of the farm and step inside the café renovation story.",
+      "homeButton": "Explore our progress",
+      "open": "Open scene",
+      "currentWord": "Current",
+      "futureWord": "Future preview",
+      "chapter": "Chapter",
+      "menu": "Menu",
+      "closeMenu": "Close menu",
+      "complete": "Confirmed",
+      "currentLabels": [
+        "DA approved",
+        "Construction under way",
+        "Finishing touches in progress",
+        "Preparing our first welcome"
+      ],
+      "currentText": [
+        "Our development application (DA) has been approved. We are preparing the next steps for the landscape, café renovation and coffee trial.",
+        "Construction is under way. We will share verified updates to the landscape and café works as each milestone is confirmed.",
+        "The finishing chapter is under way. We will share the café details, paths and planting work as they are confirmed.",
+        "We are preparing our first welcome. The confirmed date and visiting details will be announced before opening."
+      ],
+      "currentIntro": [
+        "DA approval is our current milestone. The next chapters will appear here as the work progresses.",
+        "Construction is our current chapter. We will share meaningful steps as they are confirmed.",
+        "We are working through the finishing details. Actual updates will be shared as they are confirmed.",
+        "Our opening chapter is taking shape. We will confirm when and how to visit before welcoming guests."
+      ],
+      "homeStageBodies": [
+        "DA approved. Explore a playful miniature of the farm and step inside the café renovation story.",
+        "Construction is under way. Explore the miniature farm and follow the café renovation story.",
+        "The finishing chapter is under way. Explore the paths, planting and café details in our little world.",
+        "We are preparing our first welcome. Explore the little world and follow the confirmed opening announcements."
+      ],
+      "past": "Earlier-stage illustration",
+      "pastWord": "Earlier chapter",
+      "posterAlt": "Illustrative miniature farm with a café, coffee trial rows and a small working team",
+      "sceneNotes": "Scene notes"
+    },
+    "zh": {
+      "lang": "zh-Hant",
+      "progress": "進度頁面",
+      "nav": [
+        "我們的故事",
+        "正在醞釀",
+        "我們的進度"
+      ],
+      "register": "登記接收消息",
+      "kicker": "THE GLENOLIA · 正在醞釀",
+      "title": "一個小世界，<br>慢慢成形。",
+      "intro": "走近我們正在籌備的地方。看看迷你農場裡忙碌的小團隊，再走進咖啡館，感受新空間逐步成形的故事。",
+      "current": "目前里程碑",
+      "approved": "開發申請（DA）已獲核准",
+      "update": "項目消息 · 2026 年 10 月 14 日",
+      "next": "準備下一步工作",
+      "farm": "農場小世界",
+      "cafe": "咖啡館內部",
+      "view": "選擇場景",
+      "illustrative": "迷你概念場景 · 以空間與活動呈現接下來的願景。",
+      "drag": "拖曳，換個角度看看",
+      "pause": "暫停動畫",
+      "play": "播放動畫",
+      "reset": "回到原來視角",
+      "loading": "小世界正在慢慢出現……",
+      "fallback": "動畫場景需要支援 3D 的瀏覽器。你仍可在下方閱讀項目進度及場景說明。",
+      "sound": "安靜的小世界，不用開啟聲音。",
+      "stageKicker": "從計畫，走向一個地方",
+      "stageTitle": "一個階段，一步一步。",
+      "stageIntro": "目前的里程碑是 DA 已獲核准。隨著工作推進，我們會在這裡分享下一個階段。",
+      "stages": [
+        "DA 已核准",
+        "施工",
+        "裝修與佈置",
+        "開幕"
+      ],
+      "states": [
+        "目前階段",
+        "下一個階段",
+        "之後的工作",
+        "目標 · 2027 年 9 月"
+      ],
+      "reviewLabel": "看看未來階段的概念場景",
+      "future": "未來階段概念預覽",
+      "now": "正在呈現目前里程碑",
+      "stageText": [
+        "DA 已獲核准。我們正準備景觀、咖啡館翻修及咖啡種植試驗的下一步工作。",
+        "施工階段的概念預覽：場地整理、咖啡館結構與忙碌的小團隊，慢慢找出工作節奏。",
+        "裝修與佈置階段的概念預覽：咖啡館細節、步道與種植空間逐漸串連起來。",
+        "第一次迎賓的概念預覽。目標仍是 2027 年 9 月，實際日期須視準備情況確認。"
+      ],
+      "hotspots": [
+        "咖啡種植試驗",
+        "咖啡館翻修",
+        "景觀空間"
+      ],
+      "zoneTitle": [
+        "耐心，從這裡開始。",
+        "咖啡館，慢慢成形。",
+        "留一點空間，讓綠意生長。"
+      ],
+      "zoneBody": [
+        "John Ou 主導咖啡種植試驗，並與種植顧問合作。小模型裡的植株呈現試驗方向；我們會在有實際觀察時，分享種植進展。",
+        "走進咖啡館翻修的剖面概念場景，看看咖啡、交流與共同學習的空間。內部裝修細節仍在籌備中。",
+        "景觀與訪客步道是接下來的工作之一。迷你場景呈現這些空間可能如何連接。"
+      ],
+      "zoneLinks": [
+        "了解咖啡種植試驗",
+        "走進咖啡館",
+        "看看景觀空間"
+      ],
+      "interiorTags": [
+        "咖啡吧檯",
+        "共同學習",
+        "翻修準備"
+      ],
+      "interiorTitle": "第一杯咖啡之前。",
+      "interiorBody": "結構框架、工作檯、小梯子，還有正在準備的小團隊。這是一幅早期翻修的概念場景，讓你先看看我們正在籌備的空間。",
+      "noteTitle": "真實的里程碑，小世界的故事。",
+      "noteBody": "John 確認目前項目階段為 DA 已獲核准。動畫裡的人物、設備與種植活動屬於敘事概念。我們會在實際工作與里程碑確認後，更新場景。",
+      "target": "以 2027 年 9 月為開幕目標",
+      "targetNote": "開幕日期及到訪資訊，會在確認後公布。",
+      "footer": "種下新綠，等你來聚",
+      "homeKicker": "看看小世界的成長",
+      "homeTitle": "一起看，下一個階段慢慢成形。",
+      "homeBody": "DA 已獲核准。探索迷你農場，再走進咖啡館翻修的故事。",
+      "homeButton": "探索我們的進度",
+      "open": "開啟場景",
+      "currentWord": "目前",
+      "futureWord": "未來概念",
+      "chapter": "階段",
+      "menu": "選單",
+      "closeMenu": "關閉選單",
+      "complete": "已確認",
+      "currentLabels": [
+        "開發申請（DA）已獲核准",
+        "施工已開始",
+        "裝修與收尾工作進行中",
+        "準備第一次迎賓"
+      ],
+      "currentText": [
+        "DA 已獲核准。我們正準備景觀、咖啡館翻修及咖啡種植試驗的下一步工作。",
+        "施工已開始。景觀與咖啡館工作的實際進度，會在每個里程碑確認後分享。",
+        "我們正進行裝修與收尾工作。咖啡館細節、步道與種植工作的進度，會在確認後分享。",
+        "我們正準備第一次迎賓。正式開幕日期與到訪資訊，會在開幕前公布。"
+      ],
+      "currentIntro": [
+        "目前的里程碑是 DA 已獲核准。隨著工作推進，我們會在這裡分享下一個階段。",
+        "目前進入施工階段。我們會在重要步驟確認後，分享實際進度。",
+        "我們正逐步完成收尾細節。實際進度會在確認後分享。",
+        "開幕階段正慢慢成形。正式迎賓前，我們會公布到訪日期與方式。"
+      ],
+      "homeStageBodies": [
+        "DA 已獲核准。探索迷你農場，再走進咖啡館翻修的故事。",
+        "施工已開始。探索迷你農場，一起看看咖啡館翻修的故事。",
+        "裝修與收尾工作正進行中。看看小世界裡的步道、種植空間與咖啡館細節。",
+        "我們正準備第一次迎賓。探索小世界，並留意正式的開幕消息。"
+      ],
+      "past": "先前階段概念預覽",
+      "pastWord": "先前階段",
+      "posterAlt": "迷你農場概念模型：咖啡館、咖啡試驗植株與小團隊",
+      "sceneNotes": "場景說明"
+    },
+    "ja": {
+      "lang": "ja",
+      "progress": "進捗ページ",
+      "nav": [
+        "私たちの物語",
+        "準備していること",
+        "これまでと、これから"
+      ],
+      "register": "お知らせを受け取る",
+      "kicker": "THE GLENOLIA · 準備の日々",
+      "title": "小さな世界が、<br>少しずつかたちに。",
+      "intro": "いま準備している場所を、小さな模型でのぞいてみませんか。農園で働く小さな仲間たちを見つけたら、カフェの中へ。",
+      "current": "現在の節目",
+      "approved": "開発申請（DA）承認済み",
+      "update": "更新日 · 2026年10月14日",
+      "next": "次の工程を準備中",
+      "farm": "農園を見てみる",
+      "cafe": "カフェの中へ",
+      "view": "シーンを選ぶ",
+      "illustrative": "ミニチュアのイメージ · 空間と動きで、これからの構想を描いています。",
+      "drag": "ドラッグして、別の角度から",
+      "pause": "アニメーションを止める",
+      "play": "アニメーションを再生",
+      "reset": "視点を戻す",
+      "loading": "小さな世界を準備しています…",
+      "fallback": "アニメーションには 3D 対応のブラウザーが必要です。現在の進捗とシーンの説明は、下でご覧いただけます。",
+      "sound": "音を出さずに楽しめる、小さな世界。",
+      "stageKicker": "計画から、ひとつの場所へ",
+      "stageTitle": "ひとつの章を、少しずつ。",
+      "stageIntro": "現在の節目は DA の承認です。実際の作業が進むごとに、次の章をここでお知らせします。",
+      "stages": [
+        "DA 承認",
+        "工事",
+        "内装と仕上げ",
+        "オープン"
+      ],
+      "states": [
+        "現在の段階",
+        "次の章",
+        "その先の準備",
+        "目標 · 2027 年 9 月"
+      ],
+      "reviewLabel": "これからの段階を、イメージで見る",
+      "future": "将来の段階のイメージ",
+      "now": "現在の節目を表示中",
+      "stageText": [
+        "DA が承認されました。景観整備、カフェの改装、コーヒー栽培試験の次の工程を準備しています。",
+        "工事の章を描いたイメージです。場内の整備、カフェの骨組み、忙しく動く小さなチームが登場します。",
+        "仕上げの章を描いたイメージです。カフェの細部、通路、植栽が少しずつつながっていきます。",
+        "最初のお迎えを描いたイメージです。2027 年 9 月を目指し、準備状況を踏まえて日程を確定します。"
+      ],
+      "hotspots": [
+        "コーヒー栽培試験",
+        "カフェの改装",
+        "景観と通路"
+      ],
+      "zoneTitle": [
+        "ゆっくり育てる、最初の一歩。",
+        "カフェが、かたちになるまで。",
+        "育つための余白を。"
+      ],
+      "zoneBody": [
+        "John Ou が栽培コンサルタントとともにコーヒー栽培試験を進めています。模型の苗は試験の構想を表現したもの。実際の観察ができた時点で、様子をお伝えします。",
+        "カフェ改装の断面イメージをのぞいてみましょう。コーヒー、会話、学びを分かち合う空間を考えています。内装の詳細は準備中です。",
+        "景観整備と来訪者の通路は、次の章の一部です。ミニチュアでは、それぞれの場所がどうつながるかを描いています。"
+      ],
+      "zoneLinks": [
+        "栽培試験について",
+        "カフェの中へ",
+        "景観を見てみる"
+      ],
+      "interiorTags": [
+        "コーヒーカウンター",
+        "ともに学ぶ場所",
+        "改装の準備"
+      ],
+      "interiorTitle": "最初の一杯の、その前に。",
+      "interiorBody": "骨組み、作業台、小さなはしご、準備に取り組む仲間たち。カフェの改装初期をイメージした、小さなシーンです。",
+      "noteTitle": "実際の節目と、小さな世界の物語。",
+      "noteBody": "John により、現在の段階は DA 承認済みと確認されています。アニメーションの人物、設備、植栽は構想を伝えるための表現です。実際の作業や節目が確認できたら、シーンを更新します。",
+      "target": "2027 年 9 月のオープンを目指して",
+      "targetNote": "オープン日と来訪のご案内は、確定後にお知らせします。",
+      "footer": "A place to grow and gather.",
+      "homeKicker": "小さな世界の、その先へ",
+      "homeTitle": "次の章が、かたちになるまで。",
+      "homeBody": "DA 承認済み。ミニチュアの農園と、カフェ改装の物語をのぞいてみませんか。",
+      "homeButton": "進捗を見てみる",
+      "open": "シーンを見る",
+      "currentWord": "現在",
+      "futureWord": "将来のイメージ",
+      "chapter": "章",
+      "menu": "メニュー",
+      "closeMenu": "メニューを閉じる",
+      "complete": "確認済み",
+      "currentLabels": [
+        "開発申請（DA）承認済み",
+        "工事が始まりました",
+        "内装と仕上げを進めています",
+        "最初のお迎えを準備中"
+      ],
+      "currentText": [
+        "DA が承認されました。景観整備、カフェの改装、コーヒー栽培試験の次の工程を準備しています。",
+        "工事が始まりました。景観整備とカフェの作業について、実際の節目が確認できた時点でお伝えします。",
+        "内装と仕上げを進めています。カフェの細部、通路、植栽の実際の進捗を、確認後にお知らせします。",
+        "最初のお迎えを準備しています。正式なオープン日と来訪のご案内は、オープン前にお知らせします。"
+      ],
+      "currentIntro": [
+        "現在の節目は DA の承認です。実際の作業が進むごとに、次の章をここでお知らせします。",
+        "現在は工事の章です。実際の大切な一歩を、確認できた時点でお伝えします。",
+        "仕上げの細部に取り組んでいます。実際の進捗を、確認後にお知らせします。",
+        "オープンの章がかたちになってきました。お迎えする前に、来訪の日程と方法をお知らせします。"
+      ],
+      "homeStageBodies": [
+        "DA 承認済み。ミニチュアの農園と、カフェ改装の物語をのぞいてみませんか。",
+        "工事が始まりました。ミニチュアの農園と、カフェ改装の物語をご覧ください。",
+        "内装と仕上げを進めています。小さな世界で、通路、植栽、カフェの細部を見てみませんか。",
+        "最初のお迎えを準備しています。小さな世界を楽しみながら、正式なオープンのお知らせをお待ちください。"
+      ],
+      "past": "以前の段階のイメージ",
+      "pastWord": "これまでの章",
+      "posterAlt": "カフェ、コーヒー栽培試験の苗、小さな仲間たちを描いた農園の模型",
+      "sceneNotes": "シーンの説明"
+    }
+  },
+  "roomCopy": {
+    "en": {
+      "titles": [
+        "Before the first coffee.",
+        "A table for shared learning.",
+        "The little details come later."
+      ],
+      "bodies": [
+        "The counter, tools and equipment are an early-renovation concept. Coffee service begins only when the real space is ready.",
+        "A flexible space for conversation and workshops is part of the café vision. The workshop programme will be shared when confirmed.",
+        "The tiny team is busy measuring, painting and preparing. This animation tells the renovation story; actual work updates will follow."
+      ]
+    },
+    "zh": {
+      "titles": [
+        "第一杯咖啡之前。",
+        "一張桌子，一起學習。",
+        "小細節，慢慢準備。"
+      ],
+      "bodies": [
+        "吧檯、工具與設備是早期翻修的概念。實際空間準備好後，才會開始咖啡服務。",
+        "一個能交流、也能舉辦工作坊的彈性空間，是咖啡館願景的一部分。活動安排會在確認後公布。",
+        "小團隊忙著丈量、刷漆與準備。動畫呈現翻修故事；實際工作進度會在之後分享。"
+      ]
+    },
+    "ja": {
+      "titles": [
+        "最初の一杯の、その前に。",
+        "ともに学ぶためのテーブル。",
+        "細かな仕上げは、これから。"
+      ],
+      "bodies": [
+        "カウンター、工具、設備は改装初期のイメージです。実際の空間が整ってから、コーヒーの提供を始めます。",
+        "会話やワークショップに使える柔軟な空間を考えています。プログラムは確定後にお知らせします。",
+        "小さなチームが測り、塗り、準備を進めています。改装の物語を描くアニメーションです。実際の作業状況は、あらためてお伝えします。"
+      ]
+    }
+  }
+}
