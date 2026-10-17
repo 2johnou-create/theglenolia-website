@@ -162,6 +162,7 @@ check(coffee['seedStage'] == 'seed' and coffee['trialName'] == 'Paraíso' and co
 for key,(lang,prefix) in LOCALES.items():
     c = DATA['copy'][key]
     check(set(c) == set(DATA['copy']['en']) and c['lang'] == lang, key+': incomplete or wrong localized copy')
+    check(set(c['clock']) == {'label','place'} and all(c['clock'].values()), key+': analogue clock labels missing')
     check(list(c['departments']) == IDS, key+': department names missing')
     check(list(c['growth']['stages']) == GROWTH, key+': optional growth stages missing/order changed')
     check(set(c['statusLabels']) == {'planning','developing','trialling','ready'}, key+': status labels incomplete')
@@ -248,7 +249,17 @@ for key,(lang,prefix) in LOCALES.items():
         check([n.attrs.get('data-programme-department') for n in buttons] == ['all']+IDS, label+': department controls are incomplete')
         check([n.attrs.get('data-programme-department') for n in buttons if n.attrs.get('aria-pressed')=='true'] == ['all'], label+': initial model must show overview, not imply a completed department')
         clock = marked(root,'data-programme-time',label)
-        check(clock.tag=='time' and norm(c['weather']['time']) in norm(clock.text()), label+': clock needs an honest Sydney-local placeholder')
+        check(clock.tag=='time' and norm(c['weather']['time']) in norm(clock.text()), label+': date needs an honest Sydney-local placeholder')
+        wrap = one(root.classes('programme-canvas-wrap'), label+': world canvas wrapper')
+        dial = marked(wrap,'data-programme-clock',label)
+        check(dial.tag=='time' and dial.attrs.get('role')=='img' and bool(dial.attrs.get('aria-label')) and dial.attrs.get('aria-live','off')=='off', label+': live analogue clock needs a readable, non-announcing time equivalent')
+        for hand in ['hour','minute','second']:
+            check(marked(dial,'data-clock-'+hand,label).tag=='g', label+': analogue clock hand missing: '+hand)
+        check(not any(n.tag=='canvas' for n in dial.walk()), label+': clock must work without a second WebGL context')
+        sky = marked(wrap,'data-programme-sky',label)
+        for body in ['sun','moon']:
+            check('hidden' in marked(sky,'data-sky-'+body,label).attrs, label+': static sky indicator must not invent current day/night')
+        check(marked(sky,'data-sky-moon-lit',label).tag=='path',label+': current moon phase graphic missing')
         marked(root,'data-programme-day',label)
         check(norm(marked(root,'data-weather-status',label).text())==norm(c['weather']['unavailable']),label+': static weather must honestly report unavailable until data loads')
         for field in ['data-weather-status','data-weather-temperature','data-weather-wind','data-weather-rain','data-weather-asof']:

@@ -84,7 +84,7 @@
         "temperature": "Temperature",
         "wind": "Wind",
         "rain": "Rain · next hour",
-        "time": "Sydney local time",
+        "time": "Date in Sydney",
         "day": "Daytime",
         "night": "Night-time",
         "asOf": "Estimate for",
@@ -285,6 +285,10 @@
             "A peaceful night in our small world."
           ]
         }
+      },
+      "clock": {
+        "label": "Sydney time",
+        "place": "Glenorie"
       }
     },
     "zh": {
@@ -371,7 +375,7 @@
         "temperature": "氣溫",
         "wind": "風速",
         "rain": "未來1小時雨量",
-        "time": "雪梨當地時間",
+        "time": "雪梨日期",
         "day": "白天",
         "night": "夜間",
         "asOf": "估算時間",
@@ -572,6 +576,10 @@
             "讓小世界，過一個安靜的夜。"
           ]
         }
+      },
+      "clock": {
+        "label": "雪梨時間",
+        "place": "Glenorie"
       }
     },
     "ja": {
@@ -658,7 +666,7 @@
         "temperature": "気温",
         "wind": "風速",
         "rain": "今後1時間の雨量",
-        "time": "シドニー現地時間",
+        "time": "シドニーの日付",
         "day": "昼間",
         "night": "夜間",
         "asOf": "推定時刻",
@@ -859,6 +867,10 @@
             "小さな世界に、おだやかな夜を。"
           ]
         }
+      },
+      "clock": {
+        "label": "シドニー時間",
+        "place": "Glenorie"
       }
     }
   },

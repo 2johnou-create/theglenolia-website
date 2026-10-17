@@ -1,5 +1,5 @@
 import {nearby} from './motion.js';
-import {sydneyState} from './programme-time.js';
+import {sydneyState,moonPhasePath} from './programme-time.js';
 const source=document.getElementById('programme-data');
 const {copy:c,initial,language,apiOrigin}=JSON.parse(source.textContent);
 const root=document.querySelector('[data-programme-world]'),canvas=document.getElementById('programme-world-canvas');
@@ -11,7 +11,17 @@ const number=value=>new Intl.NumberFormat(locale,{maximumFractionDigits:1}).form
 function clock(){
  if(document.hidden)return;
  const before=state.clock;state.clock=sydneyState(new Date(),locale);
- all('[data-programme-time]').forEach(el=>{el.textContent=state.clock.formatted;el.dateTime=state.clock.iso;});
+ all('[data-programme-time]').forEach(el=>{el.textContent=state.clock.dateLabel;el.dateTime=state.clock.iso;});
+ all('[data-programme-clock]').forEach(el=>{
+  el.dateTime=state.clock.iso;
+  el.setAttribute('aria-label',c.clock.place+' · '+c.clock.label+' · '+state.clock.formatted+' · '+(state.clock.isDay?c.day:c.night));
+ });
+ for(const hand of ['hour','minute','second'])all('[data-clock-'+hand+']').forEach(el=>el.setAttribute('transform','rotate('+state.clock.angles[hand]+' 50 50)'));
+ all('[data-sky-sun]').forEach(el=>el.toggleAttribute('hidden',!state.clock.isDay));
+ all('[data-sky-moon]').forEach(el=>el.toggleAttribute('hidden',state.clock.isDay));
+ all('[data-sky-label]').forEach(el=>el.textContent=state.clock.isDay?c.day:c.night);
+ if(!before||before.iso.slice(0,16)!==state.clock.iso.slice(0,16))all('[data-sky-moon-lit]').forEach(el=>el.setAttribute('d',moonPhasePath(state.clock.moonPhase)));
+ root.classList.add('is-clock-ready');
  all('[data-programme-day]').forEach(el=>el.textContent=state.clock.isDay?c.day:c.night);
  root.classList.toggle('is-night',!state.clock.isDay);
  if(!before||before.hour!==state.clock.hour||before.isDay!==state.clock.isDay)environment();
@@ -76,8 +86,10 @@ async function refreshWeather(){
  environment();
 }
 function pauseLabel(){
+ const reduced=document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;
+ root.classList.toggle('is-motion-paused',Boolean(state.manualPaused||reduced||state.world?.paused));
  if(!state.world)return;const paused=state.world.paused;
- all('[data-programme-pause]').forEach(button=>{button.textContent=paused?c.resume:c.pause;button.setAttribute('aria-pressed',String(paused));button.disabled=document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;});
+ all('[data-programme-pause]').forEach(button=>{button.textContent=paused?c.resume:c.pause;button.setAttribute('aria-pressed',String(paused));button.disabled=reduced;});
  if(paused)$('[data-programme-thought]').hidden=true;
 }
 let bubbleKey='',bubbleBucket=-1,bubbleActor=null;
@@ -125,11 +137,11 @@ nearby(root,async()=>{
   if($('[data-growth-next]'))$('[data-growth-next]').onclick=()=>{const ids=Object.keys(c.growth.stages),i=ids.indexOf(state.growth);growth(ids[(i+1)%ids.length]);};
   if($('[data-growth-previous]'))$('[data-growth-previous]').onclick=()=>{const ids=Object.keys(c.growth.stages),i=ids.indexOf(state.growth);growth(ids[i<0?ids.length-1:(i-1+ids.length)%ids.length]);};
   all('button[data-growth-stage]').forEach(b=>b.onclick=()=>growth(b.dataset.growthStage));
-  new MutationObserver(pauseLabel).observe(document.documentElement,{attributes:true,attributeFilter:['data-reduce-motion']});
-  matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',pauseLabel);
  }catch{fail();}
 });
-clock();renderProgramme();refreshProgramme();refreshWeather();
+new MutationObserver(pauseLabel).observe(document.documentElement,{attributes:true,attributeFilter:['data-reduce-motion']});
+matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change',pauseLabel);
+clock();pauseLabel();renderProgramme();refreshProgramme();refreshWeather();
 setInterval(clock,1000);
 setInterval(refreshProgramme,60000);
 setInterval(refreshWeather,15*60000);

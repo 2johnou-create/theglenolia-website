@@ -7,11 +7,11 @@
 .programme-intro h1{font-size:clamp(45px,5.4vw,78px);line-height:1.08;max-width:14ch}
 .programme-intro .lead{max-width:57ch;margin-top:27px;font-size:16px;line-height:1.9}
 .programme-weather{min-width:0;padding:25px 26px;border:1px solid var(--sage);border-radius:7px;background:rgba(217,223,208,.24);color:var(--green)}
-.programme-clock{display:flex;align-items:center;gap:13px;min-width:0}
+.programme-weather-heading{display:flex;align-items:center;gap:13px;min-width:0}
 .weather-live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 5px rgba(47,74,60,.06);flex:none}
-.programme-clock>span:nth-child(2){min-width:0}
-.programme-clock .eyebrow{display:block;font-size:9px;letter-spacing:.11em;margin:0 0 4px;line-height:1.6}
-.programme-clock time{display:block;font-family:var(--serif);font-size:25px;line-height:1.35;font-variant-numeric:tabular-nums}
+.programme-weather-heading>span:nth-child(2){min-width:0}
+.programme-weather-heading .eyebrow{display:block;font-size:9px;letter-spacing:.11em;margin:0 0 4px;line-height:1.6}
+.programme-weather-heading time{display:block;font-family:var(--serif);font-size:25px;line-height:1.35;font-variant-numeric:tabular-nums}
 .programme-day{margin-left:auto;font-size:11px;line-height:1.6;flex:none}
 .weather-condition{font-size:14px;line-height:1.7;margin-top:20px;max-width:none}
 .weather-numbers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:21px 0 0;padding-top:17px;border-top:1px solid rgba(47,74,60,.12)}
@@ -130,10 +130,10 @@ main:has(.programme-world-root.is-interactive) .growth-description,.programme-gr
 .programme-home-world .programme-world-drag{font-size:9px;bottom:12px;left:13px;max-width:calc(100% - 26px)}
 .programme-home-world .programme-thought{max-width:190px;font-size:11px;padding:11px 14px}
 .programme-hero-art .programme-weather.is-compact{display:grid;grid-template-columns:1.2fr 1fr;gap:11px 16px;padding:15px 17px;border-radius:5px}
-.programme-weather.is-compact .programme-clock{gap:9px}
+.programme-weather.is-compact .programme-weather-heading{gap:9px}
 .programme-weather.is-compact .weather-live-dot{width:6px;height:6px;box-shadow:0 0 0 4px rgba(47,74,60,.06)}
-.programme-weather.is-compact .programme-clock .eyebrow{font-size:8px;line-height:1.6;margin-bottom:2px;letter-spacing:.08em}
-.programme-weather.is-compact .programme-clock time{font-family:var(--sans);font-size:14px;line-height:1.6}
+.programme-weather.is-compact .programme-weather-heading .eyebrow{font-size:8px;line-height:1.6;margin-bottom:2px;letter-spacing:.08em}
+.programme-weather.is-compact .programme-weather-heading time{font-family:var(--sans);font-size:14px;line-height:1.6}
 .programme-weather.is-compact .programme-day{font-size:10px;margin-left:0}
 .programme-weather.is-compact .weather-condition{margin:0;align-self:center;text-align:right;font-size:12px;line-height:1.7}
 .programme-weather.is-compact .weather-numbers{grid-column:1/-1;display:flex;justify-content:space-between;gap:10px;margin:0;padding:9px 0 0}
@@ -181,7 +181,7 @@ main:has(.programme-world-root.is-interactive) .growth-description,.programme-gr
 }
 @media(max-width:520px){
   .programme-weather{padding:20px 21px}
-  .programme-clock time{font-size:23px}
+  .programme-weather-heading time{font-size:23px}
   .programme-intro h1{font-size:43px;line-height:1.1}
   .programme-intro .lead{font-size:14px;line-height:1.9}
   .programme-canvas-wrap{height:440px;border-radius:6px}
@@ -214,8 +214,8 @@ main:has(.programme-world-root.is-interactive) .growth-description,.programme-gr
   .programme-home-world .programme-world-actions .programme-reset{font-size:22px;padding:6px}
   .programme-home-world .programme-thought{max-width:180px;font-size:11px}
   .programme-hero-art .programme-weather.is-compact{grid-template-columns:1fr 1fr;gap:10px 12px;padding:13px 14px}
-  .programme-weather.is-compact .programme-clock{gap:7px}
-  .programme-weather.is-compact .programme-clock time{font-size:13px}
+  .programme-weather.is-compact .programme-weather-heading{gap:7px}
+  .programme-weather.is-compact .programme-weather-heading time{font-size:13px}
   .programme-weather.is-compact .weather-condition{font-size:11px}
   .programme-weather.is-compact .weather-numbers{gap:8px}
   .programme-weather.is-compact .weather-numbers div{gap:4px}
@@ -228,3 +228,55 @@ main:has(.programme-world-root.is-interactive) .growth-description,.programme-gr
 html[data-reduce-motion=true] .programme-world-root *,html[data-reduce-motion=true] .programme-hero-art *,html[data-reduce-motion=true] .growth-explorer *{transition:none!important;animation:none!important}
 
 .programme-growth-quick{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0 8px;border-top:1px solid rgba(47,74,60,.18)}.programme-growth-quick p{margin:0;font-size:12px;color:var(--green)}.programme-growth-quick strong{display:block;font-family:var(--serif);font-weight:400;font-size:24px;line-height:1.4}.programme-growth-quick>div{display:flex;gap:8px;align-items:center}.programme-growth-quick button{min-height:44px;padding:10px 15px;border:1px solid rgba(47,74,60,.25);background:var(--ivory);color:var(--green);border-radius:30px;font-size:12px;cursor:pointer}.programme-growth-quick button[data-growth-stage]{background:var(--green);color:var(--ivory)}.programme-world-root:not(.is-interactive) .programme-growth-quick{display:none}@media(max-width:600px){.programme-growth-quick{align-items:flex-start;flex-direction:column}.programme-growth-quick button{font-size:11px}}
+
+/* Sydney's live analogue clock remains available with the static model poster. */
+.programme-clock-hud{position:absolute;top:17px;left:17px;z-index:4;display:grid;grid-template-columns:78px minmax(0,1fr);gap:7px;align-items:center;width:166px;min-height:96px;padding:8px;border:1px solid rgba(47,74,60,.13);border-radius:14px;background:rgba(245,241,232,.94);box-shadow:0 5px 20px rgba(59,51,45,.06);color:var(--green);pointer-events:none}
+.programme-clock{display:block;width:78px;height:78px;margin:0}
+.programme-clock-face{display:block;width:100%;height:100%;overflow:visible}
+.programme-clock-rim{fill:var(--ivory);stroke:var(--green);stroke-opacity:.22;stroke-width:1}
+.programme-clock-field{fill:var(--sage);fill-opacity:.25}
+.programme-clock-tick{stroke:var(--green);stroke-opacity:.55;stroke-width:1;stroke-linecap:round}
+.programme-clock-tick.is-cardinal{stroke-opacity:1;stroke-width:1.8}
+.programme-clock-numerals{font-family:var(--serif);font-size:10.5px;fill:var(--green);text-anchor:middle;dominant-baseline:middle}
+.programme-clock-hands{visibility:hidden}
+.programme-world-root.is-clock-ready .programme-clock-hands{visibility:visible}
+.programme-clock-hands,.programme-clock-hands g{transition:none!important;animation:none!important}
+.programme-clock-hour line{stroke:var(--green);stroke-width:5;stroke-linecap:round}
+.programme-clock-minute line{stroke:var(--ink);stroke-width:3;stroke-linecap:round}
+.programme-clock-second line{stroke:var(--copper);stroke-width:1.4;stroke-linecap:round}
+.programme-clock-second circle,.programme-clock-pin{fill:var(--copper)}
+.programme-clock-pin-centre{fill:var(--ivory)}
+.programme-clock-aside{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;min-width:0}
+.programme-clock-label{font-family:var(--sans);font-size:9px;line-height:1.3;letter-spacing:.015em;white-space:nowrap}
+.programme-clock-place{font-family:var(--serif);font-size:11px;line-height:1.4;white-space:nowrap}
+.programme-sky{display:block;width:32px;height:32px;margin-top:1px;overflow:visible}
+.programme-sun-rays{fill:none;stroke:var(--copper);stroke-width:1.8;stroke-linecap:round;transform-origin:24px 24px;animation:programme-sun-turn 36s linear infinite}
+.programme-sun-disc{fill:var(--copper)}
+.programme-sun-highlight{fill:var(--ivory);opacity:.25}
+.programme-moon-disc{fill:var(--green)}
+.programme-moon-lit{fill:var(--ivory)}
+.programme-moon-outline{fill:none;stroke:var(--green);stroke-opacity:.5;stroke-width:.75}
+.programme-moon-orb{animation:programme-moon-float 5s ease-in-out infinite}
+.programme-moon-stars{fill:var(--copper);stroke:var(--copper);stroke-width:1;stroke-linecap:round;animation:programme-stars-twinkle 4.6s ease-in-out infinite}
+.programme-sky-label{font-family:var(--sans);font-size:10px;line-height:1.3;white-space:nowrap}
+.programme-sky [hidden]{display:none!important}
+.programme-world-root.is-motion-paused .programme-sky *{animation-play-state:paused!important}
+.programme-world-root.is-motion-paused .programme-clock-second{visibility:hidden!important}
+@keyframes programme-sun-turn{to{transform:rotate(360deg)}}
+@keyframes programme-moon-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.2px)}}
+@keyframes programme-stars-twinkle{0%,100%{opacity:.45}50%{opacity:1}}
+@media(max-width:520px){
+  .programme-clock-hud{top:10px;left:10px;grid-template-columns:56px minmax(0,1fr);gap:5px;width:128px;min-height:76px;max-height:80px;padding:6px;border-radius:11px}
+  .programme-clock{width:56px;height:56px}
+  .programme-clock-aside{gap:1px}
+  .programme-clock-label{font-size:7.5px;line-height:1.2}
+  .programme-clock-place{font-size:9px;line-height:1.25}
+  .programme-sky{width:26px;height:26px;margin-top:0}
+  .programme-sky-label{font-size:8px;line-height:1.2}
+}
+@media(prefers-reduced-motion:reduce){
+  .programme-sky *{animation:none!important;transition:none!important}
+  .programme-clock-second{visibility:hidden!important}
+}
+html[data-reduce-motion=true] .programme-sky *{animation:none!important;transition:none!important}
+html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!important}

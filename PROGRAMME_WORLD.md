@@ -153,6 +153,18 @@ September 2027 remains a target opening.
 ## Sydney time and weather
 
 The clock always uses `Australia/Sydney`, including daylight-saving changes.
+Inside the world, a round analogue dial shows live hour/minute hands and a
+second hand. The visible weather header shows the local date; a precise
+localized timestamp remains available to assistive technology without repeated
+live announcements. The dial works independently of WebGL and weather requests.
+
+The adjacent animated sun/moon indicator follows the calculated Glenorie solar
+horizon. It can still be daytime at 20:00 in summer or night at 17:00 in winter.
+The moon shows a calculated, symbolic Southern Hemisphere phase; it is not an
+on-site sky observation or a projection of its apparent viewing angle. Pausing
+the miniature or reducing motion stops decorative sky effects and hides the
+second hand while the clock keeps its correct time. No separate animation
+loop, weather request or visitor location permission is introduced by the HUD.
 SunCalc uses a fixed Glenorie town-area point to choose day/night from solar
 position. A visitor's device timezone does not change that timezone or location.
 No visitor geolocation is requested, collected or sent to the provider.
