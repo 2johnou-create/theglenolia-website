@@ -1,6 +1,6 @@
 # THE GLENOLIA — public website
 
-A light, responsive information website in English, Traditional Chinese and Japanese. Native A-v1 artwork, the five selected palette values and Noto typography are preserved. The homepage hero now contains the animated programme miniature; the original magnolia image assets remain intact. September 2027 remains a target opening, subject to readiness and required approvals. The approved founder wording remains unchanged; John Ou leads the coffee project alongside plantation consultants.
+A light, responsive information website in English, Traditional Chinese and Japanese. Native A-v1 artwork, the five selected palette values and Noto typography are preserved. The homepage uses the original magnolia hero and a static progress preview linking to Our Progress. The programme miniature runs on its dedicated subpage. September 2027 remains a target opening, subject to readiness and required approvals. The approved founder wording remains unchanged; John Ou leads the coffee project alongside plantation consultants.
 
 ## Live services
 
@@ -11,7 +11,7 @@ A light, responsive information website in English, Traditional Chinese and Japa
 - Partner invitation: the In the making page links to the partner mailbox with a localized expression-of-interest subject. It opens the visitor’s email app.
 - Instagram: the official @theglenolia account is linked. Automatic feed import still needs Meta account authorization; no invented posts appear.
 - Google Business Profile: account creation/verification remains separate from completed Workspace setup.
-- Programme updates: `/progress/programmes/`, `/zh-hant/progress/programmes/` and `/ja/progress/programmes/` show four developing areas, dated coffee observations and an illustrative miniature. The homepage hero links into these pages. Sydney day/night and attributed nearby weather estimates animate the scene without visitor geolocation.
+- Programme updates: `/progress/programmes/`, `/zh-hant/progress/programmes/` and `/ja/progress/programmes/` show four developing areas, dated coffee observations and an illustrative miniature. Our Progress links into these pages. Programme 3D, Sydney day/night and attributed nearby weather run on these subpages without visitor geolocation.
 
 ## Owner workflow
 

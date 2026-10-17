@@ -1,11 +1,12 @@
 # Programme world and public updates
 
-The programme world is the homepage hero illustration and a separate page under
-Our Progress. It shows four developing areas: Café & farm experiences, Coffee
-growing, Hands-on workshops and Local connections. The original magnolia image
-assets remain preserved; the programme miniature now occupies the homepage hero.
-The existing farm/café construction miniature remains on the parent Progress
-page and has its own [maintenance guide](PROGRESS_WORLD.md).
+The programme world is a dedicated subpage under Our Progress. It shows four
+developing areas: Café & farm experiences, Coffee growing, Hands-on workshops and
+Local connections. The landing page uses the original magnolia hero and a static
+progress preview linking to Our Progress. The programme miniature and its
+clock/weather enhancement run only on the programme subpage. The existing
+farm/café construction miniature remains on the parent Progress page and has its
+own [maintenance guide](PROGRESS_WORLD.md).
 
 ## Public routes and content
 
@@ -15,9 +16,10 @@ page and has its own [maintenance guide](PROGRESS_WORLD.md).
 | Traditional Chinese | `/zh-hant/progress/programmes/` |
 | Japanese | `/ja/progress/programmes/` |
 
-Each localized homepage links to its programme page. Our Progress also has an
-entry to the programme page. Common language navigation retains the current
-route. The main action remains registration for notices and the newsletter.
+Visitors reach the programme page through its entry on Our Progress. Each
+localized homepage links first to Our Progress. Common language navigation
+retains the current route. The main action remains registration for notices and
+the newsletter.
 
 `programme-content.json` contains the reviewed static baseline, localized
 interface copy and educational growth notes. `scripts/programme_markup.py`
@@ -166,7 +168,7 @@ while visible; day/night still follows the Sydney clock if weather is unavailabl
 
 Display **MET Norway** attribution, a link to [the source](https://api.met.no/)
 and the [CC BY 4.0 licence](https://creativecommons.org/licenses/by/4.0/) alongside
-the estimate qualification on both the homepage and programme page. Preserve
+the estimate qualification on the programme page wherever weather is shown. Preserve
 source/freshness metadata when changing the weather interface.
 
 ## Source and rendering

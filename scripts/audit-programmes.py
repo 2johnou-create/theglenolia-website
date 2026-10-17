@@ -202,6 +202,27 @@ for key,(lang,prefix) in LOCALES.items():
         check(any(n.tag=='img' and n.attrs.get('src')==BASE+'/assets/logos/logo-compact-web.svg' for n in logo.walk()), label+': original native logo missing')
         base = one(root.find(name='site-base'), label+': base metadata')
         check(base.attrs.get('content') == BASE, label+': wrong runtime deployment base')
+        for node in root.walk():
+            for field in ['href','src']:
+                if node.attrs.get(field):
+                    local_target(node.attrs[field],file,label)
+        check(not any('127.0.0.1' in n.attrs.get('href','') or 'localhost' in n.attrs.get('href','') for n in root.walk()), label+': local design-review link leaked')
+        if page=='home':
+            hero = one(root.classes('home-hero'), label+': homepage hero')
+            magnolia = one(hero.classes('magnolia'), label+': original magnolia hero image')
+            check(magnolia.tag=='img' and magnolia.attrs.get('src')==BASE+'/assets/images/magnolia.webp', label+': original magnolia hero must remain')
+            check(not any(n.tag=='canvas' for n in root.walk()), label+': homepage must not contain a live 3D canvas')
+            check(not root.classes('programme-world-root') and not root.find(id='programme-world-canvas'), label+': programme world must stay on its detail page')
+            check(not root.find(id='programme-data') and not root.find(id='progress-data'), label+': homepage must not carry live-model data')
+            check(not any(n.tag=='script' and '/assets/progress/' in n.attrs.get('src','') for n in root.walk()), label+': homepage must not load a live-model script')
+            check(not any(n.tag=='link' and n.attrs.get('rel')=='stylesheet' and 'programme' in urlsplit(n.attrs.get('href','')).path for n in root.walk()), label+': homepage must not load programme styles')
+            check(not any(attribute.startswith(('data-programme','data-weather')) for n in root.walk() for attribute in n.attrs), label+': live programme/weather controls leaked onto homepage')
+            check(not root.classes('programme-weather') and not root.classes('programme-clock'), label+': homepage must not display live programme weather or clock')
+            check(any(n.tag=='a' and n.attrs.get('href')==BASE+'/'+prefix+'progress/' for n in root.walk()), label+': homepage has no route to physical progress')
+            continue
+        programmes += 1
+        world = marked(root,'data-programme-world',label)
+        check('programme-world-root' in world.attrs.get('class','').split(), label+': expected one programme world root')
         payload = one(root.find(id='programme-data'), label+': one programme JSON payload')
         check(payload.tag=='script' and payload.attrs.get('type')=='application/json', label+': content payload must be inert JSON')
         try:
@@ -237,36 +258,30 @@ for key,(lang,prefix) in LOCALES.items():
         # A disabled script or failed request must not invent measured conditions.
         for field in ['data-weather-temperature','data-weather-wind','data-weather-rain']:
             check(norm(marked(root,field,label).text()) == '—', label+': weather value must not be fabricated in static HTML')
-        if page=='home':
-            hero=one(root.classes('home-hero'),label+': homepage hero')
-            check(bool(hero.find(id='programme-world-canvas')),label+': programme world must be inside homepage hero')
-            check(any(n.tag=='a' and n.attrs.get('href')==BASE+'/'+prefix+'progress/programmes/' for n in root.walk()), label+': homepage has no route to the programme')
-        else:
-            programmes += 1
-            check(norm(one([n for n in root.walk() if n.tag=='h1'],label+': H1').text())==norm(c['title']), label+': wrong programme title')
-            cards = root.classes('programme-card')
-            check([n.attrs.get('data-department-card') for n in cards]==IDS, label+': expected exactly the four real department cards')
-            for id,card in zip(IDS,cards):
-                d=initial['departments'][id];t=d['translations'][key]
-                check(norm(marked(card,'data-status',label).text())==norm(c['statusLabels'][d['status']]), label+'/'+id+': actual status differs')
-                check(norm(marked(card,'data-now',label).text())==norm(t['now']), label+'/'+id+': now copy differs from published initial')
-                check(norm(marked(card,'data-next',label).text())==norm(t['next']), label+'/'+id+': next copy differs from published initial')
-                done=marked(card,'data-done',label)
-                check([norm(n.text()) for n in done.children if isinstance(n,Node) and n.tag=='li']==[norm(v) for v in t['done']], label+'/'+id+': completed list differs')
-            check(all(name in root.text() for name in ['IPR107','NR25','Marsellesa','Paraíso']), label+': accepted seed direction and separate trial name missing')
-            check(norm(marked(root,'data-seed-actual',label).text())==norm(c['growth']['seedActual']) and norm(marked(root,'data-trial-actual',label).text())==norm(c['growth']['trialActual']), label+': current seed/seedling facts missing')
-            check('20' in marked(root,'data-plant-height',label).text(), label+': approximate reported 20 cm seedling height missing')
-            observed=marked(root,'data-plant-observed',label)
-            check(observed.tag=='time' and observed.attrs.get('datetime')==coffee['observedOn'], label+': report date missing/wrong')
-            updated=marked(root,'data-programme-updated',label)
-            check(updated.tag=='time' and updated.attrs.get('datetime')==initial['updatedAt'], label+': programme date missing/wrong')
-            explorer=one(root.classes('growth-explorer'),label+': growth explorer')
-            check(explorer.tag=='details' and 'open' not in explorer.attrs, label+': future growth must be an optional explorer')
-            growth=[n for n in explorer.walk() if n.tag=='button' and 'data-growth-stage' in n.attrs]
-            check([n.attrs['data-growth-stage'] for n in growth]==['actual']+GROWTH, label+': growth controls lack reported stage or eight exploratory stages')
-            check([n.attrs['data-growth-stage'] for n in growth if n.attrs.get('aria-pressed')=='true']==['actual'], label+': future growth must not be presented as actual by default')
-            for field in ['futureNote','graftNote','varietyNote']:
-                check(norm(c['growth'][field]) in norm(root.text()), label+': missing optional/future/identity qualifier: '+field)
+        check(norm(one([n for n in root.walk() if n.tag=='h1'],label+': H1').text())==norm(c['title']), label+': wrong programme title')
+        cards = root.classes('programme-card')
+        check([n.attrs.get('data-department-card') for n in cards]==IDS, label+': expected exactly the four real department cards')
+        for id,card in zip(IDS,cards):
+            d=initial['departments'][id];t=d['translations'][key]
+            check(norm(marked(card,'data-status',label).text())==norm(c['statusLabels'][d['status']]), label+'/'+id+': actual status differs')
+            check(norm(marked(card,'data-now',label).text())==norm(t['now']), label+'/'+id+': now copy differs from published initial')
+            check(norm(marked(card,'data-next',label).text())==norm(t['next']), label+'/'+id+': next copy differs from published initial')
+            done=marked(card,'data-done',label)
+            check([norm(n.text()) for n in done.children if isinstance(n,Node) and n.tag=='li']==[norm(v) for v in t['done']], label+'/'+id+': completed list differs')
+        check(all(name in root.text() for name in ['IPR107','NR25','Marsellesa','Paraíso']), label+': accepted seed direction and separate trial name missing')
+        check(norm(marked(root,'data-seed-actual',label).text())==norm(c['growth']['seedActual']) and norm(marked(root,'data-trial-actual',label).text())==norm(c['growth']['trialActual']), label+': current seed/seedling facts missing')
+        check('20' in marked(root,'data-plant-height',label).text(), label+': approximate reported 20 cm seedling height missing')
+        observed=marked(root,'data-plant-observed',label)
+        check(observed.tag=='time' and observed.attrs.get('datetime')==coffee['observedOn'], label+': report date missing/wrong')
+        updated=marked(root,'data-programme-updated',label)
+        check(updated.tag=='time' and updated.attrs.get('datetime')==initial['updatedAt'], label+': programme date missing/wrong')
+        explorer=one(root.classes('growth-explorer'),label+': growth explorer')
+        check(explorer.tag=='details' and 'open' not in explorer.attrs, label+': future growth must be an optional explorer')
+        growth=[n for n in explorer.walk() if n.tag=='button' and 'data-growth-stage' in n.attrs]
+        check([n.attrs['data-growth-stage'] for n in growth]==['actual']+GROWTH, label+': growth controls lack reported stage or eight exploratory stages')
+        check([n.attrs['data-growth-stage'] for n in growth if n.attrs.get('aria-pressed')=='true']==['actual'], label+': future growth must not be presented as actual by default')
+        for field in ['futureNote','graftNote','varietyNote']:
+            check(norm(c['growth'][field]) in norm(root.text()), label+': missing optional/future/identity qualifier: '+field)
         modules=[n for n in root.walk() if n.tag=='script' and n.attrs.get('type')=='module' and n.attrs.get('src')]
         check(len(modules)==1 and 'programme' in modules[0].attrs.get('src',''), label+': expected one programme enhancement entry')
         if len(modules)==1:
@@ -275,11 +290,6 @@ for key,(lang,prefix) in LOCALES.items():
                 initial_modules(entry,label)
                 check(re.search(r'\bimport\s*\([\"\']\./programme-world-[^\"\']+\.js[\"\']\)',entry.read_text()) is not None, label+': world is not lazy imported')
         check(not any(n.tag=='link' and n.attrs.get('rel') in ['preload','modulepreload'] and n.attrs.get('as')!='image' and '/assets/progress/' in n.attrs.get('href','') for n in root.walk()), label+': heavy programme module is preloaded')
-        for node in root.walk():
-            for field in ['href','src']:
-                if node.attrs.get(field):
-                    local_target(node.attrs[field],file,label)
-        check(not any('127.0.0.1' in n.attrs.get('href','') or 'localhost' in n.attrs.get('href','') for n in root.walk()), label+': local design-review link leaked')
 
 for key,(_,prefix) in LOCALES.items():
     progress=DIST/prefix/'progress/index.html'
