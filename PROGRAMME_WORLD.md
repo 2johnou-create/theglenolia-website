@@ -8,6 +8,11 @@ clock/weather enhancement run only on the programme subpage. The existing
 farm/café construction miniature remains on the parent Progress page and has its
 own [maintenance guide](PROGRESS_WORLD.md).
 
+The programme miniature uses four open, roofless settings so each area is easy
+to recognise: a café counter and seating, a seed-starting garden, a hands-on
+classroom, and shelves of illustrative local gifts and products. These are
+playful programme settings, not a completed site layout or confirmed stock.
+
 ## Public routes and content
 
 | Language | Programme page |

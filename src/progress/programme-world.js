@@ -86,12 +86,28 @@ function planningBoard(parent,x,z,rotation=0) {
   for (let i=0;i<4;i++) {box(g,.45,.02,.02,'sage',-.42,2.24-i*.16,.09);box(g,.55,.025,.02,'copper',.35,2.24-i*.16,.09);}
   return g;
 }
-function pergola(parent,x,z,w=6.5,d=5.2,roof=false) {
-  const g=group(parent,x,.43,z);
-  for (const a of [-1,1]) for (const b of [-1,1]) box(g,.13,3.2,.13,'copper',a*(w/2),1.6,b*(d/2));
-  for (const a of [-1,1]) box(g,w+.2,.16,.15,'green',0,3.23,a*d/2);
-  for (let i=0;i<7;i++) box(g,.09,.10,d+.22,'copper',-w/2+i*w/6,3.35,0);
-  if (roof) {const canopy=box(g,w+.3,.06,d+.3,'sage',0,3.45,0);canopy.material=material('sage',.32);canopy.castShadow=false;}
+function chair(parent,x,z,rotation=0) {
+  const g=group(parent,x,.43,z);g.rotation.y=rotation;
+  box(g,.58,.10,.56,'sage',0,.58,0);box(g,.58,.57,.07,'green',0,.90,-.25);
+  for(const a of [-1,1])for(const b of [-1,1])box(g,.055,.56,.055,'copper',a*.23,.28,b*.21);
+  return g;
+}
+function soilBed(parent,x,z,w,d) {
+  const g=group(parent,x,.43,z);box(g,w,.22,d,'copper',0,.11,0);box(g,w-.16,.045,d-.16,'ink',0,.23,0);
+  for(const a of [-1,1])box(g,w+.05,.08,.11,'ivory',0,.26,a*d/2);
+  for(const a of [-1,1])box(g,.11,.08,d,'ivory',a*w/2,.26,0);
+  return g;
+}
+function productShelf(parent,x,z,w=2.65) {
+  const g=group(parent,x,.43,z);box(g,w,2.5,.07,'sage',0,1.30,-.28);
+  for(const side of [-1,1])box(g,.10,2.65,.62,'green',side*w/2,1.33,0);
+  for(const h of [.20,1.00,1.8,2.62])box(g,w+.1,.09,.68,'copper',0,h,0);
+  return g;
+}
+function giftBox(parent,x,y,z,w=.55,h=.40,d=.45,colour='ivory') {
+  const g=group(parent,x,y,z);box(g,w,h,d,colour,0,h/2,0);box(g,w+.03,.06,d+.03,colour,0,h+.03,0);
+  box(g,.06,h+.07,d+.045,'green',0,(h+.07)/2,0);box(g,w+.04,.015,.055,'green',0,h+.07,0);
+  for(const side of [-1,1]){const ribbon=ball(g,.11,.035,.065,'copper',side*.085,h+.11,0);ribbon.rotation.z=side*.25;}
   return g;
 }
 function shadeTree(parent,x,z,size=1) {
@@ -202,39 +218,65 @@ function buildMiniature(scene,requestRender) {
   for(const x of [-11.9,11.9])for(const z of [-8.5,8.5])windPlants.push(shadeTree(root,x,z,z<0?1.15:.92));
   for(let i=0;i<15;i++){const x=-12.5+i*1.8;box(root,.075,.65,.075,'ivory',x,.79,-9.1);if(i<14)box(root,1.8,.065,.055,'copper',x+.9,.94,-9.1);}
 
-  // Café and farm programme planning: an open dollhouse, with plans rather than a service queue.
-  const cafe=pergola(root,-6.2,-4.2,6.9,5.2);
-  box(cafe,6.9,1.1,.12,'sage',0,.58,-2.6);box(cafe,.12,2.5,5.2,'ivory',-3.45,1.3,0);
-  box(cafe,6.9,.18,.14,'green',0,2.8,-2.6);planningBoard(root,-8.45,-5.7,.12);
-  const cafeTable=table(root,-6.5,-3.35,3.5,1.4);paper(cafeTable,0,1.055,0,1.55,.9);box(cafeTable,1.25,.018,.018,'sage',0,1.07,0);box(cafeTable,.018,.018,.7,'copper',-.25,1.07,0);mug(cafeTable,1.2,1.1,.25);
-  const layout=group(cafeTable,-.05,1.10,-.05);box(layout,.40,.19,.30,'sage',-.35,.09,0);box(layout,.25,.035,.5,'green',.3,.025,.02);
-  const shelf=group(cafe,-2.3,.1,-1.1);box(shelf,1.5,.9,.7,'ivory',0,.45,0);box(shelf,1.6,.08,.8,'green',0,.94,0);for(const x of [-.35,.15,.5])mug(shelf,x,1.07,.05);
+  // Roofless café: counter, coffee equipment and seating surround a planning table.
+  const cafe=group(root,-6.2,.43,-4.2);
+  box(cafe,6.9,2.95,.12,'ivory',0,1.48,-2.6);box(cafe,.12,2.1,5.2,'ivory',-3.45,1.06,0);
+  box(cafe,6.9,.62,.14,'sage',0,.32,-2.6);
+  const counter=group(root,-6.65,.43,-5.6);box(counter,4.9,1.04,1.0,'green',0,.52,0);box(counter,5.04,.12,1.12,'ivory',0,1.10,0);
+  for(let i=1;i<8;i++)box(counter,.018,.89,.018,'sage',-2.45+i*4.9/8,.51,.51);
+  for(const h of [.28,.56,.84])box(counter,4.8,.018,.018,'sage',0,h,.51);
+  const machine=group(counter,.20,1.17,0);box(machine,1.35,.52,.62,'sage',0,.26,0);box(machine,1.45,.10,.68,'green',0,.57,0);box(machine,1.35,.07,.68,'ink',0,.025,.04);
+  for(const x of [-.32,.32]){cylinder(machine,.06,.18,'copper',x,.23,.34);beam(machine,[x,.30,.28],[x,.15,.40],.025,'copper');mug(counter,x+.2,1.25,.39);}
+  cylinder(counter,.19,.51,'copper',1.65,1.43,0);cylinder(counter,.17,.26,'ink',1.65,1.82,0);box(counter,.43,.08,.45,'green',1.65,1.20,0);
+  for(const x of [-1.8,-1.35])mug(counter,x,1.25,.1);
+  const cafeTable=table(root,-6.5,-3.35,3.1,1.4);paper(cafeTable,0,1.055,0,1.55,.9);box(cafeTable,1.25,.018,.018,'sage',0,1.07,0);box(cafeTable,.018,.018,.7,'copper',-.25,1.07,0);mug(cafeTable,1.05,1.1,.25);
+  const cafeSeating=group(root,-8.95,.43,-2.55);cylinder(cafeSeating,.48,.09,'ivory',0,.76,0);cylinder(cafeSeating,.055,.72,'copper',0,.37,0);cylinder(cafeSeating,.30,.06,'green',0,.04,0);mug(cafeSeating,-.17,.88,0);mug(cafeSeating,.19,.88,.07);
+  chair(root,-8.95,-3.30);chair(root,-8.95,-1.80,Math.PI);
+  for(const x of [-7.9,-5.1])stool(root,x,-4.6);
+  box(cafe,.26,.09,1.55,'copper',-3.25,1.7,-1.6);for(const z of [-2.05,-1.60,-1.15])mug(cafe,-3.24,1.83,z);
 
-  // Coffee nursery: seed trays and small plants remain the initial illustrative state.
-  pergola(root,6.25,-4.2,6.9,5.2,true);
-  const nursery=table(root,7.7,-5.2,3.2,1.3,1.0);tray(nursery,-.7,1.11,0,1.2,.8);
-  for(const x of [.25,.8,1.3])windPlants.push(smallPlant(nursery,x,.1,.22,1.06));
+  // Gardening area: open soil beds and a potting bench, with young illustrative plants.
+  for(const [bx,width] of [[4.65,3.0],[8.1,2.7]]){
+    const bed=soilBed(root,bx,-6.1,width,1.4);
+    for(let i=0;i<6;i++){
+      const plant=group(bed,(i%3-1)*width*.25,.27,(Math.floor(i/3)-.5)*.55);
+      beam(plant,[0,0,0],[0,.22,0],.012);leaves(plant,.25,6);windPlants.push(plant);
+    }
+  }
+  for(let i=0;i<8;i++){const x=2.8+i*.95;box(root,.07,.60,.07,'ivory',x,.75,-7.25);if(i<7)box(root,.95,.055,.05,'copper',x+.475,.88,-7.25);}
   const seedBench=table(root,7.6,-3.5,2.5,1.1,.92);tray(seedBench,-.45,1.02,0,.85,.65);paper(seedBench,.65,1.02,0,.6,.65);
+  const barrow=group(root,9.45,.43,-3.15);box(barrow,.66,.32,.80,'green',0,.59,0);for(const side of [-1,1]){beam(barrow,[side*.25,.36,-.10],[side*.25,.75,.95],.03);beam(barrow,[side*.25,0,.4],[side*.25,.42,.2],.027);}
+  cylinder(barrow,.19,.10,'ink',0,.20,-.49).rotation.z=Math.PI/2;cylinder(barrow,.075,.13,'copper',0,.20,-.49).rotation.z=Math.PI/2;
+  for(const x of [-.17,.17])pot(barrow,x,0,.40,.77);
+  beam(root,[9.55,.45,-4.9],[9.85,2.15,-5.05],.028);box(root,.26,.36,.07,'green',9.53,.62,-4.88);
+  beam(root,[9.15,.46,-4.9],[9.40,1.95,-5.03],.024);beam(root,[9.00,.48,-4.85],[9.32,.48,-4.85],.025,'green');for(let i=0;i<5;i++)beam(root,[9.00+i*.08,.48,-4.85],[9.00+i*.08,.48,-4.55],.012,'green');
   const growthHolder=group(root,4.5,.57,-4.4);cylinder(root,1.05,.17,'ivory',4.5,.52,-4.4);
   const plantData={seedStage:'seed',trialStage:'seedling',heightCm:20},growthCache=new Map();
   let growth='actual',growthRoot=actualPlants(plantData);growthHolder.add(growthRoot);
-  planningBoard(root,9.35,-5.95,-.15);
-  for(const z of [-5.9,-5.25,-4.6])windPlants.push(smallPlant(root,3.5,z,.25));
 
-  // Hands-on workshops: a practice table, journals, sample pots and seating.
-  pergola(root,-6.25,4.6,6.9,5.0);
-  const work=table(root,-6.2,4.25,4.1,1.7,1.02);paper(work,-1,1.10,0,.95,.65);paper(work,.3,1.10,.12,.8,.55);
-  for(const x of [.9,1.35])smallPlant(work,x,-.1,.19,1.08);
-  for(const x of [-7.2,-5.3])stool(root,x,5.7);
-  planningBoard(root,-8.65,6.0,.12);const tools=table(root,-8.5,3.25,1.2,1.1,.83);tray(tools,0,.93,0,.85,.6);
+  // Open classroom: a generous teaching board, student desks and a hands-on table.
+  const classroom=group(root,-9.5,.43,6.0);classroom.rotation.y=Math.PI/2;
+  for(const side of [-1,1]){box(classroom,.09,2.55,.09,'ink',side*1.50,1.28,0);box(classroom,.56,.08,.68,'copper',side*1.5,.04,0);}
+  box(classroom,3.6,1.6,.09,'green',0,1.85,0);for(const side of [-1,1])box(classroom,3.35,1.36,.03,'ivory',0,1.85,side*.065);
+  for(const side of [-1,1]){const face=group(classroom,0,1.85,side*.07);face.rotation.y=side===1?0:Math.PI;beam(face,[-1.05,-.43,0],[-1.05,.40,0],.014,'green');for(let i=0;i<3;i++){const y=-.2+i*.2;for(const s of [-1,1])ball(face,.14,.035,.055,'sage',-1.05+s*.12,y,.025).rotation.z=s*.45;}for(let i=0;i<4;i++)box(face,1.20-i*.11,.035,.02,i===0?'copper':'green',.50,.40-i*.22,.025);}
+  const work=table(root,-6.2,4.25,3.6,1.35,1.02);paper(work,-.8,1.10,0,.95,.65);paper(work,.4,1.10,.12,.8,.55);cylinder(work,.12,.22,'sage',1.3,1.19,-.1);for(let i=0;i<3;i++)beam(work,[1.25+i*.05,1.22,-.1],[1.25+i*.05,1.53,-.1],.012);
+  for(const x of [-8.35,-4.15]){const desk=table(root,x,6.1,1.5,.90,.83);paper(desk,0,.902,0,.75,.53);box(desk,.40,.025,.025,'copper',.15,.93,.10).rotation.y=.30;chair(root,x,5.12);}
+  const resources=table(root,-8.8,3.4,1.05,1.5,.78);for(let i=0;i<3;i++)box(resources,.69,.075,.93,i%2?'sage':'green',0,.88+i*.085,0).rotation.y=.07*i;
 
-  // Local connections: choosing growers, makers and product presentation samples.
-  const local=pergola(root,6.3,4.6,6.9,5.0);box(local,6.9,.65,.13,'sage',0,.35,2.5);
+  // Gift and product samples: stocked display shelves and a wrapping/selection table.
+  for(const sx of [4.75,7.85]){
+    const shelf=productShelf(root,sx,7.05);
+    for(const h of [.25,1.05,1.85])for(let i=0;i<3;i++){
+      const x=(i-1)*.75;
+      if(i===0){cylinder(shelf,.15,.30,'sage',x,h+.15,.08);cylinder(shelf,.16,.055,'copper',x,h+.33,.08);box(shelf,.16,.11,.018,'ivory',x,h+.15,.235);}
+      else if(i===1)giftBox(shelf,x,h,.04,.55,.38,.45,h>1.5?'sage':'ivory');
+      else{box(shelf,.48,.52,.29,'ivory',x,h+.26,.04);const handle=mesh(shelf,new THREE.TorusGeometry(.12,.018,5,10,Math.PI),'copper',x,h+.55,.04);handle.rotation.z=0;}
+    }
+  }
   const selection=table(root,6.3,4.25,4.2,1.6,1.02);paper(selection,-1.25,1.1,0,.9,.65);
-  for(let i=0;i<4;i++){const x=-.25+i*.60;cylinder(selection,.15,.28,'sage',x,1.25,.15);cylinder(selection,.165,.05,'copper',x,1.42,.15);box(selection,.17,.11,.02,'ivory',x,1.25,.30);}
-  const crate=group(root,8.75,.44,6.35);box(crate,1.3,.55,1.05,'copper',0,.28,0);for(let i=0;i<3;i++)box(crate,1.32,.045,1.07,'ivory',0,.13+i*.18,0);box(crate,1.1,.035,.8,'sage',0,.57,0);
+  for(let i=0;i<2;i++){const x=-.25+i*.60;cylinder(selection,.15,.28,'sage',x,1.25,.15);cylinder(selection,.165,.05,'copper',x,1.42,.15);box(selection,.17,.11,.02,'ivory',x,1.25,.30);}
+  giftBox(selection,1.2,1.09,.05,.70,.43,.60,'sage');
   const swatches=table(root,3.9,6.1,1.25,1.0,.80);for(let i=0;i<3;i++)box(swatches,.6,.035,.5,['ivory','green','sage'][i],0,.89+i*.06,0).rotation.y=.12*i;
-  planningBoard(root,9.15,6.6,-.2);
 
   // Break benches sit in the lanes; routes stop at their front, with room to pass.
   bench(root,-1.7,3.0,Math.PI/2);bench(root,2.25,-2.1,-Math.PI/2);bench(root,-3.2,.85);bench(root,3.2,.85);bench(root,1.2,7.7,-Math.PI/2);
@@ -255,7 +297,6 @@ function buildMiniature(scene,requestRender) {
   const base=document.querySelector('meta[name=site-base]')?.content||'';
   const texture=new THREE.TextureLoader().load(base+'/assets/email/logo-compact.png',requestRender,undefined,()=>{});texture.colorSpace=THREE.SRGBColorSpace;
   box(root,2.08,1.10,.08,'ivory',-6.2,2.7,-6.78);
-  for(const x of [-6.85,-5.55])beam(root,[x,3.66,-6.80],[x,3.24,-6.80],.018,'copper');
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(1.85,.94),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));logo.position.set(-6.2,2.7,-6.72);root.add(logo);
   batchStatic(root,new Set([...windPlants,growthHolder,...actors.map(actor=>actor.root)]));
   function refreshGrowth(stage){
