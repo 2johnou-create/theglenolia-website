@@ -225,7 +225,7 @@ for key, (lang, prefix) in LOCALES.items():
 
 pages = 0
 for key, (lang, prefix) in LOCALES.items():
-    for page, route in [('home', ''), ('progress', 'progress/')]:
+    for page, route in [('progress', 'progress/')]:
         path = DIST / prefix / route / 'index.html'
         label = str(path.relative_to(DIST))
         check(path.is_file(), label + ': generated page missing')
@@ -274,7 +274,7 @@ for key, (lang, prefix) in LOCALES.items():
 
 # Pages that cannot display the miniature should incur no scene-specific payload.
 for path in DIST.rglob('*.html'):
-    if path in [DIST/p/r/'index.html' for _, p in LOCALES.values() for r in ['', 'progress/']]:
+    if path in [DIST/p/r/'index.html' for _, p in LOCALES.values() for r in ['', 'progress/', 'progress/programmes/']]:
         continue
     source = path.read_text()
     root = Document(source).root

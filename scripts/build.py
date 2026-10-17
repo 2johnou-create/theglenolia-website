@@ -4,6 +4,7 @@ from html import escape as e
 import json, shutil, os, hashlib
 from urllib.parse import quote
 import progress_markup as world_markup
+import programme_markup
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = json.loads((ROOT / 'content.json').read_text())
@@ -20,8 +21,8 @@ ORIGIN = CONFIG['canonicalOrigin'].rstrip('/')
 BASE_PATH = os.environ.get('SITE_BASE_PATH', '').rstrip('/')
 if BASE_PATH and (not BASE_PATH.startswith('/') or '..' in BASE_PATH):
     raise ValueError('SITE_BASE_PATH must be a safe absolute URL path')
-WORLD_REVISION = hashlib.sha256(b''.join(p.read_bytes() for p in sorted((ROOT/'src/progress').glob('*.js'))) + (ROOT/'public/assets/progress/progress.css').read_bytes()).hexdigest()[:12]
-ROUTES = {'home':'', 'about':'about/', 'making':'in-the-making/', 'coffee':'coffee-trial/', 'progress':'progress/', 'register':'register/', 'privacy':'privacy/', 'confirmed':'confirmed/', 'admin':'admin/'}
+WORLD_REVISION = hashlib.sha256(b''.join(p.read_bytes() for p in sorted((ROOT/'src/progress').glob('*.js'))) + (ROOT/'public/assets/progress/progress.css').read_bytes() + (ROOT/'public/assets/progress/programme.css').read_bytes()).hexdigest()[:12]
+ROUTES = {'home':'', 'about':'about/', 'making':'in-the-making/', 'coffee':'coffee-trial/', 'progress':'progress/', 'programmes':'progress/programmes/', 'register':'register/', 'privacy':'privacy/', 'confirmed':'confirmed/', 'admin':'admin/'}
 
 def url(c, page):
     return '/' + c['prefix'] + ROUTES[page]
@@ -82,18 +83,18 @@ def footer(c):
 
 def build_page(key, page):
     c=CONTENT[key]
-    titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'coffee':c['coffeeTitle'], 'progress':c['nav'][2], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle'],'admin':c['adminLabel']}
+    titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'coffee':c['coffeeTitle'], 'progress':c['nav'][2], 'programmes':programme_markup.DATA['copy'][key]['metaTitle'], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle'],'admin':c['adminLabel']}
     page_title=titles[page] if page=='home' else titles[page]+' | The Glenolia'
-    descriptions={'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'coffee':c['coffeeIntro'],'progress':world_markup.DATA['copy'][key]['currentText'][world_markup.CONFIG['currentStage']],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText'],'admin':c['adminIntro']}
+    descriptions={'programmes':programme_markup.DATA['copy'][key]['metaDescription'],'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'coffee':c['coffeeIntro'],'progress':world_markup.DATA['copy'][key]['currentText'][world_markup.CONFIG['currentStage']],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText'],'admin':c['adminIntro']}
     description=descriptions[page]
     canon=ORIGIN+url(c,page)
     alternates=''.join(f'<link rel="alternate" hreflang="{v["lang"]}" href="{ORIGIN+url(v,page)}">' for v in CONTENT.values())+f'<link rel="alternate" hreflang="x-default" href="{ORIGIN+url(CONTENT["en"],page)}">'
     languages=''.join(f'<a href="{url(v,page)}" lang="{v["lang"]}" hreflang="{v["lang"]}" {"aria-current=\"true\"" if v==c else ""}>{v["name"]}</a>' for v in CONTENT.values())
-    nav=''.join(f'<a href="{url(c,p)}" {"aria-current=\"page\"" if page==p else ""}>{e(c["nav"][i])}</a>' for i,p in enumerate(['about','making','progress']))
+    nav=''.join(f'<a href="{url(c,p)}" {"aria-current=\"page\"" if (page==p or (p=='progress' and page=='programmes')) else ""}>{e(c["nav"][i])}</a>' for i,p in enumerate(['about','making','progress']))
     header=f'''<a class="skip-link" href="#main">{e(c['skip'])}</a><header class="site-header" id="top"><a class="brand" href="{url(c,'home')}" aria-label="THE GLENOLIA · {e(c['home'])}"><img src="/assets/logos/logo-compact-web.svg" width="660" height="335" alt="THE GLENOLIA"></a><div class="header-tools"><nav class="languages" aria-label="Language / 語言 / 言語">{languages}</nav><button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" data-close="{e(c['close'])}" data-open="{e(c['menu'])}">{e(c['menu'])}<span aria-hidden="true">☰</span></button></div><nav class="main-nav" id="main-nav" aria-label="{e(c['menu'])}">{nav}{button(url(c,'register'),c['register'],'button button-small')}</nav></header>'''
     if page=='home':
         h=''.join(f'<span>{e(x)}</span>' for x in c['hero'])
-        body=f'''<section class="home-hero section"><div class="hero-copy">{label(c['location'])}<h1>{h}</h1><p class="lead">{e(c['heroText'])}</p><div class="hero-actions">{button(url(c,'register'),c['register'])}{button(url(c,'about'),c['storyLink'],'text-link')}</div><p class="opening-note"><span class="dot" aria-hidden="true"></span>{e(c['target'])}</p></div><div class="hero-art" data-depth><div class="hero-art-field"></div>{image('magnolia.webp','', 'magnolia',True)}<div class="hero-art-caption">{label('01 · '+c['status'])}<p>{e(c['tagline'])}</p></div><img class="hero-leaf" src="/assets/logos/leaf.svg" alt="" width="90" height="215" loading="eager"></div></section>'''+vision(c)+f'<section class="landscape-section">{motion(c)}</section>'+directions(c)+world_markup.home(key,url(c,'progress'),url(c,'coffee'))+journal(c)+faq(c)+signup(c)
+        body=f'''<section class="home-hero section"><div class="hero-copy">{label(c['location'])}<h1>{h}</h1><p class="lead">{e(c['heroText'])}</p><div class="hero-actions">{button(url(c,'register'),c['register'])}{button(url(c,'about'),c['storyLink'],'text-link')}</div><p class="opening-note"><span class="dot" aria-hidden="true"></span>{e(c['target'])}</p></div><div class="programme-hero-art">{programme_markup.home(key,CONFIG['programmeApiOrigin'],url(c,'programmes'))}</div></section>'''+vision(c)+f'<section class="landscape-section">{motion(c)}</section>'+directions(c)+world_markup.home(key,url(c,'progress'),url(c,'coffee'),animated=False)+journal(c)+faq(c)+signup(c)
     elif page=='about':
         body=f'''<section class="page-intro section">{label(c['nav'][0])}<h1>{e(c['visionTitle'])}</h1><p class="lead">{e(c['visionIntro'])}</p></section><section class="landscape-section">{motion(c,True)}</section>'''+vision(c,True,True)+f'''<section class="section foundation"><div>{label(c['status'])}<h2>{e(c['foundationTitle'])}</h2><p class="lead">{e(c['foundationIntro'])}</p><div class="foundation-items">{''.join('<article><h3>'+e(x['title'])+'</h3><p>'+e(x['body'])+'</p></article>' for x in c['foundation'])}</div></div><div class="foundation-art" data-depth>{image('magnolia.webp','')}{image('shoot.webp','')}</div></section>'''+signup(c)
     elif page=='making':
@@ -101,7 +102,8 @@ def build_page(key, page):
     elif page=='coffee':
         body=f'<section class="page-intro section coffee-intro">{label(c["coffeeLabel"])}<h1>{e(c["coffeeTitle"])}</h1><p class="lead">{e(c["coffeeIntro"])}</p></section><section class="section coffee-details"><div class="coffee-art">'+image('shoot.webp',c['directions'][1]['alt'])+f'<p class="small">{e(c["conceptNote"])}</p></div><div>'+''.join(f'<article><h2>{e(x["title"])}</h2><p>{e(x["body"])}</p></article>' for x in c['coffeeSections'])+'</div></section>'+signup(c)
     elif page=='progress':
-        body=world_markup.page(key,url(c,'register'),url(c,'coffee'))
+        body=programme_markup.entry(key,url(c,'programmes'))+world_markup.page(key,url(c,'register'),url(c,'coffee'))
+    elif page=='programmes': body=programme_markup.page(key,CONFIG['programmeApiOrigin'],url(c,'home'),url(c,'progress'),url(c,'programmes'),url(c,'register'))
     elif page=='register': body=signup(c,True)+faq(c)
     elif page=='privacy':
         body=f'<section class="page-intro section prose">{label(c["privacyDate"])}<h1>{e(c["privacyTitle"])}</h1><p class="lead">{e(c["privacyIntro"])}</p>'+''.join(f'<section><h2>{e(x["title"])}</h2><p>{e(x["body"])}</p></section>' for x in c['privacySections'])+'</section>'
@@ -114,7 +116,11 @@ def build_page(key, page):
     result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page in ['confirmed','admin'] else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
     if page in ['home','progress']:
         script='home-world' if page=='home' else 'progress'
-        result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/progress.css?v={WORLD_REVISION}"><script type="module" src="/assets/progress/{script}.js?v={WORLD_REVISION}"></script></head>')
+        result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/progress.css?v={WORLD_REVISION}"></head>')
+        if page=='progress':
+            result=result.replace('</head>',f'<script type="module" src="/assets/progress/progress.js?v={WORLD_REVISION}"></script></head>')
+    if page in ['home','programmes']:
+        result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/programme.css?v={WORLD_REVISION}"><script type="module" src="/assets/progress/programmes.js?v={WORLD_REVISION}"></script></head>')
     if BASE_PATH:
         result=result.replace('href="/', f'href="{BASE_PATH}/').replace('src="/', f'src="{BASE_PATH}/').replace('data-desktop="/',f'data-desktop="{BASE_PATH}/').replace('data-mobile="/',f'data-mobile="{BASE_PATH}/').replace('srcset="/',f'srcset="{BASE_PATH}/').replace(', /assets/', f', {BASE_PATH}/assets/')
     result=result.replace('content="'+c['lang'].replace('-', '_')+'"', 'content="'+{'en':'en_AU','zh':'zh_TW','ja':'ja_JP'}[key]+'"')

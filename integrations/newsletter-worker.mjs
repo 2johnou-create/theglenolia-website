@@ -1,3 +1,4 @@
+import {handlePublicProgramme} from './programme-public.mjs';
 // Optional small API for the static site. Provision and verify its bindings before enabling registration.
 const locales = { 'en-AU': ['EN', ''], 'zh-Hant': ['ZH', 'zh-hant/'], ja: ['JA', 'ja/'] };
 const allowedInterests = new Set(['opening', 'coffee', 'workshops', 'local']);
@@ -7,6 +8,8 @@ const json = (status, body, origin) => new Response(JSON.stringify(body), {statu
 
 const runtimeFetch=(...args)=>globalThis.fetch(...args);
 export async function handleRequest(request, env, fetcher = runtimeFetch) {
+  const publicResponse=await handlePublicProgramme(request,env,fetcher);
+  if(publicResponse)return publicResponse;
   const origin = request.headers.get('Origin');
   const allowedOrigins = (env.ALLOWED_ORIGINS || baseOrigin).split(',').map(x=>x.trim());
   if (!origin || !allowedOrigins.includes(origin)) return json(403, {error:'origin'}, baseOrigin);

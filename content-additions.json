@@ -2,16 +2,16 @@
   "en": {
     "coffeeLabel": "THE COFFEE PROJECT",
     "coffeeTitle": "A growing trial. A patient beginning.",
-    "coffeeIntro": "Our coffee project is led by John Ou, working alongside coffee plantation consultants. We are preparing a trial that puts observation and care for this land first.",
+    "coffeeIntro": "Our coffee project is led by John Ou, working alongside coffee plantation consultants. Seed starting and the separate Paraíso seedling trial are the beginning of a project built around observation and care for this land.",
     "coffeeLink": "Explore the coffee trial",
     "coffeeSections": [
       {
         "title": "The first-block direction",
-        "body": "Following the consultants’ recommendations, we have selected IPR107, NR25 and Marsellesa for the first-block planting direction. These are selections for the planned trial; they do not mean that the trees are already planted or producing coffee."
+        "body": "IPR107, NR25 and Marsellesa are starting from seed for the first-block trial. NR25 is the supplied trial name; its identity is still being checked. Field planting and coffee production are later stages."
       },
       {
         "title": "A separate early trial",
-        "body": "Paraíso is part of a separate early trial direction. We will share its progress when nursery and planting records are available. It is separate from the three first-block selections."
+        "body": "Paraíso is a separate early trial, with seedlings around 20 cm tall, as reported on 17 October 2026. It is separate from the three seed-starting selections."
       },
       {
         "title": "What we hope to learn",
@@ -40,7 +40,7 @@
     "signupIntro": "Opening notices and a monthly letter from The Glenolia. Coffee, growing, workshops and local stories, shared as plans take shape.",
     "signupNote": "A letter at month-end, plus opening notices. Unsubscribe at any time.",
     "consent": "I agree to receive The Glenolia’s monthly newsletter and opening notices by email. I can unsubscribe at any time.",
-    "privacyDate": "Updated 12 October 2026",
+    "privacyDate": "Updated 17 October 2026",
     "privacyIntro": "How we look after the information you share with The Glenolia.",
     "privacySections": [
       {
@@ -70,22 +70,26 @@
       {
         "title": "Instagram",
         "body": "The website links to @theglenolia on Instagram. Opening Instagram takes you to Meta’s service and its own privacy settings. A live Instagram feed is not currently connected."
+      },
+      {
+        "title": "Weather and the miniature",
+        "body": "Glenorie-area weather estimates are fetched through our Cloudflare service and cached. The request uses a fixed town-area location. The website does not request your device’s location."
       }
     ]
   },
   "zh": {
     "coffeeLabel": "咖啡種植計畫",
     "coffeeTitle": "從試種開始，耐心觀察成長。",
-    "coffeeIntro": "咖啡種植計畫由 John Ou 帶領，與咖啡種植顧問共同推進。我們正準備試種，先用心了解這片土地，再記錄每一步生長。",
+    "coffeeIntro": "咖啡種植計畫由 John Ou 帶領，與咖啡種植顧問共同推進。從種子培育與獨立的 Paraíso 幼苗試種開始，我們用心觀察這片土地，記錄每一步生長。",
     "coffeeLink": "了解咖啡試種計畫",
     "coffeeSections": [
       {
         "title": "首個種植區的方向",
-        "body": "依照顧問建議，我們選定 IPR107、NR25 與 Marsellesa 作為首個種植區的試種方向。這項選擇屬於規劃階段，並不代表樹苗已種下，或已開始生產咖啡。"
+        "body": "IPR107、NR25 與 Marsellesa 正從種子開始培育，作為首個種植區的試種起點。NR25 是目前提供的試種名稱，品種身分仍待釐清。田間定植與咖啡生產，則是之後的階段。"
       },
       {
         "title": "獨立的早期試種",
-        "body": "Paraíso 屬於另一項早期試種方向，與首個種植區的三項選擇分開進行。有了育苗與種植紀錄後，我們會再分享實際進展。"
+        "body": "Paraíso 是另一項早期試種，與三項從種子培育的選擇分開進行。依 2026 年 10 月 17 日的回報，幼苗約有 20 公分高。"
       },
       {
         "title": "希望從觀察中學習",
@@ -114,7 +118,7 @@
     "signupIntro": "每月一封來自 The Glenolia 的信，以及開放消息。隨著計畫逐漸成形，與你分享咖啡、種植、工作坊和地方故事。",
     "signupNote": "每月底寄送一封電子報，另有開放通知。你可隨時取消訂閱。",
     "consent": "我願意透過電子郵件接收 The Glenolia 的每月電子報與開放通知，並可隨時取消訂閱。",
-    "privacyDate": "更新日期：2026 年 10 月 12 日",
+    "privacyDate": "更新日期：2026 年 10 月 17 日",
     "privacyIntro": "了解 The Glenolia 如何處理你與我們分享的資料。",
     "privacySections": [
       {
@@ -144,22 +148,26 @@
       {
         "title": "Instagram",
         "body": "網站提供 @theglenolia 的 Instagram 連結。開啟後會進入 Meta 的服務，並適用其隱私設定。目前尚未連接即時 Instagram 動態。"
+      },
+      {
+        "title": "天氣與小世界",
+        "body": "Glenorie 一帶的天氣預估，透過我們的 Cloudflare 服務取得並暫存。請求使用固定的地區位置；網站不會要求取得你的裝置位置。"
       }
     ]
   },
   "ja": {
     "coffeeLabel": "コーヒー栽培の計画",
     "coffeeTitle": "試験栽培から、ゆっくりと。",
-    "coffeeIntro": "コーヒー栽培の計画は John Ou が中心となり、コーヒー農園の専門コンサルタントと進めています。この土地を大切にしながら、まずは観察と学びを重ねる試験栽培を準備しています。",
+    "coffeeIntro": "コーヒー栽培の計画はJohn Ouが中心となり、コーヒー農園の専門コンサルタントと進めています。種からの栽培と、別に進めるParaísoの苗の試験から、土地を大切にしながら観察と学びを重ねていきます。",
     "coffeeLink": "試験栽培の計画を読む",
     "coffeeSections": [
       {
         "title": "最初の区画で目指すこと",
-        "body": "専門家の提案を受け、最初の区画の栽培候補として IPR107、NR25、Marsellesa を選びました。これは試験栽培の計画上の選定であり、植え付けやコーヒーの生産がすでに始まったことを示すものではありません。"
+        "body": "最初の区画の試験に向けて、IPR107、NR25、Marsellesaを種から育て始めています。NR25は提供された試験名で、品種の正確な情報は引き続き確認中です。畑への植え付けやコーヒーの生産は、その先の段階です。"
       },
       {
         "title": "別の初期試験について",
-        "body": "Paraíso は、最初の区画の三つの候補とは別に検討している初期試験の一つです。苗や植え付けの記録が整い次第、実際の進捗をお伝えします。"
+        "body": "Paraísoは、種から育てる3つとは別に進めている初期試験です。2026年10月17日の報告では、苗の高さは約20cmです。"
       },
       {
         "title": "観察から学ぶこと",
@@ -188,7 +196,7 @@
     "signupIntro": "月に一度、The Glenoliaからのお便りと、開業のお知らせをお届けします。コーヒー栽培、ワークショップ、地域の物語。計画が形になっていく様子を、少しずつお伝えします。",
     "signupNote": "月末のお便りと、開業のお知らせをお届けします。配信はいつでも停止できます。",
     "consent": "The Glenoliaの毎月のニュースレターと開業のお知らせをメールで受け取ることに同意します。配信はいつでも停止できます。",
-    "privacyDate": "更新日：2026年10月12日",
+    "privacyDate": "更新日：2026年10月17日",
     "privacyIntro": "The Glenoliaにお寄せいただく情報の取り扱いについて。",
     "privacySections": [
       {
@@ -218,6 +226,10 @@
       {
         "title": "Instagram",
         "body": "サイトから@theglenoliaのInstagramへ移動できます。InstagramではMetaのサービスとプライバシー設定が適用されます。現在、Instagramの投稿フィードは接続していません。"
+      },
+      {
+        "title": "天気と小さな世界",
+        "body": "Glenorie周辺の天気予報データは、Cloudflare上のサービスを通じて取得し、一時保存します。固定した地域の位置情報を使い、端末の現在地を求めることはありません。"
       }
     ]
   }

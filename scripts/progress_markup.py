@@ -1,7 +1,7 @@
 """Accessible public content for the approved miniature, independent of WebGL."""
 from pathlib import Path
 from html import escape as e
-import json
+import json, re
 
 DATA = json.loads((Path(__file__).resolve().parents[1] / 'progress-content.json').read_text())
 CONFIG = DATA['config']
@@ -12,9 +12,13 @@ def payload(key, coffee_url):
     value = {'config': CONFIG, 'copy': DATA['copy'][key], 'roomCopy': DATA['roomCopy'][key], 'coffeeUrl': coffee_url}
     return '<script type="application/json" id="progress-data">'+json.dumps(value, ensure_ascii=False).replace('<', '\\u003c')+'</script>'
 
-def home(key, progress_url, coffee_url):
+def home(key, progress_url, coffee_url, animated=True):
     c, stage = DATA['copy'][key], CONFIG['currentStage']
-    return f'''<section class="little-world-home" id="little-world"><div><p class="eyebrow">{e(c['homeKicker'])}</p><h2>{e(c['homeTitle'])}</h2><p>{e(c['homeStageBodies'][stage])}</p><a class="button" href="{progress_url}">{e(c['homeButton'])}<span aria-hidden="true">↗</span></a></div><div class="home-world-image"><canvas id="home-world-canvas" tabindex="0" aria-label="{e(c['farm'])}" aria-describedby="home-world-caption"></canvas><img class="home-world-poster" src="/assets/progress/farm-poster.webp" alt="{e(c['posterAlt'])}" width="1200" height="660" loading="lazy" decoding="async"><button id="home-pause" class="home-world-pause" type="button" aria-pressed="true">{e(c['play'])}</button><div class="home-world-label"><span class="home-motion-dot" aria-hidden="true"></span>{e(c['currentLabels'][stage])}</div></div><p class="small home-world-caption" id="home-world-caption">{e(c['illustrative'])}</p></section>'''+payload(key, coffee_url)
+    output = f'''<section class="little-world-home" id="little-world"><div><p class="eyebrow">{e(c['homeKicker'])}</p><h2>{e(c['homeTitle'])}</h2><p>{e(c['homeStageBodies'][stage])}</p><a class="button" href="{progress_url}">{e(c['homeButton'])}<span aria-hidden="true">↗</span></a></div><div class="home-world-image"><canvas id="home-world-canvas" tabindex="0" aria-label="{e(c['farm'])}" aria-describedby="home-world-caption"></canvas><img class="home-world-poster" src="/assets/progress/farm-poster.webp" alt="{e(c['posterAlt'])}" width="1200" height="660" loading="lazy" decoding="async"><button id="home-pause" class="home-world-pause" type="button" aria-pressed="true">{e(c['play'])}</button><div class="home-world-label"><span class="home-motion-dot" aria-hidden="true"></span>{e(c['currentLabels'][stage])}</div></div><p class="small home-world-caption" id="home-world-caption">{e(c['illustrative'])}</p></section>'''+(payload(key, coffee_url) if animated else '')
+    if not animated:
+        output=re.sub(r'<canvas[^>]*id="home-world-canvas"[^>]*></canvas>','',output)
+        output=re.sub(r'<button[^>]*id="home-pause"[^>]*>.*?</button>','',output)
+    return output
 
 def page(key, register_url, coffee_url):
     c, stage = DATA['copy'][key], CONFIG['currentStage']

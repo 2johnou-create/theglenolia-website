@@ -1,6 +1,6 @@
 # THE GLENOLIA — public website
 
-A light, responsive information website in English, Traditional Chinese and Japanese. Native A-v1 artwork, the five selected palette values, Noto typography and the existing magnolia hero are preserved. September 2027 remains a target opening, subject to readiness and required approvals. The approved founder wording remains unchanged; John Ou leads the coffee project alongside plantation consultants.
+A light, responsive information website in English, Traditional Chinese and Japanese. Native A-v1 artwork, the five selected palette values and Noto typography are preserved. The homepage hero now contains the animated programme miniature; the original magnolia image assets remain intact. September 2027 remains a target opening, subject to readiness and required approvals. The approved founder wording remains unchanged; John Ou leads the coffee project alongside plantation consultants.
 
 ## Live services
 
@@ -11,10 +11,13 @@ A light, responsive information website in English, Traditional Chinese and Japa
 - Partner invitation: the In the making page links to the partner mailbox with a localized expression-of-interest subject. It opens the visitor’s email app.
 - Instagram: the official @theglenolia account is linked. Automatic feed import still needs Meta account authorization; no invented posts appear.
 - Google Business Profile: account creation/verification remains separate from completed Workspace setup.
+- Programme updates: `/progress/programmes/`, `/zh-hant/progress/programmes/` and `/ja/progress/programmes/` show four developing areas, dated coffee observations and an illustrative miniature. The homepage hero links into these pages. Sydney day/night and attributed nearby weather estimates animate the scene without visitor geolocation.
 
 ## Owner workflow
 
 Sign in to the admin with the existing Cloudflare account for john@theglenolia.com.au. Subscribers displays the website confirmation list, language, interests, consent date and unsubscribed status; search filters the current page and pagination covers additional records.
+
+**Programme progress** edits each area's status, Working on, Next milestone and up to four completed items in all three languages. Save the draft, review the three language versions, then explicitly publish the complete update. Drafts remain private. Coffee growing also has separate actual stages for the fixed IPR107/NR25/Marsellesa seed group and Paraíso trial, with editable height and observation date. Both tracks support all eight growth stages; grafting is optional. Visitor previews never alter these records. Programme publication does not send an email. See [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) for the full workflow, weather/cache behaviour and maintenance.
 
 Monthly eDMs contains October, November and December 2026, each in three languages. Their delivery plans use the last calendar day at 10:00 am Australia/Sydney. Choose an edition, review each language and saved preview, then confirm its schedule. Scheduled editions lock in this editor. Use Brevo to pause or change an already queued campaign.
 
@@ -29,13 +32,17 @@ The configured audience allowance is 250, leaving room within the current free d
 Use Node 24 and Python 3.12 or newer:
 
 ```sh
+npm ci --ignore-scripts
 node integrations/build-admin.mjs
-node --test integrations/newsletter.test.mjs integrations/admin.test.mjs
+node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs src/progress/programme-time.test.mjs
 python scripts/build.py
+npm run build:progress
 python scripts/audit.py
+python scripts/audit-progress.py
+python scripts/audit-programmes.py
 ```
 
-`content.json` contains the original reviewed copy. `content-additions.json` contains the coffee, partner, monthly-registration, privacy and owner-entry additions. `config.json` is public configuration only. GitHub Actions publishes only `dist/`; admin source is deployed separately to its Worker.
+The current automated suite contains 71 tests. `content.json` contains the original reviewed copy. `content-additions.json` contains the coffee, partner, monthly-registration, privacy and owner-entry additions. `progress-content.json` maintains the physical development world; `programme-content.json` contains the programme's reviewed static baseline and localized interface. `config.json` is public configuration only. GitHub Actions publishes only `dist/`; admin source and public API changes are deployed separately to their Workers.
 
 ## Backend deployment
 
@@ -43,11 +50,15 @@ Wrangler is pinned in `integrations/package.json`. Copy the example configuratio
 
 Google and Brevo DKIM coexist in GoDaddy DNS. Preserve the existing Google MX, single SPF record and DMARC quarantine policy. Primary/alias domain connection is complete; alternate-domain homepage redirects do not preserve deep page paths. Use the official domain for page links.
 
+Programme updates use the existing D1 database from both admin and public Workers. Apply `migrations/003-programme.sql` and `migrations/004-weather-cache.sql` before enabling the new routes. Keep the existing Access policy, email schedules and subscriber/consent tables intact. [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) describes the separate draft/public projection and baseline maintenance.
+
 ## Editorial and media maintenance
 
-Do not infer planting, harvest, product origin, facility readiness or public visiting access from proposals or concept images. IPR107, NR25 and Marsellesa are the accepted first-block direction; Paraíso is a separate early trial, and NR25’s identity is unresolved. Keep the café vegetarian standard and the approved founder attribution. Rebuild font subsets when new public characters are added.
+Do not infer planting, harvest, product origin, facility readiness or public visiting access from proposals or concept images. IPR107, NR25 and Marsellesa are the fixed seed-group labels; Paraíso is a separate early trial, and NR25’s identity is unresolved. Publish actual growth only from confirmed, dated observations. Keep the café vegetarian standard and the approved founder attribution. Rebuild font subsets when new public characters are added.
 
 Native logo geometry and outlines remain unchanged. Web SVG presentations adjust viewport padding/dimensions only. The supplied aerial footage is silent background motion, with still fallback, pause, visibility/data-saving and reduced-motion controls. Approved botanical imagery is identified as illustrative concepts.
+
+The programme's workers, thoughts, routes, breaks and layouts are illustrative, not attendance or construction records. Actual notes remain separate from visitor growth previews, and the physical Progress page retains its DA-approved milestone. Programme scenes use static fallbacks, local lazy modules, pause/reduced-motion controls and bounded rendering. Preserve MET Norway attribution, its CC BY 4.0 link, nearby-estimate wording and stale/unavailable states. Public programme notes must not contain private operational or subscriber information.
 
 ## Authorized Instagram import
 

@@ -1,0 +1,963 @@
+{
+  "copy": {
+    "en": {
+      "lang": "en-AU",
+      "metaTitle": "Our programme, taking shape",
+      "metaDescription": "Follow the four areas we are preparing at The Glenolia: café and farm experiences, coffee growing, hands-on workshops and local connections. Explore the coffee trial and its next steps.",
+      "kicker": "THE GLENOLIA · THE WORK BEHIND THE WELCOME",
+      "title": "Four parts of one growing place.",
+      "intro": "A closer look at what we are preparing, what comes next, and the small steps worth sharing. Choose an area of the little world to follow its programme.",
+      "breadcrumbHome": "Home",
+      "breadcrumbProgress": "Our progress",
+      "breadcrumbCurrent": "Programme",
+      "now": "Now",
+      "next": "Next milestone",
+      "done": "Completed milestones",
+      "noDone": "No completed programme milestones have been posted yet.",
+      "departmentsTitle": "Four areas, growing together.",
+      "departmentsIntro": "Each area has its own preparation. Follow the current work and the next step, with updates added as they are confirmed.",
+      "viewDepartment": "Explore this area",
+      "viewAllDepartments": "View all four areas",
+      "overview": "The whole little world",
+      "updatesTitle": "Notes from the programme",
+      "updatesIntro": "Dated updates from the work we can confirm.",
+      "latestUpdate": "Latest update",
+      "updatedOn": "Updated",
+      "updatesAvailable": "Programme updates available",
+      "updatesLoading": "Gathering the latest programme notes…",
+      "updatesUnavailable": "The latest notes could not be loaded. The published overview is shown below.",
+      "noUpdates": "We will share a new note when there is a confirmed step to report.",
+      "reportedByOwner": "Owner-reported update",
+      "subscribeKicker": "STAY CLOSE TO THE STORY",
+      "subscribeTitle": "A little news, as the place grows.",
+      "subscribeBody": "Receive the occasional project note, programme news and confirmed visiting details.",
+      "subscribeButton": "Register for updates",
+      "progressLink": "Explore the programme",
+      "progressLinkBody": "Follow the four areas behind our little world, from coffee growing to the first welcome.",
+      "homeEntryKicker": "THE LITTLE WORLD · OUR PROGRAMME",
+      "homeEntryTitle": "Come and see what is taking shape.",
+      "homeEntryBody": "Follow four areas in preparation and explore the coffee-growing story, one small step at a time.",
+      "homeEntryButton": "Explore the programme",
+      "worldCaption": "An illustrative little world of the programme we are developing.",
+      "staffCaption": "Playful routines and thoughts bring our plans to life.",
+      "thoughtsLabel": "A thought from the little team",
+      "sceneControls": "Little-world controls",
+      "pause": "Pause animation",
+      "resume": "Resume animation",
+      "reset": "Reset view",
+      "loading": "Bringing the little world into view…",
+      "fallback": "You can read all programme notes and growth stages below, even if the 3D scene is unavailable.",
+      "drag": "Drag to look around",
+      "day": "Day",
+      "night": "Night",
+      "statusLabels": {
+        "planning": "In preparation",
+        "developing": "Taking shape",
+        "trialling": "Trial under way",
+        "ready": "Ready"
+      },
+      "departments": {
+        "cafe": {
+          "title": "Café & farm experiences",
+          "short": "Coffee, conversation and time closer to the land."
+        },
+        "coffee": {
+          "title": "Coffee growing",
+          "short": "From seed and young plants, with patient observation."
+        },
+        "workshops": {
+          "title": "Hands-on workshops",
+          "short": "Ideas for learning by doing, together."
+        },
+        "local": {
+          "title": "Local connections",
+          "short": "Making room for nearby growers, makers and their stories."
+        }
+      },
+      "weather": {
+        "title": "Around Glenorie",
+        "loading": "Checking nearby conditions…",
+        "unavailable": "Weather is unavailable for now.",
+        "stale": "Showing the last available weather estimate.",
+        "estimated": "Nearby model estimate. Conditions may differ on site; this is not an on-site weather gauge.",
+        "source": "Weather data",
+        "temperature": "Temperature",
+        "wind": "Wind",
+        "rain": "Rain · next hour",
+        "time": "Sydney local time",
+        "day": "Daytime",
+        "night": "Night-time",
+        "asOf": "Estimate for",
+        "conditions": {
+          "clear": "Clear",
+          "cloudy": "Cloudy",
+          "fog": "Fog",
+          "drizzle": "Drizzle",
+          "rain": "Rain",
+          "freezingRain": "Freezing rain",
+          "snow": "Snow",
+          "showers": "Showers",
+          "snowShowers": "Snow showers",
+          "thunderstorm": "Thunderstorm",
+          "unknown": "Conditions unavailable"
+        }
+      },
+      "growth": {
+        "kicker": "THE COFFEE TRIAL",
+        "title": "A small beginning, a longer story.",
+        "intro": "Follow the coffee-growing story from its small beginnings. Explore the stages at your own pace, then turn to the dated trial notes for the latest reported progress.",
+        "actualLabel": "Reported trial stage",
+        "previewLabel": "Growth-stage illustration",
+        "resetActual": "Return to the reported stage",
+        "selectStage": "Choose a growing stage",
+        "seedTrack": "Trial started from seed",
+        "trialTrack": "Separate Paraíso trial",
+        "seedActual": "Seed starting is under way for IPR107, NR25 and Marsellesa.",
+        "trialActual": "The separate Paraíso trial has seedlings around 20 cm tall.",
+        "varietyNote": "NR25 is the supplied trial name; its identity is still being checked.",
+        "graftNote": "Grafting is an optional technique to explore with consultants, rather than a required step in this growing journey.",
+        "futureNote": "The scenes explore different growing stages. Dated trial notes record the reported progress separately; harvest timing depends on how the real plants develop.",
+        "observedOn": "Reported on",
+        "height": "Approximate seedling height",
+        "stages": {
+          "seed": {
+            "title": "Seed",
+            "body": "The seed is the starting point for this growing story. Explore the small beginning before the first emergence."
+          },
+          "germinating": {
+            "title": "Germination",
+            "body": "An illustration of a seed germinating as the growing story begins."
+          },
+          "seedling": {
+            "title": "Young plant",
+            "body": "Explore a young coffee plant in the nursery part of the growing story."
+          },
+          "grafting": {
+            "title": "Grafting · optional",
+            "body": "A separate propagation technique to explore with consultants, if suitable for the trial."
+          },
+          "growing": {
+            "title": "Growing",
+            "body": "Developing stems, branches and leaves, shown as an illustration of continued growth."
+          },
+          "flowering": {
+            "title": "Flowering",
+            "body": "Explore the flowering part of the coffee-growing cycle."
+          },
+          "cherries": {
+            "title": "Coffee cherries",
+            "body": "A coffee plant with developing fruit, shown to explore this part of the growing cycle."
+          },
+          "harvest": {
+            "title": "Harvest",
+            "body": "Explore the harvesting chapter. Timing and outcomes depend on the real plants and growing conditions."
+          }
+        },
+        "previousStage": "Previous growing stage",
+        "nextStage": "Next growing stage"
+      },
+      "thoughts": {
+        "cafe": {
+          "working": [
+            "A welcoming corner starts with care.",
+            "Room for one more conversation.",
+            "A little detail, a warmer welcome."
+          ],
+          "walking": [
+            "Let’s look at it from here.",
+            "Taking the path past the trees.",
+            "Another corner to think about."
+          ],
+          "planning": [
+            "Where would people like to gather?",
+            "Coffee, company, a little breathing room.",
+            "A good welcome takes preparation."
+          ],
+          "resting": [
+            "A quiet moment for a new idea.",
+            "Time to sit with the plans.",
+            "A little pause feels right."
+          ],
+          "lunch": [
+            "A little lunch, then back to the plans.",
+            "Good ideas can wait for a bite.",
+            "A break around the table."
+          ],
+          "night": [
+            "The little world can rest now.",
+            "More ideas in the morning.",
+            "A quiet night before the next step."
+          ]
+        },
+        "coffee": {
+          "working": [
+            "A small beginning deserves patience.",
+            "Keeping an eye on the little plants.",
+            "Another small observation to note."
+          ],
+          "walking": [
+            "A slow walk past the nursery.",
+            "Let’s take a closer look.",
+            "Following the growing story."
+          ],
+          "planning": [
+            "Which small change shall we watch?",
+            "Good notes help us keep learning.",
+            "One growing question at a time."
+          ],
+          "resting": [
+            "The plants have their own pace.",
+            "A pause, and a little patience.",
+            "Growing leaves time for looking."
+          ],
+          "lunch": [
+            "Time for the growers to take a break.",
+            "A little lunch between observations.",
+            "Back to the little plants after lunch."
+          ],
+          "night": [
+            "The nursery story can wait till morning.",
+            "A quiet night in the little world.",
+            "Tomorrow brings another look."
+          ]
+        },
+        "workshops": {
+          "working": [
+            "An idea is better with a little practice.",
+            "Making room for curious hands.",
+            "What could we learn together?"
+          ],
+          "walking": [
+            "A different corner, a different idea.",
+            "A little inspiration along the path.",
+            "Questions are welcome here."
+          ],
+          "planning": [
+            "Keep it simple. Make it hands-on.",
+            "What would a first session feel like?",
+            "A useful skill, shared generously."
+          ],
+          "resting": [
+            "Let that idea settle for a moment.",
+            "A little space for the next question.",
+            "Time to turn a thought over."
+          ],
+          "lunch": [
+            "A break makes room for fresh ideas.",
+            "Lunch first, more thinking later.",
+            "Good company around a little table."
+          ],
+          "night": [
+            "The workbench can rest.",
+            "Tomorrow, another idea to explore.",
+            "A quiet end to a curious day."
+          ]
+        },
+        "local": {
+          "working": [
+            "Every local story starts with listening.",
+            "Room for growers and makers.",
+            "Keeping the community in mind."
+          ],
+          "walking": [
+            "There are stories just around the corner.",
+            "A small path to a new connection.",
+            "Looking closer to home."
+          ],
+          "planning": [
+            "Who might like to be part of this?",
+            "How can we make space for local voices?",
+            "A thoughtful connection takes time."
+          ],
+          "resting": [
+            "A little listening, a little pause.",
+            "Good connections grow at their own pace.",
+            "Time to think about the bigger picture."
+          ],
+          "lunch": [
+            "A table is a good place to pause.",
+            "A bite, a chat, a little rest.",
+            "Taking time before the next idea."
+          ],
+          "night": [
+            "The little community is quiet tonight.",
+            "More conversations another day.",
+            "A peaceful night in our small world."
+          ]
+        }
+      }
+    },
+    "zh": {
+      "lang": "zh-Hant",
+      "metaTitle": "四個方向，慢慢成形",
+      "metaDescription": "一起看看 The Glenolia 正在籌備的四個方向：咖啡館與農場體驗、咖啡種植、實作工作坊及在地連結。認識咖啡試種的起點，也看看接下來的工作。",
+      "kicker": "THE GLENOLIA · 迎賓之前的準備",
+      "title": "四個方向，一起慢慢生長。",
+      "intro": "走近我們正在籌備的事，看看下一步，也分享值得記下的小進展。選擇小世界裡的一個區域，認識各個方向的準備。",
+      "breadcrumbHome": "首頁",
+      "breadcrumbProgress": "成長進度",
+      "breadcrumbCurrent": "籌備方向",
+      "now": "目前",
+      "next": "下一個里程碑",
+      "done": "已完成的里程碑",
+      "noDone": "目前尚未發布已完成的籌備里程碑。",
+      "departmentsTitle": "四個方向，一起成形。",
+      "departmentsIntro": "每個方向都有自己的準備工作。我們會在進展確認後，分享目前的工作與下一步。",
+      "viewDepartment": "了解這個方向",
+      "viewAllDepartments": "看看四個方向",
+      "overview": "看看整個小世界",
+      "updatesTitle": "籌備小記",
+      "updatesIntro": "把已確認的進展，按日期慢慢記下來。",
+      "latestUpdate": "最新消息",
+      "updatedOn": "更新日期",
+      "updatesAvailable": "有新的籌備消息",
+      "updatesLoading": "正在整理最新的籌備小記……",
+      "updatesUnavailable": "暫時無法載入最新消息。下方仍可閱讀已發布的籌備概況。",
+      "noUpdates": "有確認的新進展時，我們會再分享。",
+      "reportedByOwner": "由項目負責人提供的近況",
+      "subscribeKicker": "一起留意，慢慢成長",
+      "subscribeTitle": "讓小消息，陪你認識這個地方。",
+      "subscribeBody": "接收不定期的項目近況、活動籌備消息，以及確認後的到訪資訊。",
+      "subscribeButton": "登記接收消息",
+      "progressLink": "看看四個籌備方向",
+      "progressLinkBody": "從咖啡種植到第一次迎賓，認識小世界背後的四個方向。",
+      "homeEntryKicker": "小世界 · 四個籌備方向",
+      "homeEntryTitle": "一起看看，正在成形的事。",
+      "homeEntryBody": "走近四個籌備中的方向，也從一個小起點，認識咖啡種植的故事。",
+      "homeEntryButton": "探索籌備方向",
+      "worldCaption": "這個概念小世界，呈現我們正在發展的籌備方向。",
+      "staffCaption": "用輕鬆的日常與心裡話，讓籌備故事動起來。",
+      "thoughtsLabel": "小團隊的心裡話",
+      "sceneControls": "小世界操作",
+      "pause": "暫停動畫",
+      "resume": "繼續動畫",
+      "reset": "回到原來視角",
+      "loading": "小世界正在慢慢出現……",
+      "fallback": "即使無法顯示 3D 場景，仍可在下方閱讀完整的籌備近況與生長階段。",
+      "drag": "拖曳，換個角度看看",
+      "day": "白天",
+      "night": "夜晚",
+      "statusLabels": {
+        "planning": "籌備中",
+        "developing": "逐步成形",
+        "trialling": "試驗進行中",
+        "ready": "準備就緒"
+      },
+      "departments": {
+        "cafe": {
+          "title": "咖啡館與農場體驗",
+          "short": "一杯咖啡、一段交流，以及親近土地的時光。"
+        },
+        "coffee": {
+          "title": "咖啡種植",
+          "short": "從種子與幼苗開始，耐心觀察。"
+        },
+        "workshops": {
+          "title": "實作工作坊",
+          "short": "一起動手學習的想法，慢慢醞釀。"
+        },
+        "local": {
+          "title": "在地連結",
+          "short": "為附近農友、職人與他們的故事，留一個位置。"
+        }
+      },
+      "weather": {
+        "title": "Glenorie 附近",
+        "loading": "正在查看附近的天氣……",
+        "unavailable": "暫時無法取得天氣資訊。",
+        "stale": "目前顯示最近一次取得的天氣估算。",
+        "estimated": "附近地區的天氣模型估算，可能與現場不同；並非場內氣象儀的讀數。",
+        "source": "天氣資料",
+        "temperature": "氣溫",
+        "wind": "風速",
+        "rain": "未來1小時雨量",
+        "time": "雪梨當地時間",
+        "day": "白天",
+        "night": "夜間",
+        "asOf": "估算時間",
+        "conditions": {
+          "clear": "晴朗",
+          "cloudy": "多雲",
+          "fog": "有霧",
+          "drizzle": "毛毛雨",
+          "rain": "下雨",
+          "freezingRain": "凍雨",
+          "snow": "下雪",
+          "showers": "陣雨",
+          "snowShowers": "陣雪",
+          "thunderstorm": "雷雨",
+          "unknown": "暫無天氣狀況"
+        }
+      },
+      "growth": {
+        "kicker": "咖啡種植試驗",
+        "title": "從小小起點，認識長長的故事。",
+        "intro": "從小小起點，慢慢認識咖啡的生長故事。自由看看各個階段，再透過附有日期的試種小記，了解最近回報的實際進展。",
+        "actualLabel": "已回報的試種階段",
+        "previewLabel": "生長階段示意",
+        "resetActual": "回到已回報的階段",
+        "selectStage": "選擇生長階段",
+        "seedTrack": "從種子起步的試種",
+        "trialTrack": "獨立的 Paraíso 試種",
+        "seedActual": "IPR107、NR25 與 Marsellesa 正從種子開始培育。",
+        "trialActual": "另行進行的 Paraíso 試種，幼苗約有 20 公分高。",
+        "varietyNote": "NR25 是目前提供的試種名稱，品種身分仍待釐清。",
+        "graftNote": "嫁接是可與顧問探討的繁殖選項，並非這段生長過程的必經階段。",
+        "futureNote": "這些場景用來認識各個生長階段。實際進度另以附有日期的試種小記記錄；採收時機須視真正植株的生長情況而定。",
+        "observedOn": "回報日期",
+        "height": "幼苗約高",
+        "stages": {
+          "seed": {
+            "title": "種子",
+            "body": "種子是這段生長故事的起點。看看初芽萌發之前，小小的開始。"
+          },
+          "germinating": {
+            "title": "發芽",
+            "body": "用示意場景看看種子萌發，認識生長故事展開的模樣。"
+          },
+          "seedling": {
+            "title": "幼苗",
+            "body": "走近一株咖啡幼苗，認識生長故事裡的育苗階段。"
+          },
+          "grafting": {
+            "title": "嫁接 · 探索選項",
+            "body": "一種可與顧問另行探討的繁殖方式，再視試種需要評估是否合適。"
+          },
+          "growing": {
+            "title": "生長",
+            "body": "透過示意場景，看看莖、枝條與葉片持續生長的模樣。"
+          },
+          "flowering": {
+            "title": "開花",
+            "body": "一起認識咖啡生長週期裡的開花階段。"
+          },
+          "cherries": {
+            "title": "咖啡果實",
+            "body": "用示意場景看看咖啡植株結果的模樣，認識生長週期的這一個篇章。"
+          },
+          "harvest": {
+            "title": "採收",
+            "body": "看看採收這個篇章。實際時機與結果，須視植株生長與現場條件而定。"
+          }
+        },
+        "previousStage": "上一個生長階段",
+        "nextStage": "下一個生長階段"
+      },
+      "thoughts": {
+        "cafe": {
+          "working": [
+            "一個溫暖角落，從用心開始。",
+            "多留一點空間，給自在的交流。",
+            "小小細節，讓迎賓更溫暖。"
+          ],
+          "walking": [
+            "換個角度，再看看。",
+            "走一段樹旁的小路。",
+            "這個角落，也值得想一想。"
+          ],
+          "planning": [
+            "大家會喜歡在哪裡相聚呢？",
+            "咖啡、陪伴，再留一點自在。",
+            "好的迎賓，需要慢慢準備。"
+          ],
+          "resting": [
+            "安靜一下，新想法也許就來了。",
+            "坐一坐，陪計畫慢慢成形。",
+            "小小休息，剛剛好。"
+          ],
+          "lunch": [
+            "先吃午餐，再回來看看計畫。",
+            "好想法，也可以等一口飯的時間。",
+            "圍著桌子，休息一下。"
+          ],
+          "night": [
+            "小世界也該休息了。",
+            "新的想法，明天再繼續。",
+            "安靜一晚，再走下一步。"
+          ]
+        },
+        "coffee": {
+          "working": [
+            "小小起點，值得耐心照顧。",
+            "再看看這些小植株。",
+            "又有一個小觀察，可以記下來。"
+          ],
+          "walking": [
+            "慢慢走過育苗區。",
+            "靠近一點，仔細看看。",
+            "沿著種植的故事走一走。"
+          ],
+          "planning": [
+            "下一個小變化，會是什麼呢？",
+            "把觀察記好，才能繼續學習。",
+            "一次，想清楚一個種植問題。"
+          ],
+          "resting": [
+            "植株有自己的步調。",
+            "停一下，再多一點耐心。",
+            "慢慢生長，也慢慢觀察。"
+          ],
+          "lunch": [
+            "種植的小夥伴，也要休息一下。",
+            "兩次觀察之間，吃個午餐。",
+            "午餐後，再回來看看小植株。"
+          ],
+          "night": [
+            "育苗的故事，明早再看。",
+            "小世界裡，安靜的一晚。",
+            "明天，再仔細看一看。"
+          ]
+        },
+        "workshops": {
+          "working": [
+            "有些想法，要動手才更清楚。",
+            "為好奇的雙手，留一點空間。",
+            "我們可以一起學什麼呢？"
+          ],
+          "walking": [
+            "換個角落，也換個想法。",
+            "沿著小路，找一點靈感。",
+            "這裡，歡迎每一個問題。"
+          ],
+          "planning": [
+            "簡單一點，也更能動手參與。",
+            "第一次的活動，會是什麼模樣？",
+            "把實用的小技能，好好分享。"
+          ],
+          "resting": [
+            "先讓這個想法，慢慢沉澱。",
+            "留一點空間，給下一個問題。",
+            "讓念頭轉一轉，不必急。"
+          ],
+          "lunch": [
+            "休息一下，為新想法留個位置。",
+            "先吃午餐，之後再慢慢想。",
+            "小桌旁，有陪伴就很好。"
+          ],
+          "night": [
+            "工作檯，也可以休息了。",
+            "明天，再探索一個新想法。",
+            "帶著好奇心，安靜結束這一天。"
+          ]
+        },
+        "local": {
+          "working": [
+            "認識在地故事，先從聆聽開始。",
+            "為農友與職人，留一個位置。",
+            "一直把社區，放在心裡。"
+          ],
+          "walking": [
+            "轉個彎，也許就有新故事。",
+            "一條小路，通往新的連結。",
+            "多看看，就在我們身邊的事。"
+          ],
+          "planning": [
+            "誰會想一起參與呢？",
+            "怎樣讓更多在地聲音被聽見？",
+            "用心的連結，需要一點時間。"
+          ],
+          "resting": [
+            "聽一聽，也停一停。",
+            "好的連結，有自己的步調。",
+            "慢慢想想，更大的那幅風景。"
+          ],
+          "lunch": [
+            "一張桌子，也是休息的好地方。",
+            "吃一口、聊一聊，再歇一會。",
+            "下一個想法之前，先好好休息。"
+          ],
+          "night": [
+            "今晚，小小社區靜下來了。",
+            "更多的交流，留待另一天。",
+            "讓小世界，過一個安靜的夜。"
+          ]
+        }
+      }
+    },
+    "ja": {
+      "lang": "ja",
+      "metaTitle": "4つの取り組み、少しずつかたちに",
+      "metaDescription": "The Glenoliaで準備を進めている、カフェと農場体験、コーヒー栽培、体験ワークショップ、地域とのつながり。栽培試験のいまの様子と、次の一歩をご紹介します。",
+      "kicker": "THE GLENOLIA · お迎えするまでの日々",
+      "title": "4つの取り組みが、ひとつの場所に。",
+      "intro": "いま準備していること、次に目指すこと、そしてお伝えしたい小さな一歩。小さな世界の気になるエリアから、それぞれの取り組みをのぞいてみませんか。",
+      "breadcrumbHome": "ホーム",
+      "breadcrumbProgress": "これからの歩み",
+      "breadcrumbCurrent": "取り組み",
+      "now": "いま",
+      "next": "次の節目",
+      "done": "完了した節目",
+      "noDone": "完了した取り組みの節目は、まだ掲載されていません。",
+      "departmentsTitle": "4つの取り組みが、ともに育つ。",
+      "departmentsIntro": "それぞれのエリアで準備を進めていきます。実際の進展が確認できたら、いまの作業と次の一歩をお伝えします。",
+      "viewDepartment": "この取り組みを見る",
+      "viewAllDepartments": "4つの取り組みを見る",
+      "overview": "小さな世界を見渡す",
+      "updatesTitle": "準備の日々から",
+      "updatesIntro": "確認できた進展を、日付とともにお伝えします。",
+      "latestUpdate": "最新のお知らせ",
+      "updatedOn": "更新日",
+      "updatesAvailable": "新しい近況を公開しました",
+      "updatesLoading": "最新の取り組みを確認しています…",
+      "updatesUnavailable": "最新のお知らせを読み込めませんでした。公開済みの概要は、下でご覧いただけます。",
+      "noUpdates": "新しい一歩を確認できたら、またお知らせします。",
+      "reportedByOwner": "プロジェクト責任者からの近況",
+      "subscribeKicker": "この場所の、これからを",
+      "subscribeTitle": "育っていく場所から、小さなお便り。",
+      "subscribeBody": "準備の近況やプログラムのお知らせ、確定した来訪のご案内を、不定期でお届けします。",
+      "subscribeButton": "お知らせを受け取る",
+      "progressLink": "4つの取り組みを見る",
+      "progressLinkBody": "コーヒー栽培から最初のお迎えまで。小さな世界を支える4つの取り組みをご紹介します。",
+      "homeEntryKicker": "小さな世界 · 4つの取り組み",
+      "homeEntryTitle": "少しずつかたちになる日々へ。",
+      "homeEntryBody": "準備中の4つの取り組みと、小さな一歩から始まるコーヒー栽培の物語をのぞいてみませんか。",
+      "homeEntryButton": "取り組みを見てみる",
+      "worldCaption": "準備を進めている取り組みを描いた、小さな世界のイメージです。",
+      "staffCaption": "小さな日常とつぶやきで、準備の物語を楽しく描きます。",
+      "thoughtsLabel": "小さな仲間のつぶやき",
+      "sceneControls": "小さな世界の操作",
+      "pause": "アニメーションを止める",
+      "resume": "アニメーションを再開",
+      "reset": "視点を戻す",
+      "loading": "小さな世界を準備しています…",
+      "fallback": "3Dシーンが表示できない場合も、すべての取り組みと生育段階の説明を下でお読みいただけます。",
+      "drag": "ドラッグして、別の角度から",
+      "day": "昼",
+      "night": "夜",
+      "statusLabels": {
+        "planning": "準備中",
+        "developing": "少しずつ具体化",
+        "trialling": "試験を進めています",
+        "ready": "準備が整いました"
+      },
+      "departments": {
+        "cafe": {
+          "title": "カフェと農場体験",
+          "short": "コーヒーと会話、土地を身近に感じる時間。"
+        },
+        "coffee": {
+          "title": "コーヒー栽培",
+          "short": "種と若い苗から、じっくり観察する日々。"
+        },
+        "workshops": {
+          "title": "体験ワークショップ",
+          "short": "ともに手を動かし、学ぶためのアイデア。"
+        },
+        "local": {
+          "title": "地域とのつながり",
+          "short": "近くの生産者や作り手、その物語のために。"
+        }
+      },
+      "weather": {
+        "title": "Glenorie周辺",
+        "loading": "近くの天気を確認しています…",
+        "unavailable": "現在、天気を取得できません。",
+        "stale": "最後に取得した天気の推定値を表示しています。",
+        "estimated": "周辺地域の気象モデルによる推定です。現地の状況とは異なる場合があり、園内の気象計による測定値ではありません。",
+        "source": "気象データ",
+        "temperature": "気温",
+        "wind": "風速",
+        "rain": "今後1時間の雨量",
+        "time": "シドニー現地時間",
+        "day": "昼間",
+        "night": "夜間",
+        "asOf": "推定時刻",
+        "conditions": {
+          "clear": "晴れ",
+          "cloudy": "曇り",
+          "fog": "霧",
+          "drizzle": "霧雨",
+          "rain": "雨",
+          "freezingRain": "着氷性の雨",
+          "snow": "雪",
+          "showers": "にわか雨",
+          "snowShowers": "にわか雪",
+          "thunderstorm": "雷雨",
+          "unknown": "天候を取得できません"
+        }
+      },
+      "growth": {
+        "kicker": "コーヒー栽培試験",
+        "title": "小さな始まりから、長い物語へ。",
+        "intro": "コーヒーが育つ道のりを、小さな始まりからたどってみませんか。気になる生育段階を自由に眺めながら、実際の進捗は日付付きの試験の近況でご覧ください。",
+        "actualLabel": "報告された試験の段階",
+        "previewLabel": "生育段階のイメージ",
+        "resetActual": "報告された段階に戻る",
+        "selectStage": "生育段階を選ぶ",
+        "seedTrack": "種から始めた試験",
+        "trialTrack": "別に進めるParaísoの試験",
+        "seedActual": "IPR107、NR25、Marsellesaは、種から育て始めています。",
+        "trialActual": "別に進めているParaísoの試験では、苗の高さは約20cmです。",
+        "varietyNote": "NR25は提供された試験名で、品種の正確な情報は引き続き確認中です。",
+        "graftNote": "接ぎ木は、コンサルタントと検討できる繁殖方法のひとつです。生育のために必ず通る段階ではありません。",
+        "futureNote": "各シーンは、生育段階を知るためのイメージです。実際の進捗は日付付きの試験の近況でお伝えします。収穫の時期や見通しは、実際の生育状況を踏まえて判断します。",
+        "observedOn": "報告日",
+        "height": "苗のおおよその高さ",
+        "stages": {
+          "seed": {
+            "title": "種",
+            "body": "種は、この生育の物語の出発点です。最初の芽が出る前の、小さな始まりをご覧ください。"
+          },
+          "germinating": {
+            "title": "発芽",
+            "body": "種から芽が出て、育つ物語が始まる様子を描いています。"
+          },
+          "seedling": {
+            "title": "苗",
+            "body": "若いコーヒーの苗を眺めながら、育苗の段階をたどってみましょう。"
+          },
+          "grafting": {
+            "title": "接ぎ木 · 検討の選択肢",
+            "body": "試験に適しているかを、コンサルタントと別途検討できる繁殖技術です。"
+          },
+          "growing": {
+            "title": "生育",
+            "body": "茎や枝、葉が育っていく様子を、生育のイメージとして描いています。"
+          },
+          "flowering": {
+            "title": "開花",
+            "body": "コーヒーの生育サイクルの、花が咲く段階をご覧ください。"
+          },
+          "cherries": {
+            "title": "コーヒーチェリー",
+            "body": "コーヒーの木に実が育つ様子を描き、生育サイクルのこの章をご紹介します。"
+          },
+          "harvest": {
+            "title": "収穫",
+            "body": "収穫の章をご覧ください。実際の時期や結果は、植物の生育と現地の条件によって異なります。"
+          }
+        },
+        "previousStage": "前の生育段階",
+        "nextStage": "次の生育段階"
+      },
+      "thoughts": {
+        "cafe": {
+          "working": [
+            "心地よい一角は、小さな気配りから。",
+            "もうひとつ、会話のための余白を。",
+            "小さな工夫で、あたたかいお迎えを。"
+          ],
+          "walking": [
+            "ここからも、眺めてみよう。",
+            "木のそばの小道を、ひと回り。",
+            "この一角にも、考えることがありそう。"
+          ],
+          "planning": [
+            "みんなは、どこで集いたいだろう。",
+            "コーヒーと会話に、少しのゆとり。",
+            "よいお迎えには、準備の時間。"
+          ],
+          "resting": [
+            "静かな時間に、新しいアイデアを。",
+            "少し座って、計画を眺めよう。",
+            "ひと息つくのも、大事な時間。"
+          ],
+          "lunch": [
+            "お昼を食べたら、また計画を見よう。",
+            "いいアイデアも、ひと口のあとで。",
+            "テーブルを囲んで、ひと休み。"
+          ],
+          "night": [
+            "小さな世界も、おやすみの時間。",
+            "新しいアイデアは、また朝に。",
+            "次の一歩の前に、静かな夜を。"
+          ]
+        },
+        "coffee": {
+          "working": [
+            "小さな始まりを、じっくり見守ろう。",
+            "小さな苗を、もう一度見てみよう。",
+            "気づいたことを、ひとつメモ。"
+          ],
+          "walking": [
+            "苗のそばを、ゆっくりひと回り。",
+            "もう少し近くで、見てみよう。",
+            "育っていく物語を、たどりながら。"
+          ],
+          "planning": [
+            "次は、どんな変化に注目しよう。",
+            "観察のメモが、次の学びに。",
+            "育てる問いを、ひとつずつ。"
+          ],
+          "resting": [
+            "植物には、植物のペースがある。",
+            "ひと息ついて、ゆっくり待とう。",
+            "育つ時間は、見つめる時間。"
+          ],
+          "lunch": [
+            "育てる仲間も、ひと休み。",
+            "観察の合間に、お昼の時間。",
+            "お昼のあとで、また苗を見に行こう。"
+          ],
+          "night": [
+            "苗の物語は、また朝に。",
+            "小さな世界に、静かな夜。",
+            "明日も、じっくり眺めてみよう。"
+          ]
+        },
+        "workshops": {
+          "working": [
+            "アイデアは、手を動かすと育つ。",
+            "好奇心いっぱいの手に、場所を。",
+            "一緒なら、何を学べるだろう。"
+          ],
+          "walking": [
+            "場所を変えると、見方も変わる。",
+            "小道の途中で、小さなひらめき。",
+            "どんな質問も、持ち寄って。"
+          ],
+          "planning": [
+            "シンプルに、手を動かせるように。",
+            "最初の体験は、どんな時間にしよう。",
+            "役立つ小さな技を、分かち合おう。"
+          ],
+          "resting": [
+            "そのアイデアを、少し寝かせよう。",
+            "次の問いのために、少しの余白。",
+            "考えをゆっくり、転がす時間。"
+          ],
+          "lunch": [
+            "ひと休みすると、新しい考えも。",
+            "お昼のあとで、また考えよう。",
+            "小さなテーブルに、仲間がいる。"
+          ],
+          "night": [
+            "作業台も、おやすみの時間。",
+            "明日は、またひとつ探ってみよう。",
+            "好奇心を胸に、静かな一日の終わり。"
+          ]
+        },
+        "local": {
+          "working": [
+            "地域の物語は、耳を傾けることから。",
+            "生産者や作り手のための場所を。",
+            "いつも、地域のことを心に。"
+          ],
+          "walking": [
+            "角を曲がれば、まだ知らない物語。",
+            "小さな道から、新しいつながりへ。",
+            "身近な場所を、もう少しよく見よう。"
+          ],
+          "planning": [
+            "一緒に関わりたい人は、いるかな。",
+            "地域の声が届く場所にするには。",
+            "大切なつながりは、時間をかけて。"
+          ],
+          "resting": [
+            "少し聞いて、少しひと息。",
+            "つながりにも、それぞれのペース。",
+            "広い景色を、ゆっくり考えよう。"
+          ],
+          "lunch": [
+            "テーブルは、ひと息つける場所。",
+            "ひと口、ひと言、少しの休憩。",
+            "次のアイデアの前に、ひと休み。"
+          ],
+          "night": [
+            "今夜、小さな地域は静かです。",
+            "続きのおしゃべりは、またの日に。",
+            "小さな世界に、おだやかな夜を。"
+          ]
+        }
+      }
+    }
+  },
+  "initial": {
+    "version": 1,
+    "updatedAt": "2026-10-17",
+    "departments": {
+      "cafe": {
+        "status": "planning",
+        "translations": {
+          "en": {
+            "now": "Programme details for the café and farm experiences are being developed. The café is planned as vegetarian, with eggs, dairy and honey allowed.",
+            "next": "Share a confirmed first programme outline and the practical details visitors will need.",
+            "done": []
+          },
+          "zh": {
+            "now": "咖啡館與農場體驗的內容仍在籌備中。咖啡館採素食方向，允許使用蛋、乳製品與蜂蜜。",
+            "next": "在確認後分享第一份活動方向，以及訪客需要的實際資訊。",
+            "done": []
+          },
+          "ja": {
+            "now": "カフェと農場体験のプログラムを検討しています。カフェはベジタリアンの方針で、卵・乳製品・はちみつは使用します。",
+            "next": "最初のプログラム概要と来訪に必要な情報を、確定後にお知らせします。",
+            "done": []
+          }
+        }
+      },
+      "coffee": {
+        "status": "trialling",
+        "translations": {
+          "en": {
+            "now": "Seed starting is under way for IPR107, NR25 and Marsellesa. Paraíso is a separate early trial, with seedlings around 20 cm tall. John Ou is leading the trial with plantation consultants.",
+            "next": "Record germination and early growth observations, and share the next dated trial update.",
+            "done": []
+          },
+          "zh": {
+            "now": "IPR107、NR25 與 Marsellesa 正從種子開始培育。Paraíso 是另行進行的早期試種，幼苗約有 20 公分高。John Ou 主導試種，並與咖啡種植顧問合作。",
+            "next": "記錄發芽與初期生長的實際觀察，再分享下一則附有日期的試種近況。",
+            "done": []
+          },
+          "ja": {
+            "now": "IPR107、NR25、Marsellesaは、種から育て始めています。Paraísoは別に進めている初期試験で、苗の高さは約20cmです。John Ouが栽培コンサルタントとともに試験を進めています。",
+            "next": "発芽や初期の生育を観察・記録し、次の試験の近況を日付とともにお伝えします。",
+            "done": []
+          }
+        }
+      },
+      "workshops": {
+        "status": "planning",
+        "translations": {
+          "en": {
+            "now": "The workshop programme is being developed for people who enjoy learning by doing. Topics, session formats and visiting details are still being prepared.",
+            "next": "Confirm an initial workshop outline before announcing any sessions.",
+            "done": []
+          },
+          "zh": {
+            "now": "我們正為喜歡動手學習的人，籌備實作工作坊。主題、活動方式與到訪資訊仍在準備中。",
+            "next": "先確認第一份工作坊內容，再公布場次。",
+            "done": []
+          },
+          "ja": {
+            "now": "手を動かして学ぶことが好きな方に向け、ワークショップを検討しています。テーマ、進め方、来訪のご案内は準備中です。",
+            "next": "最初のワークショップ内容を確定してから、開催のご案内をお知らせします。",
+            "done": []
+          }
+        }
+      },
+      "local": {
+        "status": "planning",
+        "translations": {
+          "en": {
+            "now": "We are developing the local-connections programme and welcoming interest from nearby growers, makers and providers. Participants and products will be introduced once confirmed.",
+            "next": "Review expressions of interest as they arrive and shape the first confirmed local collaboration.",
+            "done": []
+          },
+          "zh": {
+            "now": "在地連結的內容仍在籌備中，也歡迎附近農友、職人與供應商表達合作意願。參與者及產品將在確認後介紹。",
+            "next": "了解各方提出的合作意向，再逐步籌備第一個確認的在地合作。",
+            "done": []
+          },
+          "ja": {
+            "now": "地域とのつながりを育むプログラムを検討しています。近くの生産者や作り手、事業者の皆さまからのご連絡をお待ちしています。参加する方々や商品は、確認でき次第ご紹介します。",
+            "next": "参加に関心のある方の声を聞き、最初の地域との協力を具体化していきます。",
+            "done": []
+          }
+        }
+      }
+    },
+    "coffee": {
+      "seedVarieties": [
+        "IPR107",
+        "NR25",
+        "Marsellesa"
+      ],
+      "seedStage": "seed",
+      "trialName": "Paraíso",
+      "trialStage": "seedling",
+      "heightCm": 20,
+      "observedOn": "2026-10-17"
+    }
+  }
+}

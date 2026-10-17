@@ -6,7 +6,8 @@
   "newsletterReady": true,
   "contactEmail": "info@theglenolia.com.au",
   "openingTarget": "2027-09",
-  "updated": "2026-10-15",
+  "updated": "2026-10-17",
   "partnerEmail": "partner@theglenolia.com.au",
-  "adminUrl": "https://glenolia-admin.theglenolia.workers.dev"
+  "adminUrl": "https://glenolia-admin.theglenolia.workers.dev",
+  "programmeApiOrigin": "https://glenolia-newsletter.theglenolia.workers.dev"
 }

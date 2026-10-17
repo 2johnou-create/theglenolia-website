@@ -23,7 +23,7 @@ jobs:
           node-version: '24'
       - run: npm ci --ignore-scripts
       - run: node integrations/build-admin.mjs
-      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs
+      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs src/progress/programme-time.test.mjs
       - run: python scripts/build.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
@@ -32,6 +32,9 @@ jobs:
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
       - run: python scripts/audit-progress.py
+        env:
+          SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
+      - run: python scripts/audit-programmes.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}
       - uses: actions/configure-pages@v5

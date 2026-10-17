@@ -1,6 +1,8 @@
+import programmeSeed from '../programme-content.json' with {type:'json'};
+import {fetchProgramme,saveProgramme,publishProgramme} from './programme-store.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
-import {html,css,js} from './admin-assets.mjs';
+import {html,css,js,programmeJs} from './admin-assets.mjs';
 import {runOwnerNotifications} from './owner-notifications.mjs';
 const localeKeys={'en-AU':'EN','zh-Hant':'ZH',ja:'JA'};
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
@@ -83,13 +85,25 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  // Runtime-provided Access identity; never trust caller-supplied email/JWT headers.
  if(!env.ACCESS_AUD||!ctx?.access||ctx.access.aud!==env.ACCESS_AUD)return json(403,{error:'access_required'});
  let identity;try{identity=await ctx.access.getIdentity();}catch{return json(403,{error:'access_required'});}
- if(identity?.email?.toLowerCase()!==env.ADMIN_EMAIL?.toLowerCase())return json(403,{error:'owner_required'});
+ const configuredOwner=env.ADMIN_EMAIL,identityEmail=identity?.email;
+ if(typeof configuredOwner!=='string'||!configuredOwner.trim()||typeof identityEmail!=='string'||!identityEmail.trim()||identityEmail.toLowerCase()!==configuredOwner.toLowerCase())return json(403,{error:'owner_required'});
  const url=new URL(request.url),path=url.pathname;
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
- if(request.method==='GET'&&['/','/admin.css','/admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
+ if(request.method==='GET'&&['/','/admin.css','/admin.js','/programme-admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:path==='/programme-admin.js'?programmeJs:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
  if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true',ownerNotificationsEnabled:env.OWNER_NOTIFICATIONS_ENABLED==='true'});
+ if(['/api/programme','/api/programme/save','/api/programme/publish'].includes(path)){
+  if(!env.DB)return json(503,{error:'programme_unavailable'});
+  try{
+   const options={actor:identity.email,initial:programmeSeed.initial};
+   if(path==='/api/programme'&&request.method==='GET')return json(200,await fetchProgramme(env.DB,programmeSeed.initial));
+   const body=await readJson(request);if(!body)return json(400,{error:'invalid'});
+   if(path==='/api/programme/save'&&request.method==='POST')return json(200,await saveProgramme(env.DB,body,options));
+   if(path==='/api/programme/publish'&&request.method==='POST')return json(200,await publishProgramme(env.DB,{...options,expectedRevision:body.expectedRevision}));
+   return json(405,{error:'method'});
+  }catch(error){return json(error.status||503,{error:error.code||'programme_unavailable'});}
+ }
  if(!env.BREVO_API_KEY||!env.DB||!positive(env.BREVO_LIST_ID))return json(503,{error:'not_connected'});
  try{
   if(path==='/api/subscribers'&&request.method==='GET'){
