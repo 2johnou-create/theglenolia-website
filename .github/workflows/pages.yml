@@ -23,7 +23,7 @@ jobs:
           node-version: '24'
       - run: npm ci --ignore-scripts
       - run: node integrations/build-admin.mjs
-      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs integrations/programme-translation.test.mjs src/progress/programme-time.test.mjs
+      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs integrations/programme-translation.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs
       - run: python scripts/build.py
         env:
           SITE_BASE_PATH: ${{ vars.SITE_BASE_PATH }}

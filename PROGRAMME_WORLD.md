@@ -150,6 +150,15 @@ attendance, surveillance, actual construction records or an approved spatial
 plan. DA approved remains the separately confirmed physical-development stage;
 September 2027 remains a target opening.
 
+At night, each department has a stand with a local pool of light. The illustrated
+workers visit its switch as they arrive or finish, share lights while another
+worker is still in the area, and leave a short afterglow before an empty area
+goes dark. Lane lamps remain safety lighting. Night garden visits focus on
+inspection; rain suppresses the watering routine. These are local character
+routines, with no connection to real people, switches or attendance records.
+The existing pause and reduced-motion controls apply to movement and light
+transitions.
+
 ## Sydney time and weather
 
 The clock always uses `Australia/Sydney`, including daylight-saving changes.

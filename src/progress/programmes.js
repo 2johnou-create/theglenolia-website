@@ -99,12 +99,13 @@ function thoughts(actors){
  const bucket=Math.floor(Date.now()/8500),visible=actors.filter(a=>a.visible&&(state.department==='all'||a.department===state.department));
  if(!visible.length){bubble.hidden=true;return;}
  if(bucket!==bubbleBucket){bubbleBucket=bucket;bubbleActor=visible[Math.floor(Math.random()*visible.length)].id;}
- const actor=visible.find(a=>a.id===bubbleActor)||visible[0],activity=({measuring:'working',writing:'working',watering:'working',selecting:'working',closing:'night'})[actor.activity]||actor.activity;
+ const switching=visible.find(a=>a.activity==='switching');
+ const actor=switching||visible.find(a=>a.id===bubbleActor)||visible[0],activity=({measuring:'working',writing:'working',watering:'working',selecting:'working',checking:'working',closing:'night'})[actor.activity]||actor.activity;
  const key=actor.id+':'+activity+':'+bucket;
- if(key!==bubbleKey){bubbleKey=key;const choices=c.thoughts[actor.department]?.[activity]||c.thoughts[actor.department].planning;bubble.querySelector('span').textContent=choices[Math.floor(Math.random()*choices.length)];}
+ if(key!==bubbleKey){bubbleKey=key;const choices=activity==='switching'&&c.lightingThoughts?.length?c.lightingThoughts:c.thoughts[actor.department]?.[activity]||c.thoughts[actor.department].planning;bubble.querySelector('span').textContent=choices[Math.floor(Math.random()*choices.length)];}
  const edge=innerWidth<600?95:120,w=canvas.parentElement.clientWidth;
  bubble.style.left=Math.max(edge,Math.min(w-edge,actor.x))+'px';bubble.style.top=Math.max(100,actor.y-8)+'px';
- bubble.hidden=Date.now()%8500>6800;
+ bubble.hidden=!switching&&Date.now()%8500>6800;
 }
 function fail(){document.body.classList.remove('programme-has-world');root.classList.remove('is-interactive','is-loading');$('[data-programme-loading]').hidden=true;$('[data-programme-fallback]').hidden=false;}
 function focus(id){

@@ -163,6 +163,7 @@ for key,(lang,prefix) in LOCALES.items():
     c = DATA['copy'][key]
     check(set(c) == set(DATA['copy']['en']) and c['lang'] == lang, key+': incomplete or wrong localized copy')
     check(set(c['clock']) == {'label','place'} and all(c['clock'].values()), key+': analogue clock labels missing')
+    check(isinstance(c['lightingThoughts'],list) and len(c['lightingThoughts'])>=2 and all(isinstance(s,str) and s.strip() for s in c['lightingThoughts']), key+': localized light-switching thoughts missing')
     check(list(c['departments']) == IDS, key+': department names missing')
     check(list(c['growth']['stages']) == GROWTH, key+': optional growth stages missing/order changed')
     check(set(c['statusLabels']) == {'planning','developing','trialling','ready'}, key+': status labels incomplete')

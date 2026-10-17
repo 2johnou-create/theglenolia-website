@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {createProgrammeNightBehavior,departmentLightStations} from './programme-night.js';
 
 // An original planning miniature. Its clock, characters and growth previews never
 // establish the real work, attendance, planting or programme status of the farm.
@@ -184,33 +185,26 @@ function batchStatic(root,dynamicRoots) {
   }
   remove.forEach(object=>object.removeFromParent());
 }
-function updateActor(actor,delta,time,environment) {
-  const night=!environment.isDay,isLunch=environment.hour>=11.5&&environment.hour<13.5;
-  const station=actor.route[actor.index];
-  if(actor.wait>0){
-    actor.wait=Math.max(0,actor.wait-delta*(night?.35:1));actor.activity=night?'resting':station.activity==='resting'&&isLunch?'lunch':station.activity;
-    actor.root.rotation.y=angleTowards(actor.root.rotation.y,station.face,delta*7);
-  } else {
-    const next=(actor.index+1)%actor.route.length,target=actor.route[next],dx=target.x-actor.root.position.x,dz=target.z-actor.root.position.z,distance=Math.hypot(dx,dz),step=delta*actor.speed*(night?.35:1);
-    actor.activity='walking';
-    if(distance<=step){actor.root.position.set(target.x,.43,target.z);actor.index=next;actor.wait=target.hold;actor.activity=night?'resting':target.activity;}
-    else {actor.root.position.x+=dx/distance*step;actor.root.position.z+=dz/distance*step;actor.root.rotation.y=angleTowards(actor.root.rotation.y,Math.atan2(dx,dz),delta*9);}
-  }
-  const moving=actor.activity==='walking',resting=['resting','lunch'].includes(actor.activity),seated=resting&&station.activity==='resting'&&actor.wait>0,phase=time*6*actor.speed;
+function updateActor(actor,state,delta,time) {
+  actor.root.position.set(state.x,.43,state.z);actor.index=state.index;actor.wait=state.wait;actor.activity=state.activity;actor.lightAction=state.lightAction;
+  actor.root.rotation.y=angleTowards(actor.root.rotation.y,state.face,actor.poseReady?delta*9:1);actor.poseReady=true;
+  const moving=state.moving,resting=['resting','lunch'].includes(actor.activity),seated=state.seated,phase=time*6*actor.speed;
   actor.body.position.y=moving?Math.abs(Math.sin(phase))*.035:Math.sin(time*1.4+actor.offset)*.008;
   actor.body.rotation.z=moving?Math.sin(phase)*.018:0;
   actor.head.rotation.y=resting?Math.sin(time*.5+actor.offset)*.08:Math.sin(time*.7+actor.offset)*.035;
   actor.legs.forEach((leg,i)=>{leg.hip.rotation.x=seated?-1.35:moving?Math.sin(phase+i*Math.PI)*.43:0;leg.knee.rotation.x=seated?1.4:moving?Math.max(0,-Math.sin(phase+i*Math.PI))*.5:0;});
   actor.arms.forEach((arm,i)=>{arm.rotation.set(moving?Math.sin(phase+(i?0:Math.PI))*.3:resting&&!seated?-.15:-.8,0,resting?(i?-.12:.12):0);});
-  const writing=['writing','planning'].includes(actor.activity),measuring=actor.activity==='measuring',watering=actor.activity==='watering',selecting=actor.activity==='selecting';
+  const writing=['writing','planning','checking'].includes(actor.activity),measuring=actor.activity==='measuring',watering=actor.activity==='watering',selecting=actor.activity==='selecting';
   actor.clipboard.visible=writing;actor.pencil.visible=writing;actor.watering.visible=watering;actor.sample.visible=selecting;actor.ruler.visible=measuring;actor.lunch.visible=actor.activity==='lunch';
   if(writing){actor.arms[1].rotation.x=-1.1+Math.sin(time*3+actor.offset)*.09;actor.arms[0].rotation.x=-.95;}
   if(measuring){actor.arms[0].rotation.x=-1.15;actor.arms[1].rotation.x=-1.1+Math.sin(time*.8)*.08;}
   if(watering){actor.arms[1].rotation.x=-.7+Math.sin(time*1.3)*.09;actor.watering.rotation.z=-.35;}
   if(selecting){actor.arms[0].rotation.x=-1.2+Math.sin(time*.8)*.10;actor.arms[1].rotation.x=-.5;}
+  if(actor.activity==='switching'){actor.arms[1].rotation.x=-1.72+Math.sin(time*4)*.05;actor.arms[0].rotation.x=-.18;actor.head.rotation.x=-.04;}
+  else actor.head.rotation.x=actor.activity==='checking'?.11:0;
 }
 function buildMiniature(scene,requestRender) {
-  const root=new THREE.Group();scene.add(root);const windPlants=[],lamps=[],actors=[];
+  const root=new THREE.Group();scene.add(root);const windPlants=[],lamps=[],workLights=[],actors=[];
   rounded(root,27.8,20.3,.5,'copper',-.48,1.2);rounded(root,27.8,20.3,.14,'sage',.08,1.2);rounded(root,27.4,19.9,.08,'ivory',.31,1.1);
   // Furniture and walls stay inside the four islands. Travel follows the open lanes.
   rounded(root,2.7,18.9,.035,'copper',.42,.4);rounded(root,25.8,2.3,.035,'copper',.425,.4);
@@ -284,21 +278,40 @@ function buildMiniature(scene,requestRender) {
   for(const [x,z] of [[-1.45,-8.2],[1.45,8.25],[-11.2,1.45],[11.2,-1.45]]){
     beam(root,[x,.43,z],[x,3.5,z],.035,'ink');const lantern=cylinder(root,.18,.27,'ivory',x,3.28,z);lantern.material=new THREE.MeshStandardMaterial({color:palette.ivory,emissive:palette.ivory,emissiveIntensity:0,roughness:.8});lamps.push(lantern.material);
   }
+  // Four independent, small work pools supplement the always-on night lane lamps.
+  // The lights remain in the renderer at intensity zero rather than recompiling shaders.
+  const glowGeometry=new THREE.CircleGeometry(1,28);
+  for(const [id,station] of Object.entries(departmentLightStations)) {
+    const stand=group(root,station.x,.43,station.z),direction=station.approach.face===0?1:-1;
+    cylinder(stand,.22,.065,'ink',0,.035,0);beam(stand,[0,.07,0],[0,3.22,0],.038,'green');
+    beam(stand,[0,3.20,0],[0,3.20,direction*.68],.035,'copper');
+    cylinder(stand,.25,.08,'green',0,3.21,direction*.68);
+    beam(stand,[0,1.43,0],[0,1.43,-direction*.22],.025,'copper');box(stand,.23,.35,.14,'sage',0,1.43,-direction*.22);
+    const dynamicRoot=group(root,station.x,.43,station.z);
+    const bulbMaterial=material('ivory').clone();bulbMaterial.emissive.setHex(palette.ivory);bulbMaterial.emissiveIntensity=0;
+    const bulb=ball(dynamicRoot,.19,.095,.19,'ivory',0,3.12,direction*.68);bulb.material=bulbMaterial;
+    const button=box(dynamicRoot,.09,.11,.025,'ivory',0,1.43,-direction*.305);button.material=bulbMaterial;
+    const light=new THREE.PointLight(palette.ivory,0,7.2,1.4);light.position.set(0,2.95,direction*.68);light.castShadow=false;dynamicRoot.add(light);
+    const glowMaterial=new THREE.MeshBasicMaterial({color:palette.ivory,transparent:true,opacity:0,depthWrite:false,toneMapped:false,blending:THREE.AdditiveBlending});
+    for(const radius of [2.6,1.7,.85]){const glow=new THREE.Mesh(glowGeometry,glowMaterial);glow.rotation.x=-Math.PI/2;glow.position.set(0,.115,direction*.68);glow.scale.setScalar(radius);glow.renderOrder=1;dynamicRoot.add(glow);}
+    workLights.push({id,light,bulbMaterial,glowMaterial,dynamicRoot});
+  }
   const routes=[
     {id:'cafe-planner',department:'cafe',shirt:'green',speed:.83,route:[point(-6.5,-2.25,17,'planning',Math.PI),point(-6.5,-1.25),point(-1.7,-1.25),point(-1.7,2.45,9,'resting',Math.PI/2),point(-1.7,-1.25),point(-6.5,-1.25)]},
     {id:'cafe-measurer',department:'cafe',shirt:'ivory',offset:6,speed:.72,route:[point(-3.4,-4.8,14,'measuring',-Math.PI/2),point(-3.4,-1.25),point(-1.2,-1.25),point(-1.2,-7.7,8,'writing',Math.PI),point(-1.2,-1.25),point(-3.4,-1.25)]},
     {id:'coffee-grower',department:'coffee',shirt:'sage',hat:true,speed:.75,offset:3,route:[point(7.5,-2.35,18,'watering',Math.PI),point(7.5,-1.25),point(2.25,-1.25),point(2.25,-2.1,9,'resting',-Math.PI/2),point(2.25,-1.25),point(7.5,-1.25)]},
     {id:'workshop-maker',department:'workshops',shirt:'copper',speed:.78,offset:8,route:[point(-6.2,3.05,19,'writing',0),point(-6.2,1.3),point(-3.2,.85,10,'resting',0),point(-6.2,1.3)]},
     {id:'local-selector',department:'local',shirt:'green',speed:.80,offset:5,route:[point(6.3,3.05,18,'selecting',0),point(6.3,1.3),point(3.2,.85,10,'resting',0),point(6.3,1.3)]},
-    {id:'garden-helper',department:'coffee',shirt:'copper',hat:true,speed:.76,offset:1,route:[point(1.4,5.5,4,'planning',Math.PI/2),point(1.4,7.7),point(1.2,7.7,12,'resting',-Math.PI/2),point(1.4,7.7),point(1.4,-.2),point(-1.4,-.2),point(-1.4,-7.7,7,'measuring',0),point(-1.4,-.2),point(1.4,-.2)]},
+    {id:'garden-helper',department:'coffee',lightParticipant:false,shirt:'copper',hat:true,speed:.76,offset:1,route:[point(1.4,5.5,4,'planning',Math.PI/2),point(1.4,7.7),point(1.2,7.7,12,'resting',-Math.PI/2),point(1.4,7.7),point(1.4,-.2),point(-1.4,-.2),point(-1.4,-7.7,7,'measuring',0),point(-1.4,-.2),point(1.4,-.2)]},
   ];
   for(const spec of routes)actors.push(character(root,spec));
+  const behavior=createProgrammeNightBehavior(routes);
 
   const base=document.querySelector('meta[name=site-base]')?.content||'';
   const texture=new THREE.TextureLoader().load(base+'/assets/email/logo-compact.png',requestRender,undefined,()=>{});texture.colorSpace=THREE.SRGBColorSpace;
   box(root,2.08,1.10,.08,'ivory',-6.2,2.7,-6.78);
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(1.85,.94),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));logo.position.set(-6.2,2.7,-6.72);root.add(logo);
-  batchStatic(root,new Set([...windPlants,growthHolder,...actors.map(actor=>actor.root)]));
+  batchStatic(root,new Set([...windPlants,growthHolder,...actors.map(actor=>actor.root),...workLights.map(lamp=>lamp.dynamicRoot)]));
   function refreshGrowth(stage){
     if(stage===growth&&growthHolder.children.length)return;
     growth=stage;growthHolder.remove(growthRoot);
@@ -307,7 +320,7 @@ function buildMiniature(scene,requestRender) {
     growthHolder.add(growthRoot);
   }
   return {
-    root,actors,lamps,
+    root,actors,lamps,workLights,behavior,
     get windPlants(){return [...windPlants,...growthRoot.userData.windPlants];},
     setGrowth(stage){if(!growthStages.includes(stage)&&stage!=='actual')return;refreshGrowth(stage);},
     setPlantData(next={}){
@@ -379,7 +392,7 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
   }
   function projectActors(){
     const {width,height}=dimensions();
-    onActors?.(model.actors.map(actor=>{actor.root.getWorldPosition(origin);projected.copy(origin);projected.y+=2.15;projected.project(camera);return{id:actor.id,department:actor.department,activity:actor.activity,x:(projected.x*.5+.5)*width,y:(-.5*projected.y+.5)*height,visible:projected.z>-1&&projected.z<1&&Math.abs(projected.x)<.93&&Math.abs(projected.y)<.90};}));
+    onActors?.(model.actors.map(actor=>{actor.root.getWorldPosition(origin);projected.copy(origin);projected.y+=2.15;projected.project(camera);return{id:actor.id,department:actor.department,activity:actor.activity,lightAction:actor.lightAction||null,x:(projected.x*.5+.5)*width,y:(-.5*projected.y+.5)*height,visible:projected.z>-1&&projected.z<1&&Math.abs(projected.x)<.93&&Math.abs(projected.y)<.90};}));
   }
   function animateWeather(){
     const breeze=Math.min(1,environment.wind/35),sway=.01+breeze*.035;
@@ -407,9 +420,13 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
     if(tween){const p=Math.min(1,(now-tween.started)/650),ease=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,ease);controls.target.lerpVectors(tween.fromTarget,tween.toTarget,ease);dirty=true;if(p===1)tween=null;}
     controls.update();
     if(!paused||dirty){
-      model.actors.forEach(a=>updateActor(a,paused?0:delta,time,environment));animateWeather();
+      const routine=model.behavior.advance(delta,environment,{paused,reduced:reduced()});
+      model.actors.forEach((actor,i)=>updateActor(actor,routine.actors[i],paused?0:delta,time));
+      model.workLights.forEach((lamp,i)=>{const level=routine.lights[i].level;lamp.light.intensity=14*level;lamp.bulbMaterial.emissiveIntensity=1.9*level;lamp.glowMaterial.opacity=.027*level;});
+      animateWeather();
       if(now-lastShadow>750){renderer.shadowMap.needsUpdate=true;lastShadow=now;}
       renderer.render(scene,camera);projectActors();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
+      if(frame===0||frame%20===0||paused){canvas.dataset.litDepartments=routine.lights.filter(light=>light.level>.08).map(light=>light.id).join(',');canvas.dataset.actorActions=JSON.stringify(Object.fromEntries(model.actors.map(actor=>[actor.id,actor.activity])));}
       if(!ready){ready=true;canvas.dispatchEvent(new Event('worldready'));onReady?.();}
       if(++frame%20===0){canvas.dataset.frames=String(frame);canvas.dataset.drawCalls=String(renderer.info.render.calls);}
     }
@@ -424,6 +441,6 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
     setPlantData(data){model.setPlantData(data);renderer.shadowMap.needsUpdate=true;dirty=true;},
     get paused(){return isPaused();},
     get scene(){return scene;},
-    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer);canvas.removeEventListener('webglcontextlost',onContextLost);controls.dispose();renderer.dispose();},
+    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();renderer.dispose();},
   };
 }
