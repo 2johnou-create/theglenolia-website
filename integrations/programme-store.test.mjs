@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {ProgrammeError, fetchProgramme, fetchPublicProgramme, normaliseProgramme, validateProgramme, saveProgramme, publishProgramme, trialStages, seedStages} from './programme-store.mjs';
+import {ProgrammeError, fetchProgramme, fetchPublicProgramme, normaliseProgramme, validateProgramme, saveProgramme, publishProgramme, trialStages, seedStages, prepareProgrammeTranslations} from './programme-store.mjs';
 
 const actor='john@theglenolia.com.au', now='2026-10-17T14:30:00.000Z';
 function initial() {
@@ -25,7 +25,8 @@ function database() {
 }
 const expectError=(status,code)=>(error)=>error instanceof ProgrammeError&&error.status===status&&error.code===code;
 const save=(db,programme,expectedRevision=0,options={})=>saveProgramme(db,{programme,expectedRevision},{actor,now,initial:initial(),...options});
-const publish=(db,expectedRevision=1,options={})=>publishProgramme(db,{expectedRevision,actor,now,initial:initial(),...options});
+const translated=changed=>Object.fromEntries(Object.entries(changed).map(([id,c])=>[id,Object.fromEntries(['zh','ja'].map(language=>[language,{now:(language==='zh'?'備註：':'内容：')+c.now,next:(language==='zh'?'下一步：':'次の予定：')+c.next,done:c.done.map(s=>(language==='zh'?'完成：':'完了：')+s)}]))]));
+const publish=(db,expectedRevision=1,options={})=>publishProgramme(db,{expectedRevision,actor,now,initial:initial(),translate:async changed=>translated(changed),...options});
 
 test('empty storage uses only the reviewed baseline and never writes on a read',async()=>{
   const {db,sqlite,queries}=database(), baseline=initial();
@@ -78,9 +79,9 @@ test('a later draft keeps the existing public release intact and clearing conten
   assert.equal((await fetchPublicProgramme(db)).publishedAt,now);
 });
 
-test('all three translations and aligned completed items are required before publication',async()=>{
+test('complete English and aligned translated completed items are required before publication',async()=>{
   const {db}=database(), draft=initial();
-  draft.departments.local.translations.ja.next='';
+  draft.departments.local.translations.en.next='';
   await save(db,draft);await assert.rejects(publish(db),expectError(400,'invalid_programme'));
   const complete=initial();
   complete.departments.local.translations.en.done=['A planning meeting was held.'];
@@ -236,4 +237,108 @@ test('the three-variety seed group can publish every growing stage and skip opti
     assert.equal(published.coffee.trialStage,'seedling');
     assert.equal(published.coffee.heightCm,20);
   }
+});
+
+
+test('unchanged English reuses published or reviewed target pairs and ignores stale client targets',async()=>{
+  const baseline=initial(),document=initial();
+  document.departments.cafe.status='developing';document.coffee.heightCm=24;
+  for(const d of Object.values(document.departments)){d.translations.zh={now:'',next:'',done:[]};d.translations.ja={now:'untrusted',next:'untrusted',done:[]};}
+  let calls=0;const candidate=await prepareProgrammeTranslations(document,{initial:baseline,translate:async()=>{calls++;throw Error('should not translate');}});
+  assert.equal(calls,0);assert.equal(candidate.departments.cafe.status,'developing');assert.equal(candidate.coffee.heightCm,24);
+  for(const id of ['cafe','coffee','workshops','local'])for(const language of ['zh','ja'])assert.deepEqual(candidate.departments[id].translations[language],baseline.departments[id].translations[language]);
+  const published=structuredClone(baseline);published.departments.cafe.translations.en.now='A previously published source.';published.departments.cafe.translations.zh.now='已發布的中文';published.departments.cafe.translations.ja.now='公開済みの日本語';
+  const repeat=structuredClone(published);repeat.departments.cafe.translations.zh.now='stale client copy';
+  const reused=await prepareProgrammeTranslations(repeat,{published,initial:baseline});assert.equal(reused.departments.cafe.translations.zh.now,'已發布的中文');
+  const reverted=await prepareProgrammeTranslations(baseline,{published,initial:baseline});assert.deepEqual(reverted,baseline);
+});
+
+test('only changed English departments reach translation and both targets publish together without altering structured data',async()=>{
+  const {db}=database(),document=initial(),seen=[];document.departments.cafe.translations.en.now='New café update';document.departments.cafe.translations.en.done=['A meeting took place'];
+  document.departments.cafe.status='developing';document.coffee.heightCm=23;
+  await save(db,document);
+  const state=await publish(db,1,{translate:async changed=>{seen.push(structuredClone(changed));return translated(changed);}});
+  assert.deepEqual(Object.keys(seen[0]),['cafe']);assert.deepEqual(seen[0].cafe,document.departments.cafe.translations.en);
+  assert.deepEqual(state.draft.departments.cafe.translations.en,document.departments.cafe.translations.en);
+  for(const language of ['zh','ja']){
+    assert.equal(state.draft.departments.cafe.translations[language].now,translated(seen[0]).cafe[language].now);
+    assert.deepEqual(state.draft.departments.cafe.translations[language].done,translated(seen[0]).cafe[language].done);
+    assert.equal(state.draft.departments.cafe.translations[language].next,initial().departments.cafe.translations[language].next);
+  }
+  assert.equal(state.draft.departments.cafe.status,'developing');assert.equal(state.draft.coffee.heightCm,23);
+  assert.deepEqual(state.published,state.draft);
+});
+
+test('translation failure or unavailable binding preserves the saved English draft, old publication and audit',async()=>{
+  for(const translate of [undefined,async()=>{throw Error('provider timeout with private detail');},async()=>({cafe:{zh:{now:'中文',next:'下一步',done:[]}}})]){
+    const {db,audit}=database(),document=initial();document.departments.cafe.translations.en.now='New private English';await save(db,document);
+    const before=await fetchProgramme(db);
+    await assert.rejects(publish(db,1,{translate}),error=>error instanceof ProgrammeError&&[502,503].includes(error.status));
+    assert.deepEqual(await fetchProgramme(db),before);assert.equal(audit().filter(r=>r.action==='publish').length,0);
+  }
+});
+
+test('untrusted model objects cannot add fields, locales, English changes, markup or incomplete lists',async()=>{
+  const source=initial();source.departments.cafe.translations.en.now='A new source';source.departments.cafe.translations.en.done=['A confirmed step'];
+  const malformed=[
+    value=>value.other=value.cafe,
+    value=>delete value.cafe.ja,
+    value=>value.cafe.en={now:'overwritten'},
+    value=>value.cafe.zh.extra='unsupported',
+    value=>value.cafe.zh.now='',
+    value=>value.cafe.ja.next='<script>bad</script>',
+    value=>value.cafe.zh.now='https://external.example',
+    value=>value.cafe.ja.next='x'.repeat(281),
+    value=>value.cafe.zh.done=[],
+    value=>value.cafe.ja.done=[''],
+  ];
+  for(const mutate of malformed)await assert.rejects(prepareProgrammeTranslations(source,{initial:initial(),translate:async changed=>{const value=translated(changed);mutate(value);return value;}}),expectError(502,'translation_invalid'));
+  let called=false;const incomplete=structuredClone(source);incomplete.departments.cafe.translations.en.next='';
+  await assert.rejects(prepareProgrammeTranslations(incomplete,{initial:initial(),translate:async()=>{called=true;}}),expectError(400,'invalid_programme'));assert.equal(called,false);
+});
+
+test('a translator cannot mutate the saved English snapshot through its input reference',async()=>{
+  const source=initial();source.departments.cafe.translations.en.now='The English source must survive';
+  const candidate=await prepareProgrammeTranslations(source,{initial:initial(),translate:async changed=>{const result=translated(changed);changed.cafe.now='Provider tried to mutate source';return result;}});
+  assert.equal(candidate.departments.cafe.translations.en.now,'The English source must survive');assert.equal(source.departments.cafe.translations.en.now,'The English source must survive');
+});
+
+test('an intervening English save during translation prevents stale publication or target writes',async()=>{
+  const {db,audit}=database(),source=initial();source.departments.cafe.translations.en.now='First private source';await save(db,source);
+  let release,started;const waiting=new Promise(resolve=>release=resolve),inferenceStarted=new Promise(resolve=>started=resolve);
+  const publication=publish(db,1,{translate:async changed=>{started();await waiting;return translated(changed);}});await inferenceStarted;
+  const newer=initial();newer.departments.cafe.translations.en.now='A newer English source';await save(db,newer,1);release();
+  await assert.rejects(publication,expectError(409,'changed_elsewhere'));
+  const state=await fetchProgramme(db);assert.equal(state.revision,2);assert.equal(state.draft.departments.cafe.translations.en.now,'A newer English source');
+  assert.deepEqual(state.published,initial());assert.equal(audit().filter(r=>r.action==='publish').length,0);
+});
+
+test('parallel translated publications commit one paired snapshot and one audit record',async()=>{
+  const {db,audit}=database(),source=initial();source.departments.cafe.translations.en.now='A new publication';await save(db,source);
+  let calls=0,release;const wait=new Promise(resolve=>release=resolve);
+  const translate=async changed=>{calls++;if(calls===2)release();await wait;return translated(changed);};
+  const results=await Promise.allSettled([publish(db,1,{translate}),publish(db,1,{translate})]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.find(r=>r.status==='rejected').reason.status,409);
+  assert.equal(audit().filter(r=>r.action==='publish').length,1);const publicData=await fetchPublicProgramme(db);
+  assert.match(publicData.departments.cafe.translations.zh.now,/備註/);assert.match(publicData.departments.cafe.translations.ja.now,/内容/);
+  assert.equal(JSON.stringify(publicData).includes('translate'),false);
+});
+
+
+test('a new English next step preserves reviewed now wording and the whole unchanged completed list',async()=>{
+  const reviewed=initial();
+  reviewed.departments.cafe.translations.en.now='A reviewed current update';
+  reviewed.departments.cafe.translations.en.done=['A confirmed planning step'];
+  reviewed.departments.cafe.translations.zh.now='已校閱的目前進度';
+  reviewed.departments.cafe.translations.zh.done=['已確認的規劃步驟'];
+  reviewed.departments.cafe.translations.ja.now='確認済みの現在の取り組み';
+  reviewed.departments.cafe.translations.ja.done=['確認された計画の一歩'];
+  const source=structuredClone(reviewed);source.departments.cafe.translations.en.next='A newly changed next step';
+  const candidate=await prepareProgrammeTranslations(source,{published:reviewed,initial:initial(),translate:async changed=>translated(changed)});
+  for(const language of ['zh','ja']){
+    assert.equal(candidate.departments.cafe.translations[language].now,reviewed.departments.cafe.translations[language].now);
+    assert.deepEqual(candidate.departments.cafe.translations[language].done,reviewed.departments.cafe.translations[language].done);
+    assert.notEqual(candidate.departments.cafe.translations[language].next,reviewed.departments.cafe.translations[language].next);
+  }
+  await assert.rejects(prepareProgrammeTranslations(source,{published:reviewed,initial:initial(),translate:async changed=>{const result=translated(changed);result.cafe.zh.now='<script>invalid despite reviewed reuse</script>';return result;}}),expectError(502,'translation_invalid'));
 });

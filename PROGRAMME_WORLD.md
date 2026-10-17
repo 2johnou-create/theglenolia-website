@@ -45,25 +45,72 @@ programme password or public write access is introduced.
 1. Choose an area and its current status: Planning, In development, In trial or
    Ready for the next step. These statuses do not announce a public opening.
 2. Write **Working on**, **Next milestone**, and any **Completed milestones** in
-   English, Traditional Chinese and Japanese. Each main note allows 280
-   characters. Completed items allow up to four lines of 120 characters each.
-3. Keep completed items aligned in meaning and order across the three languages.
-   Leave them blank until the work is confirmed. Drafts can be incomplete;
-   publication requires all three versions and matching completed-item counts.
-4. Select **Save draft & review**, then open **Review all three languages**.
-   Check every area and the coffee observations, not only the visible editor.
-5. Select **Publish public update**, review the confirmation and choose
-   **Publish now**. This publishes all four areas and the coffee record together.
-   It does not send an email or change an eDM schedule.
+   **English only**. Each main note allows 280 characters. Completed items allow
+   up to four lines of 120 characters each. Leave them blank until confirmed.
+3. Select **Save English draft** to keep the work privately. Drafts may be
+   incomplete. Saving does not call AI or publish anything.
+4. Optionally choose **Preview translations** and open **Review draft and
+   translations**. This produces a read-only Traditional Chinese/Japanese
+   preview from the current English, including unsaved edits. It does not save
+   or publish the draft. Editing any field invalidates the old preview.
+5. Select **Publish public update**. The editor first saves any unsaved English
+   (including the initial revision-zero baseline), then shows confirmation.
+   Check the English notes for all four areas and the coffee observations.
+6. Choose **Publish now**. The server prepares the paired Traditional Chinese
+   and Japanese versions and publishes all three languages and the coffee
+   record atomically. The editor then shows the published versions read-only.
+   This does not send an email or change an eDM schedule.
 
-The last publication stays public while a new draft is edited. Revision checks
-prevent one session overwriting or publishing another session's unreviewed
-changes. If a conflict is reported, reload the saved notes and review again.
-Allow about a minute for an already-open public page to refresh.
+English is the factual source. When an area's English is unchanged from the last
+publication or reviewed baseline, its existing language versions are reused.
+Only changed English needs model translation. Publication requires complete
+English main notes for every area and aligned completed-item counts in the
+validated results; manual target-language editing is not required.
+
+The last publication stays public while a new draft is edited. Translation or
+validation failure keeps the saved English draft and previous publication intact.
+The editor reports unavailable translation, invalid output, busy/rate-limit or
+other failures without claiming publication. Revision checks also prevent a
+new save during translation from publishing an older snapshot. On a conflict,
+preserve any unsaved English, reload and review again. Allow about a minute for
+an already-open public page to refresh.
 
 Write public notes only. Keep personal information, internal budgets, supplier
 negotiations, subscriber details and credentials out of these fields. Notes are
 plain text; HTML and URLs are rejected. Status/date fields are validated too.
+
+## Translation service and safeguards
+
+Translation runs in the protected admin Worker through its server-side
+Cloudflare Workers AI binding, using Qwen3
+(`@cf/qwen/qwen3-30b-a3b-fp8`). The model receives only changed English public
+notes. The frontend receives no provider credential and makes no direct model
+request. The anonymous public read API cannot request translation.
+
+`integrations/programme-translation.mjs` makes a generation call followed by an
+editorial call against the English for a normal uncached translation. It requests
+a strict JSON schema and paired target strings for every supplied entry. Both
+language versions must pass the final checks before atomic publication. Protected tokens preserve approved
+names, numerals and measurement units; returned names, counts, lengths and text
+shapes are checked again. OpenCC normalizes Chinese output to Traditional
+Chinese. The prompt preserves planning/completed distinctions, qualifications,
+founder attribution and the brand's warm tone. These checks do not replace
+semantic review of sensitive new wording; the optional preview is available
+before publication. Never treat arbitrary caller-supplied target text as fresh
+translation evidence.
+
+Private D1 cache entries are keyed by source, model and prompt version, retained
+for up to 30 days and bounded to 100 entries. Valid cached pairs can be reused
+for preview/publication. A preview may update that private cache and attempt
+ledger, but never the programme draft or public snapshot. Reusing reviewed or
+cached translations does not call the model.
+
+Provider-attempt caps are six in a rolling minute and 20 per UTC day. Generation,
+editorial and any retry calls each consume an attempt. Cached/reviewed reuse
+consumes no model attempt. Do not describe these limits as a guarantee of free or unlimited
+provider service. No paid upgrade is configured by this feature; existing
+account/binding limits still apply. If the binding or allowance is unavailable,
+keep the English draft and prior public version, then retry when available.
 
 ## Actual coffee records and growth illustrations
 
@@ -135,6 +182,8 @@ source/freshness metadata when changing the weather interface.
 - `integrations/programme-public.mjs` and `programme-weather.mjs`: public reads
   and weather normalization/cache.
 - `integrations/admin-ui/programme-admin.js`: owner editing and review flow.
+- `integrations/programme-translation.mjs`: server-side translation, protected
+  tokens, validation and bounded private reuse.
 
 The model loads locally near the viewport, without a runtime 3D CDN. Static
 scenery is batched by material. Animation is capped at 30 fps, shadow refresh is
@@ -157,7 +206,7 @@ Use Node 24 and Python 3.12 or newer:
 ```sh
 npm ci --ignore-scripts
 node integrations/build-admin.mjs
-node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs src/progress/programme-time.test.mjs
+node --test integrations/*.test.mjs src/progress/programme-time.test.mjs
 python scripts/build.py
 npm run build:progress
 python scripts/audit.py
@@ -166,22 +215,46 @@ python scripts/audit-programmes.py
 python -m http.server 8775 --directory dist
 ```
 
-The current automated suite contains 71 tests, covering existing email services,
-Access/write boundaries, draft/publish races, public projections, weather cache
-limits and Sydney time/DST. Static audits cover localized routes, source links,
-metadata, fallback content and lazy module references. Browser review must also
-cover three languages, small mobile layouts, actual and illustrative growth,
-department focus, day/night/rain, pause/reduced motion, keyboard/touch navigation,
-fallbacks and the existing registration flow. Rebuild font subsets when adding
-new public characters.
+The automated suite covers existing email services, Access/write boundaries,
+draft/publish races, English-source translation and cache/attempt bounds, public
+projections, weather cache limits and Sydney time/DST. Use the release audit for
+final test counts and deployment status. Static audits cover localized routes,
+source links, metadata, fallback content and lazy module references. Browser
+review must also cover three languages, small mobile layouts, actual and
+illustrative growth, department focus, day/night/rain, pause/reduced motion,
+keyboard/touch navigation, fallbacks and the existing registration flow. Exercise
+English-only save, unsaved private preview, preview invalidation, automatic save
+before confirmation, successful paired publication and translation-failure
+recovery. Rebuild font subsets when adding new public characters.
 
 GitHub Actions builds and audits `dist/` before Pages deployment. Worker changes
 deploy separately. Both the admin Worker and public newsletter Worker need the
-same existing D1 binding; apply `integrations/migrations/003-programme.sql` and
-`004-weather-cache.sql` to that database before enabling these routes. Preserve
-the existing email tables, consent records, sending schedules and Access policy.
-Changing this programme feature must not reset them. Keep account bindings,
-credentials and operational evidence outside the public repository.
+same existing D1 binding; apply `integrations/migrations/003-programme.sql`,
+`004-weather-cache.sql` and `005-programme-translations.sql` to that database
+before enabling the associated routes. The last migration adds only the private
+translation cache/attempt tables. Preserve the existing email tables, consent
+records, sending schedules and Access policy. Changing this programme feature
+must not reset them. Keep account bindings, credentials and operational evidence
+outside the public repository.
+
+The admin example configuration includes the AI binding:
+
+```json
+{
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  }
+}
+```
+
+Copy the example into the ignored local deployment configuration and retain the
+existing authorized account, D1 and Access bindings privately. Deploy the admin
+Worker with its `AI` binding; the public newsletter Worker needs the shared DB
+for read-only publication/weather, not an anonymous translation endpoint. Verify
+one protected preview and a failure case before public release. No AI key belongs
+in HTML, client JavaScript, public configuration or the repository. Do not change
+provider plan/billing as part of routine deployment.
 
 Owner publication updates the dynamic notes without a GitHub rebuild. For an
 updated static/no-JS/search baseline, reconcile confirmed public facts into

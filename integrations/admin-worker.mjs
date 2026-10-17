@@ -1,5 +1,6 @@
 import programmeSeed from '../programme-content.json' with {type:'json'};
-import {fetchProgramme,saveProgramme,publishProgramme} from './programme-store.mjs';
+import {fetchProgramme,saveProgramme,publishProgramme,prepareProgrammeTranslations,ProgrammeError} from './programme-store.mjs';
+import {translateDepartmentNotes} from './programme-translation.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
 import {html,css,js,programmeJs} from './admin-assets.mjs';
@@ -93,13 +94,19 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
  if(request.method==='GET'&&['/','/admin.css','/admin.js','/programme-admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:path==='/programme-admin.js'?programmeJs:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
  if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true',ownerNotificationsEnabled:env.OWNER_NOTIFICATIONS_ENABLED==='true'});
- if(['/api/programme','/api/programme/save','/api/programme/publish'].includes(path)){
+ if(['/api/programme','/api/programme/save','/api/programme/publish','/api/programme/preview-translations'].includes(path)){
   if(!env.DB)return json(503,{error:'programme_unavailable'});
   try{
-   const options={actor:identity.email,initial:programmeSeed.initial};
+   const options={actor:identity.email,initial:programmeSeed.initial,translate:changed=>translateDepartmentNotes(changed,env)};
    if(path==='/api/programme'&&request.method==='GET')return json(200,await fetchProgramme(env.DB,programmeSeed.initial));
    const body=await readJson(request);if(!body)return json(400,{error:'invalid'});
    if(path==='/api/programme/save'&&request.method==='POST')return json(200,await saveProgramme(env.DB,body,options));
+   if(path==='/api/programme/preview-translations'&&request.method==='POST'){
+    if(!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<0||Object.keys(body).sort().join(',')!=='expectedRevision,programme')return json(400,{error:'invalid'});
+    const current=await fetchProgramme(env.DB,programmeSeed.initial);
+    if(current.revision!==body.expectedRevision)throw new ProgrammeError(409,'changed_elsewhere');
+    return json(200,{programme:await prepareProgrammeTranslations(body.programme,{...options,published:current.published})});
+   }
    if(path==='/api/programme/publish'&&request.method==='POST')return json(200,await publishProgramme(env.DB,{...options,expectedRevision:body.expectedRevision}));
    return json(405,{error:'method'});
   }catch(error){return json(error.status||503,{error:error.code||'programme_unavailable'});}

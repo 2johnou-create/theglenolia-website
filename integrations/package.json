@@ -4,7 +4,7 @@
   },
   "scripts": {
     "build": "node build-admin.mjs",
-    "test": "node --test newsletter.test.mjs admin.test.mjs owner-notifications.test.mjs programme-store.test.mjs programme-api.test.mjs ../src/progress/programme-time.test.mjs"
+    "test": "node --test newsletter.test.mjs admin.test.mjs owner-notifications.test.mjs programme-store.test.mjs programme-api.test.mjs programme-translation.test.mjs ../src/progress/programme-time.test.mjs"
   },
   "name": "theglenolia",
   "private": true

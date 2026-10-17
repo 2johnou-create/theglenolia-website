@@ -17,7 +17,9 @@ A light, responsive information website in English, Traditional Chinese and Japa
 
 Sign in to the admin with the existing Cloudflare account for john@theglenolia.com.au. Subscribers displays the website confirmation list, language, interests, consent date and unsubscribed status; search filters the current page and pagination covers additional records.
 
-**Programme progress** edits each area's status, Working on, Next milestone and up to four completed items in all three languages. Save the draft, review the three language versions, then explicitly publish the complete update. Drafts remain private. Coffee growing also has separate actual stages for the fixed IPR107/NR25/Marsellesa seed group and Paraíso trial, with editable height and observation date. Both tracks support all eight growth stages; grafting is optional. Visitor previews never alter these records. Programme publication does not send an email. See [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) for the full workflow, weather/cache behaviour and maintenance.
+**Programme progress** edits each area's status, Working on, Next milestone and up to four completed items in **English only**. **Save English draft** stores it privately without AI. Optional **Preview translations** shows read-only Traditional Chinese/Japanese versions without writing the draft; editing invalidates that preview. **Publish public update** first saves any unsaved English, then asks for confirmation. **Publish now** prepares the paired translations and publishes all three languages atomically. Existing reviewed translations are reused where English is unchanged; failures retain the draft and previous public version. No manual target-language editing is required.
+
+Coffee growing also has separate actual stages for the fixed IPR107/NR25/Marsellesa seed group and Paraíso trial, with editable height and observation date. Both tracks support all eight growth stages; grafting is optional. Visitor previews never alter these records. Programme publication does not send an email. See [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) for the full workflow, translation/weather cache behaviour and maintenance.
 
 Monthly eDMs contains October, November and December 2026, each in three languages. Their delivery plans use the last calendar day at 10:00 am Australia/Sydney. Choose an edition, review each language and saved preview, then confirm its schedule. Scheduled editions lock in this editor. Use Brevo to pause or change an already queued campaign.
 
@@ -34,7 +36,7 @@ Use Node 24 and Python 3.12 or newer:
 ```sh
 npm ci --ignore-scripts
 node integrations/build-admin.mjs
-node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs src/progress/programme-time.test.mjs
+node --test integrations/*.test.mjs src/progress/programme-time.test.mjs
 python scripts/build.py
 npm run build:progress
 python scripts/audit.py
@@ -42,7 +44,7 @@ python scripts/audit-progress.py
 python scripts/audit-programmes.py
 ```
 
-The current automated suite contains 71 tests. `content.json` contains the original reviewed copy. `content-additions.json` contains the coffee, partner, monthly-registration, privacy and owner-entry additions. `progress-content.json` maintains the physical development world; `programme-content.json` contains the programme's reviewed static baseline and localized interface. `config.json` is public configuration only. GitHub Actions publishes only `dist/`; admin source and public API changes are deployed separately to their Workers.
+Use the release audit for final test counts and deployment status. `content.json` contains the original reviewed copy. `content-additions.json` contains the coffee, partner, monthly-registration, privacy and owner-entry additions. `progress-content.json` maintains the physical development world; `programme-content.json` contains the programme's reviewed static baseline and localized interface. `config.json` is public configuration only. GitHub Actions publishes only `dist/`; admin source and public API changes are deployed separately to their Workers.
 
 ## Backend deployment
 
@@ -50,7 +52,7 @@ Wrangler is pinned in `integrations/package.json`. Copy the example configuratio
 
 Google and Brevo DKIM coexist in GoDaddy DNS. Preserve the existing Google MX, single SPF record and DMARC quarantine policy. Primary/alias domain connection is complete; alternate-domain homepage redirects do not preserve deep page paths. Use the official domain for page links.
 
-Programme updates use the existing D1 database from both admin and public Workers. Apply `migrations/003-programme.sql` and `migrations/004-weather-cache.sql` before enabling the new routes. Keep the existing Access policy, email schedules and subscriber/consent tables intact. [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) describes the separate draft/public projection and baseline maintenance.
+Programme updates use the existing D1 database from both admin and public Workers. Apply `migrations/003-programme.sql`, `migrations/004-weather-cache.sql` and `migrations/005-programme-translations.sql` before enabling their routes. The admin example includes a server-side Workers AI binding named `AI`. Normal uncached translation uses Qwen3 generation followed by an editorial pass against the English, with OpenCC Traditional Chinese normalization, schema validation and protected names/numbers/units. Both targets pass final checks before atomic publication; no model credential reaches the frontend. Private translation reuse lasts up to 30 days and is bounded to 100 entries. Model attempts, including generation, editing and retries, are capped at six per rolling minute and 20 per UTC day; cached reuse makes no model call. These checks do not guarantee perfect translation. This feature configures no paid upgrade; existing provider limits still apply. Keep the Access policy, email schedules and subscriber/consent tables intact. [PROGRAMME_WORLD.md](PROGRAMME_WORLD.md) covers binding setup, failure behaviour and baseline maintenance.
 
 ## Editorial and media maintenance
 

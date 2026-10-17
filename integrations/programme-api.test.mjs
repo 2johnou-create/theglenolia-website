@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import seed from '../programme-content.json' with {type:'json'};
 import {handleAdmin} from './admin-worker.mjs';
 import {handleRequest} from './newsletter-worker.mjs';
@@ -14,12 +14,14 @@ const millis=Date.parse('2026-10-17T00:37:00Z');
 const iso=time=>new Date(time).toISOString();
 function database() {
   const sqlite=new DatabaseSync(':memory:');
-  for(const file of ['admin-schema.sql','migrations/003-programme.sql','migrations/004-weather-cache.sql'])sqlite.exec(readFileSync(new URL('./'+file,import.meta.url),'utf8'));
+  const migrations=readdirSync(new URL('./migrations/',import.meta.url)).filter(name=>/^00[345]-.*\.sql$/.test(name)).sort();
+  for(const file of ['admin-schema.sql',...migrations.map(name=>'migrations/'+name)])sqlite.exec(readFileSync(new URL('./'+file,import.meta.url),'utf8'));
   const queries=[];
   const db={prepare(sql){queries.push(sql);const statement=sqlite.prepare(sql);let values=[];return {bind(...args){values=args;return this;},async first(){return statement.get(...values)||null;},async all(){return {results:statement.all(...values)};},async run(){return this._run();},_run(){return {meta:{changes:Number(statement.run(...values).changes)}};}};},async batch(statements){sqlite.exec('BEGIN IMMEDIATE');try{const result=statements.map(s=>s._run());sqlite.exec('COMMIT');return result;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
   return {db,sqlite,queries};
 }
-const adminEnv=db=>({DB:db,ACCESS_AUD:'programme-test-audience',ADMIN_EMAIL:owner});
+function fakeAI(onRun){return {async run(model,options){const input=JSON.parse(options.messages.find(message=>message.role==='user').content);assert.ok(Array.isArray(input.entries));onRun?.(model,input);return {response:{entries:input.entries.map(({id,text})=>({id,zh:'備註：'+text,ja:'内容：'+text}))}};}};}
+const adminEnv=db=>({DB:db,AI:fakeAI(),ACCESS_AUD:'programme-test-audience',ADMIN_EMAIL:owner});
 function adminRequest(path='/api/programme',{method='GET',body,origin='https://admin.example',headers={}}={}) {
   return new Request('https://admin.example'+path,{method,headers:{...(method==='POST'?{'Content-Type':'application/json',Origin:origin}:{}),...headers},body:body===undefined?undefined:typeof body==='string'?body:JSON.stringify(body)});
 }
@@ -39,7 +41,7 @@ function cached(sqlite,body,{fetchedAt=millis,expiresAt=millis-1,refreshUntil=0,
 
 test('anonymous, forged-header, wrong audience and non-owner requests cannot read or change programme admin',async()=>{
   const {db,sqlite}=database(),env=adminEnv(db);
-  for(const path of ['/api/programme','/api/programme/save','/api/programme/publish']){
+  for(const path of ['/api/programme','/api/programme/save','/api/programme/publish','/api/programme/preview-translations']){
     for(const method of ['GET','POST']){
       const request=()=>adminRequest(path,{method,...(method==='POST'?{body:{programme:seed.initial,expectedRevision:0}}:{}),headers:{'Cf-Access-Authenticated-User-Email':owner,'Cf-Access-Jwt-Assertion':'forged'}});
       for(const ctx of [{},{access:{...access.access,aud:'wrong-app'}},{access:{...access.access,getIdentity:async()=>({email:'someone@example.com'})}},{access:{...access.access,getIdentity:async()=>{throw Error('not authenticated');}}}]){
@@ -90,7 +92,9 @@ test('owner editor works without Brevo and exposes no-store state while public e
   assert.equal((await publish(env,1)).status,200);
   const live=await (await handleRequest(publicRequest(),{DB:db})).json();
   assert.equal(live.coffee.heightCm,22);
-  for(const language of ['en','zh','ja'])assert.equal(live.departments.workshops.translations[language].now,'Private draft '+language);
+  assert.equal(live.departments.workshops.translations.en.now,'Private draft en');
+  assert.equal(live.departments.workshops.translations.zh.now,'備註：Private draft en');
+  assert.equal(live.departments.workshops.translations.ja.now,'内容：Private draft en');
   assert.deepEqual(Object.keys(live).sort(),['coffee','departments','publishedAt','updatedAt','version']);
   assert.ok(live.publishedAt);assert.equal(JSON.stringify(live).includes(owner),false);
   assert.equal(JSON.stringify(live).includes('expectedRevision'),false);
@@ -104,7 +108,7 @@ test('stale, malformed, oversize and incomplete programme edits never publish th
   assert.equal((await publish(env,0)).status,409);
   assert.equal((await handleAdmin(adminRequest('/api/programme/save',{method:'POST',body:'{'}),env,access)).status,400);
   assert.equal((await handleAdmin(adminRequest('/api/programme/save',{method:'POST',body:'x'.repeat(45000)}),env,access)).status,400);
-  const invalid=structuredClone(seed.initial);invalid.departments.cafe.translations.ja.now='';
+  const invalid=structuredClone(seed.initial);invalid.departments.cafe.translations.en.now='';
   assert.equal((await save(env,invalid,1)).status,200);
   assert.equal((await publish(env,2)).status,400);
   const unsafe=structuredClone(seed.initial);unsafe.departments.local.translations.en.now='<script>alert(1)</script>';
@@ -232,4 +236,77 @@ test('an older forecast point is marked stale on the first fetch as well as subs
   const first=await getWeather(db,async()=>provider(data),millis);
   assert.equal(first.stale,true);
   assert.equal((await getWeather(db,async()=>{throw Error('must use cache');},millis+1000)).stale,true);
+});
+
+
+test('unchanged English and structured observation updates publish without an AI binding',async()=>{
+  const {db}=database(),env={...adminEnv(db),AI:undefined},document=structuredClone(seed.initial);
+  document.departments.cafe.status='developing';document.coffee.heightCm=23;
+  document.departments.cafe.translations.zh.now='';document.departments.cafe.translations.ja.next='';
+  assert.equal((await save(env,document)).status,200);assert.equal((await publish(env,1)).status,200);
+  const publicData=await (await handleRequest(publicRequest(),{DB:db})).json();
+  assert.equal(publicData.coffee.heightCm,23);assert.equal(publicData.departments.cafe.status,'developing');
+  assert.deepEqual(publicData.departments.cafe.translations,seed.initial.departments.cafe.translations);
+});
+
+test('changed English without an AI binding preserves the private draft and previous publication',async()=>{
+  const {db,sqlite}=database(),env={...adminEnv(db),AI:undefined},document=structuredClone(seed.initial);
+  document.departments.cafe.translations.en.now='A new English update';
+  assert.equal((await save(env,document)).status,200);
+  const response=await publish(env,1);assert.equal(response.status,503);
+  const state=await (await handleAdmin(adminRequest(),env,access)).json();
+  assert.equal(state.draft.departments.cafe.translations.en.now,'A new English update');assert.equal(state.publishedRevision,0);
+  assert.deepEqual(state.published,seed.initial);assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM programme_audit WHERE action='publish'").get().n,0);
+});
+
+test('English-only publishing translates only the changed department and ignores caller target text',async()=>{
+  const {db}=database(),env=adminEnv(db),document=structuredClone(seed.initial),seen=[];
+  env.AI=fakeAI((model,input)=>seen.push(input));
+  document.departments.cafe.translations.en.now='A new café note';document.departments.cafe.translations.zh.now='Stale client target';document.departments.cafe.translations.ja.now='Unrelated client target';
+  assert.equal((await save(env,document)).status,200);assert.equal((await publish(env,1)).status,200);
+  assert.ok(seen.length>0);assert.ok(seen.every(input=>input.entries.every(entry=>entry.id.startsWith('cafe.'))));
+  const state=await (await handleAdmin(adminRequest(),env,access)).json();
+  assert.equal(state.draft.departments.cafe.translations.en.now,'A new café note');
+  assert.equal(state.draft.departments.cafe.translations.zh.now,'備註：A new café note');assert.equal(state.draft.departments.cafe.translations.ja.now,'内容：A new café note');
+  assert.deepEqual(state.draft.departments.workshops,seed.initial.departments.workshops);
+  const calls=seen.length;assert.equal((await publish(env,1)).status,200);assert.equal(seen.length,calls);
+});
+
+test('malformed or unavailable translation never partially publishes a language',async()=>{
+  for(const AI of [{async run(){throw Error('provider quota or timeout private detail');}},{async run(model,options){const {entries}=JSON.parse(options.messages.find(message=>message.role==='user').content);return {response:{entries:entries.map(({id})=>({id,zh:'中文新內容'}))}};}}]){
+    const {db,sqlite}=database(),env={...adminEnv(db),AI},document=structuredClone(seed.initial);document.departments.cafe.translations.en.now='New private draft';
+    assert.equal((await save(env,document)).status,200);const before=await (await handleAdmin(adminRequest(),env,access)).json();
+    const response=await publish(env,1);assert.ok([502,503].includes(response.status));
+    const after=await (await handleAdmin(adminRequest(),env,access)).json();assert.deepEqual(after,before);
+    assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM programme_audit WHERE action='publish'").get().n,0);
+    const publicData=await (await handleRequest(publicRequest(),{DB:db})).json();assert.equal(publicData.departments.cafe.translations.en.now,seed.initial.departments.cafe.translations.en.now);
+    assert.equal(JSON.stringify(publicData).includes('provider quota or timeout private detail'),false);
+  }
+});
+
+
+test('translation preview leaves programme state private and publication reuses its validated cache pair',async()=>{
+  const {db,sqlite}=database(),env=adminEnv(db),document=structuredClone(seed.initial);let calls=0;
+  env.AI=fakeAI(()=>calls++);document.departments.cafe.translations.en.now='An English update to preview';
+  const preview=await handleAdmin(adminRequest('/api/programme/preview-translations',{method:'POST',body:{programme:document,expectedRevision:0}}),env,access);
+  assert.equal(preview.status,200);const candidate=(await preview.json()).programme;
+  assert.equal(candidate.departments.cafe.translations.zh.now,'備註：An English update to preview');
+  assert.equal(candidate.departments.cafe.translations.ja.now,'内容：An English update to preview');
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM programme_state').get().n,0);
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM programme_audit').get().n,0);
+  const before=await (await handleRequest(publicRequest(),{DB:db})).json();assert.deepEqual(before.departments,seed.initial.departments);
+  assert.equal((await save(env,document)).status,200);
+  const stale=await handleAdmin(adminRequest('/api/programme/preview-translations',{method:'POST',body:{programme:document,expectedRevision:0}}),env,access);assert.equal(stale.status,409);
+  const beforePublish=calls;env.AI=undefined;assert.equal((await publish(env,1)).status,200);assert.equal(calls,beforePublish);
+  const current=await (await handleRequest(publicRequest(),{DB:db})).json();assert.deepEqual(current.departments,candidate.departments);
+  assert.equal(JSON.stringify(current).includes('translation_cache'),false);assert.equal(JSON.stringify(current).includes('cache_key'),false);
+});
+
+test('reviewed-English preview needs no AI and cannot accept caller actor/provider fields',async()=>{
+  const {db,sqlite}=database(),env={...adminEnv(db),AI:undefined};
+  const accepted=await handleAdmin(adminRequest('/api/programme/preview-translations',{method:'POST',body:{programme:seed.initial,expectedRevision:0}}),env,access);assert.equal(accepted.status,200);
+  for(const extra of [{actor:'someone@example.com'},{translate:'trust this client function'},{AI:{ready:true}}]){
+    const rejected=await handleAdmin(adminRequest('/api/programme/preview-translations',{method:'POST',body:{programme:seed.initial,expectedRevision:0,...extra}}),env,access);assert.equal(rejected.status,400);
+  }
+  assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM programme_state').get().n,0);
 });

@@ -152,16 +152,78 @@ export async function saveProgramme(db, input, {actor, now, initial} = {}) {
   return fetchProgramme(db, baseline);
 }
 
-/** Publish only the saved, complete draft at the exact revision reviewed. */
-export async function publishProgramme(db, {expectedRevision, actor, now, initial} = {}) {
+/** English is the source of truth; caller-supplied target text cannot establish freshness. */
+export async function prepareProgrammeTranslations(programme, {published, initial, translate} = {}) {
+  fields(programme, ['version', 'updatedAt', 'departments', 'coffee'], 'programme');
+  fields(programme.departments, departmentIds, 'departments');
+  const source = {...programme, departments:{}};
+  for (const id of departmentIds) {
+    const department = programme.departments[id];
+    fields(department, ['status', 'translations'], 'departments.'+id);
+    fields(department.translations, programmeLanguages, 'departments.'+id+'.translations');
+    // Fill internal placeholders so the existing complete validator checks English
+    // and structured observations without trusting possibly stale target strings.
+    source.departments[id] = {status:department.status, translations:Object.fromEntries(programmeLanguages.map(language => [language, department.translations.en]))};
+  }
+  const candidate = normaliseProgramme(source, {complete:true});
+  let previous = null, baseline = null;
+  try {
+    if (published) previous = normaliseProgramme(published, {complete:true});
+    if (initial) baseline = normaliseProgramme(initial, {complete:true});
+  } catch { throw unavailable(); }
+  const changed = {};
+  for (const id of departmentIds) {
+    const english = candidate.departments[id].translations.en;
+    const matching = [previous, baseline].find(record => record && JSON.stringify(record.departments[id].translations.en) === JSON.stringify(english));
+    if (matching) {
+      for (const language of ['zh','ja']) candidate.departments[id].translations[language] = structuredClone(matching.departments[id].translations[language]);
+    } else changed[id] = structuredClone(english);
+  }
+  const ids = Object.keys(changed);
+  if (!ids.length) return normaliseProgramme(candidate, {complete:true});
+  if (typeof translate !== 'function') throw new ProgrammeError(503, 'translation_unavailable');
+  let result;
+  try { result = await translate(changed); }
+  catch (error) {
+    if (error instanceof ProgrammeError && /^translation_/.test(error.code)) throw error;
+    throw new ProgrammeError(503, 'translation_unavailable');
+  }
+  try {
+    fields(result, ids, 'translations');
+    for (const id of ids) {
+      fields(result[id], ['zh','ja'], 'translations.'+id);
+      for (const language of ['zh','ja']) {
+        fields(result[id][language], ['now','next','done'], 'translations.'+id+'.'+language);
+        if (!Array.isArray(result[id][language].done) || result[id][language].done.length !== candidate.departments[id].translations.en.done.length) invalid('translations.'+id+'.'+language+'.done');
+        candidate.departments[id].translations[language] = result[id][language];
+      }
+    }
+    // Validate every generated field before reusing reviewed wording. An invalid
+    // provider response must fail even if a particular field could be reused.
+    const validated = normaliseProgramme(candidate, {complete:true});
+    for (const id of ids) {
+      for (const field of ['now','next','done']) {
+        const english = validated.departments[id].translations.en[field];
+        const matching = [previous, baseline].find(record => record && JSON.stringify(record.departments[id].translations.en[field]) === JSON.stringify(english));
+        if (matching) for (const language of ['zh','ja']) validated.departments[id].translations[language][field] = structuredClone(matching.departments[id].translations[language][field]);
+      }
+    }
+    return normaliseProgramme(validated, {complete:true});
+  } catch { throw new ProgrammeError(502, 'translation_invalid'); }
+}
+
+/** Translate the reviewed English snapshot before one atomic three-language publication. */
+export async function publishProgramme(db, {expectedRevision, actor, now, initial, translate} = {}) {
   const expected = revision(expectedRevision), meta = editorialMeta(actor, now), baseline = initialDocument(initial);
   const state = privateState(await readState(db), baseline);
   if (state.revision !== expected) throw conflict();
   if (expected === 0) throw new ProgrammeError(409, 'save_before_publish');
-  // Validation is repeated at the trust boundary; client-side checks are optional.
-  normaliseProgramme(state.draft, {complete:true});
   if (state.publishedRevision === expected) return state;
-  const update = statement(db, 'UPDATE programme_state SET published_json=draft_json,published_revision=revision,published_at=?,published_by=? WHERE id=1 AND revision=? AND published_revision<>revision', [meta.at, meta.actor, expected]);
+  const candidate = await prepareProgrammeTranslations(state.draft, {published:state.published, initial:baseline, translate});
+  const payload = JSON.stringify(candidate);
+  // A new save during inference invalidates this exact English revision. The
+  // paired targets, public snapshot and audit either commit together or not at all.
+  const update = statement(db, 'UPDATE programme_state SET draft_json=?,published_json=?,published_revision=revision,published_at=?,published_by=? WHERE id=1 AND revision=? AND published_revision<>revision', [payload, payload, meta.at, meta.actor, expected]);
   const audit = statement(db, "INSERT INTO programme_audit (action,revision,published_revision,actor,created_at) SELECT 'publish',revision,published_revision,?,? FROM programme_state WHERE id=1 AND revision=? AND published_revision=? AND changes()=1", [meta.actor, meta.at, expected, expected]);
   await atomicWrite(db, update, audit, expected);
   return fetchProgramme(db, baseline);

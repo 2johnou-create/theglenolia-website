@@ -16,10 +16,20 @@
     "BREVO_LIST_JA": "",
     "BREVO_SENDER_ID": ""
   },
-  "triggers": {"crons": ["*/5 * * * *"]},
-  "d1_databases": [{
-    "binding": "DB",
-    "database_name": "glenolia-admin",
-    "database_id": "REPLACE_WITH_DATABASE_ID"
-  }]
+  "triggers": {
+    "crons": [
+      "*/5 * * * *"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "glenolia-admin",
+      "database_id": "REPLACE_WITH_DATABASE_ID"
+    }
+  ],
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  }
 }
