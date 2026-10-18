@@ -23,7 +23,7 @@ jobs:
           node-version: '24'
       - run: npm ci --ignore-scripts
       - run: node integrations/build-admin.mjs
-      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs integrations/programme-translation.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs
+      - run: node --test integrations/newsletter.test.mjs integrations/admin.test.mjs integrations/owner-notifications.test.mjs integrations/programme-store.test.mjs integrations/programme-api.test.mjs integrations/programme-translation.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs src/progress/programme-hello.test.mjs
       - run: python -m unittest discover -s scripts -p 'test_mobile_content.py'
       - run: python scripts/build.py
         env:

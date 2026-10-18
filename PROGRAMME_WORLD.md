@@ -159,6 +159,27 @@ routines, with no connection to real people, switches or attendance records.
 The existing pause and reduced-motion controls apply to movement and light
 transitions.
 
+## Say hello
+
+Tap a visible character or its small hand marker to receive a brief wave and a
+localized greeting. The **Say hello to the little team** chooser provides the
+same four department choices for keyboard users. Its native links reach the
+published department cards when JavaScript is unavailable.
+
+**What are you working on?** opens the selected area's status, current work,
+next milestone and dated update. These values come from the same public
+programme record as the cards and refresh when a valid publication is fetched.
+Unavailable updates retain the last available public notes with an explanation.
+Greeting lines are fictional, curated interface copy in `copy.*.sayHello`,
+separate from the factual notes translated and published through the admin.
+
+The wave lasts about two seconds, uses a free hand during switching/gardening
+tasks and leaves routes, occupied lights, camera selection, growth previews and
+actual progress unchanged. Pause and reduced motion provide the greeting text
+without a wave. Dragging, scrolling, long presses and multi-touch do not trigger
+greetings. Escape or either close button dismisses the conversation. No login,
+new request, storage, visitor tracking or backend write is involved.
+
 ## Sydney time and weather
 
 The clock always uses `Australia/Sydney`, including daylight-saving changes.

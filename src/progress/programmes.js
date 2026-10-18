@@ -1,10 +1,11 @@
 import {nearby} from './motion.js';
 import {sydneyState,moonPhasePath} from './programme-time.js';
+import {helloDepartments,placeGreeting,createCharacterTap} from './programme-hello.js';
 const source=document.getElementById('programme-data');
 const {copy:c,initial,language,apiOrigin}=JSON.parse(source.textContent);
 const root=document.querySelector('[data-programme-world]'),canvas=document.getElementById('programme-world-canvas');
 const $=selector=>document.querySelector(selector),all=selector=>document.querySelectorAll(selector);
-const state={programme:initial,weather:null,world:null,department:'all',growth:'actual',manualPaused:false,lastProgramme:0,lastWeather:0,clock:null};
+const state={programme:initial,weather:null,world:null,department:'all',growth:'actual',manualPaused:false,lastProgramme:0,lastWeather:0,clock:null,hello:null,programmeMessage:c.updatesLoading};
 const locale=c.lang;
 const day=value=>value?new Intl.DateTimeFormat(locale,{timeZone:'Australia/Sydney',year:'numeric',month:'short',day:'numeric'}).format(new Date(value.length===10?value+'T12:00:00+11:00':value)):'';
 const number=value=>new Intl.NumberFormat(locale,{maximumFractionDigits:1}).format(value);
@@ -50,6 +51,7 @@ function renderProgramme(){
  }
  all('[data-programme-updated]').forEach(el=>{el.textContent=day(state.programme.updatedAt);el.dateTime=state.programme.updatedAt;});
  plantSummary();
+ renderHelloNotes();
 }
 function validProgramme(data){
  return data?.version===1&&/^\d{4}-\d{2}-\d{2}$/.test(data.updatedAt)&&['cafe','coffee','workshops','local'].every(id=>{
@@ -63,8 +65,8 @@ async function get(path){
 }
 async function refreshProgramme(){
  if(document.hidden)return;state.lastProgramme=Date.now();
- try{const data=await get('/public/programme');if(!validProgramme(data))throw Error('invalid');state.programme=data;renderProgramme();if($('[data-programme-data-status]'))$('[data-programme-data-status]').textContent=c.latestUpdate+' · '+day(data.updatedAt);}
- catch{if($('[data-programme-data-status]'))$('[data-programme-data-status]').textContent=c.updatesUnavailable+' · '+day(state.programme.updatedAt);}
+ try{const data=await get('/public/programme');if(!validProgramme(data))throw Error('invalid');state.programme=data;state.programmeMessage=c.latestUpdate;renderProgramme();if($('[data-programme-data-status]'))$('[data-programme-data-status]').textContent=c.latestUpdate+' · '+day(data.updatedAt);}
+ catch{state.programmeMessage=c.updatesUnavailable;renderHelloNotes();if($('[data-programme-data-status]'))$('[data-programme-data-status]').textContent=c.updatesUnavailable+' · '+day(state.programme.updatedAt);}
 }
 async function refreshWeather(){
  if(document.hidden)return;state.lastWeather=Date.now();
@@ -95,7 +97,7 @@ function pauseLabel(){
 let bubbleKey='',bubbleBucket=-1,bubbleActor=null;
 function thoughts(actors){
  const bubble=$('[data-programme-thought]');
- if(state.world?.paused||state.growth!=='actual'){bubble.hidden=true;return;}
+ if(state.hello||state.world?.paused||state.growth!=='actual'){bubble.hidden=true;return;}
  const bucket=Math.floor(Date.now()/8500),visible=actors.filter(a=>a.visible&&(state.department==='all'||a.department===state.department));
  if(!visible.length){bubble.hidden=true;return;}
  if(bucket!==bubbleBucket){bubbleBucket=bucket;bubbleActor=visible[Math.floor(Math.random()*visible.length)].id;}
@@ -107,8 +109,84 @@ function thoughts(actors){
  bubble.style.left=Math.max(edge,Math.min(w-edge,actor.x))+'px';bubble.style.top=Math.max(100,actor.y-8)+'px';
  bubble.hidden=!switching&&Date.now()%8500>6800;
 }
-function fail(){document.body.classList.remove('programme-has-world');root.classList.remove('is-interactive','is-loading');$('[data-programme-loading]').hidden=true;$('[data-programme-fallback]').hidden=false;}
+const helloBubble=$('[data-hello-bubble]'),helloPanel=$('[data-hello-panel]'),helloTargets=$('[data-hello-targets]'),helloMore=$('[data-hello-more]');
+const targetButtons=new Map();let lastActors=[],helloSize={width:244,height:180};
+function renderHelloNotes(){
+ if(!state.hello||!helloPanel)return;
+ const id=state.hello.department,record=state.programme.departments[id],notes=record.translations[language];
+ $('[data-hello-title]').textContent=c.departments[id].title;
+ $('[data-hello-status]').textContent=c.statusLabels[record.status];
+ $('[data-hello-now]').textContent=notes.now;$('[data-hello-next]').textContent=notes.next;
+ const date=$('[data-hello-updated]');date.textContent=day(state.programme.updatedAt);date.dateTime=state.programme.updatedAt;
+ $('[data-hello-data-status]').textContent=state.programmeMessage;
+}
+function positionHello(){
+ if(!state.hello||!helloBubble||helloBubble.hidden)return;
+ const actor=lastActors.find(actor=>actor.id===state.hello.id&&actor.visible),hud=$('.programme-clock-hud');
+ const clock=hud?{left:hud.offsetLeft,top:hud.offsetTop,right:hud.offsetLeft+hud.offsetWidth,bottom:hud.offsetTop+hud.offsetHeight}:null;
+ const position=placeGreeting(actor,{width:canvas.clientWidth,height:canvas.clientHeight,bubbleWidth:helloSize.width,bubbleHeight:helloSize.height,clock});
+ helloBubble.style.left=position.x+'px';helloBubble.style.top=position.y+'px';
+}
+function markHello(){
+ for(const [id,button] of targetButtons)button.setAttribute('aria-pressed',String(state.hello?.id===id));
+ all('[data-hello-department]').forEach(button=>button.setAttribute('aria-current',String(state.hello?.department===button.dataset.helloDepartment)));
+}
+function showHello(selection,trigger=null,wave=true){
+ const requested=typeof selection==='string'?selection:selection?.id,department=typeof selection==='string'?selection:selection?.department;
+ if(!helloDepartments.includes(department))return;
+ const actor=(wave?state.world?.greet(requested):selection)||{id:requested,department};
+ state.hello={id:actor.id,department,trigger};
+ helloPanel.hidden=true;helloMore.setAttribute('aria-expanded','false');
+ helloBubble.hidden=false;$('[data-hello-greeting]').textContent=c.sayHello.greetings[department];
+ $('[data-programme-thought]').hidden=true;renderHelloNotes();markHello();
+ helloSize={width:helloBubble.offsetWidth,height:helloBubble.offsetHeight};positionHello();
+ if(trigger?.hasAttribute('data-hello-department')){
+   helloBubble.scrollIntoView({block:'nearest',behavior:'auto'});helloMore.focus({preventScroll:true});
+ }
+}
+function closeHello(restore=true){
+ const trigger=state.hello?.trigger;state.hello=null;helloBubble.hidden=true;helloPanel.hidden=true;helloMore.setAttribute('aria-expanded','false');state.world?.clearGreeting();markHello();
+ if(restore)(trigger?.isConnected&&!trigger.hidden&&trigger.getClientRects().length?trigger:$('.programme-hello-chooser summary'))?.focus({preventScroll:true});
+}
+function actorUpdates(actors){
+ lastActors=actors;
+ if(helloTargets){
+  helloTargets.hidden=!root.classList.contains('is-interactive');
+  const represented=new Set(),placed=[],hud=$('.programme-clock-hud'),clockRight=hud?hud.offsetLeft+hud.offsetWidth:0,clockBottom=hud?hud.offsetTop+hud.offsetHeight:0;
+  for(const actor of actors){
+   let button=targetButtons.get(actor.id);
+   if(!button){
+    button=document.createElement('button');button.type='button';button.className='programme-hello-target';button.dataset.helloActor=actor.id;button.setAttribute('aria-label',c.sayHello.teamLabels[actor.department]);button.setAttribute('aria-pressed','false');
+    button.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 10V5a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-2 7-6 7h-1c-2 0-3-1-4-2l-5-6a1.5 1.5 0 0 1 2-2l2 2"/></svg>';
+    const tap=createCharacterTap();
+    button.addEventListener('pointerdown',event=>tap.down(event),{passive:true});
+    button.addEventListener('pointermove',event=>tap.move(event),{passive:true});
+    button.addEventListener('pointercancel',event=>tap.cancel(event),{passive:true});
+    button.addEventListener('pointerleave',()=>tap.reset(),{passive:true});
+    button.addEventListener('pointerup',event=>{if(tap.up(event))showHello(actor,button);},{passive:true});
+    button.onclick=event=>{if(event.detail===0)showHello(actor,button);};helloTargets.append(button);targetButtons.set(actor.id,button);
+   }
+   const x=actor.x,y=actor.y-10;
+   const allowed=actor.visible&&(state.department==='all'||state.department===actor.department)&&!represented.has(actor.department)&&x>24&&x<canvas.clientWidth-24&&y>24&&y<canvas.clientHeight-24&&!(x<clockRight+24&&y<clockBottom+24)&&!placed.some(p=>Math.hypot(p.x-x,p.y-y)<46);
+   button.hidden=!allowed;
+   if(allowed){represented.add(actor.department);placed.push({x,y});button.style.left=x+'px';button.style.top=y+'px';}
+  }
+ }
+ positionHello();thoughts(actors);
+}
+all('[data-hello-department]').forEach(button=>button.onclick=event=>{event.preventDefault();showHello(button.dataset.helloDepartment,button);});
+if(helloMore)helloMore.onclick=()=>{
+ if(!state.hello)return;
+ renderHelloNotes();helloPanel.hidden=false;helloMore.setAttribute('aria-expanded','true');
+ helloPanel.scrollIntoView({block:'nearest',behavior:!state.world||state.world.paused?'auto':'smooth'});$('[data-hello-title]').focus({preventScroll:true});
+};
+if($('[data-hello-dismiss]'))$('[data-hello-dismiss]').onclick=()=>closeHello();
+if($('[data-hello-close]'))$('[data-hello-close]').onclick=()=>closeHello();
+root.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.hello){event.preventDefault();closeHello();}});
+if(helloBubble)new ResizeObserver(()=>{helloSize={width:helloBubble.offsetWidth,height:helloBubble.offsetHeight};positionHello();}).observe(helloBubble);
+function fail(){document.body.classList.remove('programme-has-world');root.classList.remove('is-interactive','is-loading');$('[data-programme-loading]').hidden=true;$('[data-programme-fallback]').hidden=false;if(helloTargets)helloTargets.hidden=true;}
 function focus(id){
+ if(state.hello)closeHello(false);
  if(id!=='coffee'&&state.growth!=='actual')growth('actual',false,false);
  if($('[data-growth-previewbar]'))$('[data-growth-previewbar]').hidden=id!=='coffee';
  state.department=id;state.world?.focusDepartment(id==='all'?null:id);
@@ -129,7 +207,7 @@ nearby(root,async()=>{
  root.classList.add('is-loading');$('[data-programme-loading]').hidden=false;
  try{
   const {createProgrammeWorld}=await import('./programme-world.js');
-  state.world=createProgrammeWorld(canvas,{onError:fail,onReady(){document.body.classList.add('programme-has-world');root.classList.add('is-interactive');root.classList.remove('is-loading');$('[data-programme-loading]').hidden=true;},onActors:thoughts});
+  state.world=createProgrammeWorld(canvas,{onError:fail,onReady(){document.body.classList.add('programme-has-world');root.classList.add('is-interactive');root.classList.remove('is-loading');$('[data-programme-loading]').hidden=true;},onActors:actorUpdates,onHello:selection=>showHello(selection,canvas,false)});
   if(!state.world){fail();return;}
   environment();plantSummary();pauseLabel();
   all('[data-programme-pause]').forEach(b=>b.onclick=()=>{state.manualPaused=!state.manualPaused;state.world.pause(state.manualPaused);pauseLabel();});

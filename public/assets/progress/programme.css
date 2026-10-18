@@ -280,3 +280,56 @@ html[data-reduce-motion=true] .programme-world-root *,html[data-reduce-motion=tr
 }
 html[data-reduce-motion=true] .programme-sky *{animation:none!important;transition:none!important}
 html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!important}
+
+/* A small conversation with the illustrated team. Published updates remain readable
+   through the same chooser when the miniature cannot run. */
+.programme-hello-targets{position:absolute;inset:0;z-index:5;pointer-events:none}
+.programme-hello-target{position:absolute;display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--green);transform:translate(-50%,-50%);cursor:pointer;pointer-events:auto;touch-action:manipulation}
+.programme-hello-target svg{display:block;width:27px;height:27px;padding:5px;overflow:visible;border:1px solid rgba(47,74,60,.38);border-radius:50%;background:var(--ivory);box-shadow:0 2px 9px rgba(59,51,45,.13);fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.programme-hello-target:hover svg,.programme-hello-target[aria-pressed=true] svg{background:var(--sage);border-color:var(--green)}
+.programme-hello-target:focus-visible{outline:2px solid var(--green);outline-offset:1px;background:var(--ivory)}
+.programme-world-root.is-night .programme-hello-target:focus-visible{outline-color:var(--ivory);box-shadow:0 0 0 4px var(--green)}
+.programme-hello-bubble{position:absolute;left:12px;top:120px;z-index:6;width:244px;max-width:calc(100% - 24px);padding:19px 17px 14px;border:1px solid rgba(47,74,60,.22);border-radius:19px;background:var(--ivory);color:var(--green);box-shadow:0 8px 28px rgba(59,51,45,.14);overflow-wrap:break-word;pointer-events:auto}
+.programme-hello-bubble p{max-width:none;margin:0 0 12px;padding-right:24px;font-size:13px;line-height:1.75}
+.programme-hello-dismiss,.programme-hello-close{display:grid;place-items:center;flex:none;width:44px;min-width:44px;height:44px;padding:11px;border:0;border-radius:50%;background:transparent;color:var(--green);cursor:pointer;touch-action:manipulation}
+.programme-hello-dismiss{position:absolute;top:1px;right:1px}
+.programme-hello-dismiss svg,.programme-hello-close svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round}
+.programme-hello-dismiss:hover,.programme-hello-close:hover{background:var(--sage)}
+.programme-hello-more{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;max-width:100%;width:100%;padding:10px 14px;border:1px solid var(--green);border-radius:25px;background:var(--green);color:var(--ivory);font-family:var(--sans);font-size:12px;line-height:1.6;text-align:left;cursor:pointer;touch-action:manipulation}
+.programme-hello-more svg{display:block;flex:none;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.programme-hello-more:hover{background:var(--ink);border-color:var(--ink)}
+.programme-hello-hint{max-width:78ch;margin:15px 0 10px;font-size:12px;line-height:1.8;color:var(--green)}
+.programme-hello-chooser{border-top:1px solid var(--sage);border-bottom:1px solid var(--sage);color:var(--green)}
+.programme-hello-chooser summary{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:48px;padding:11px 0;list-style:none;font-size:13px;line-height:1.8;cursor:pointer}
+.programme-hello-chooser summary::-webkit-details-marker{display:none}
+.programme-hello-chooser summary>span{display:block;flex:none;font-size:23px;line-height:1}
+.programme-hello-chooser[open] summary>span{transform:rotate(45deg)}
+.programme-hello-chooser>div{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 17px}
+.programme-hello-chooser button,.programme-hello-chooser a{display:inline-flex;align-items:center;min-height:44px;max-width:100%;padding:11px 15px;border:1px solid rgba(47,74,60,.22);border-radius:25px;background:var(--ivory);color:var(--green);font-family:var(--sans);font-size:12px;line-height:1.6;text-align:left;text-decoration:none;cursor:pointer;touch-action:manipulation}
+.programme-hello-chooser button:hover,.programme-hello-chooser a:hover,.programme-hello-chooser button[aria-pressed=true],.programme-hello-chooser a[aria-pressed=true],.programme-hello-chooser a[aria-current=true]{border-color:var(--green);background:var(--sage)}
+.programme-hello-dismiss:focus-visible,.programme-hello-close:focus-visible,.programme-hello-more:focus-visible,.programme-hello-chooser button:focus-visible,.programme-hello-chooser a:focus-visible,.programme-hello-chooser summary:focus-visible{outline:2px solid var(--green);outline-offset:3px}
+.programme-hello-notes{margin:20px 0 3px;padding:23px 25px 25px;border:1px solid rgba(47,74,60,.26);border-radius:7px;background:rgba(217,223,208,.26);color:var(--ink);scroll-margin-top:28px}
+.programme-hello-notes header{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+.programme-hello-notes h3{max-width:24ch;margin:5px 0 0;font-family:var(--serif);font-size:30px;line-height:1.25;color:var(--green);overflow-wrap:break-word}
+.programme-hello-notes h3:focus-visible{outline:2px solid var(--green);outline-offset:6px}
+.programme-hello-meta{display:flex;align-items:center;flex-wrap:wrap;gap:9px 18px;margin:17px 0 20px}
+.programme-hello-meta .programme-status{max-width:100%}
+.programme-hello-meta p{max-width:none;margin:0;font-size:11px;line-height:1.8;color:var(--green)}
+.programme-hello-notes dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;margin:0;padding-top:20px;border-top:1px solid rgba(47,74,60,.17)}
+.programme-hello-notes dl>div{min-width:0}
+.programme-hello-notes dt{font-size:11px;line-height:1.7;color:var(--green)}
+.programme-hello-notes dd{max-width:65ch;margin:9px 0 0;font-size:14px;line-height:1.85;overflow-wrap:break-word}
+@media(max-width:520px){
+  .programme-hello-bubble{width:226px;padding:17px 15px 12px;border-radius:17px}
+  .programme-hello-bubble p{font-size:12px;line-height:1.75}
+  .programme-hello-more{font-size:11px;padding:10px 12px}
+  .programme-hello-hint{font-size:11px;margin-top:13px}
+  .programme-hello-chooser summary{font-size:12px}
+  .programme-hello-chooser>div{gap:7px}
+  .programme-hello-chooser button,.programme-hello-chooser a{width:100%;font-size:12px;padding:11px 13px}
+  .programme-hello-notes{padding:19px 19px 22px;margin-top:17px}
+  .programme-hello-notes h3{font-size:27px}
+  .programme-hello-notes dl{grid-template-columns:1fr;gap:19px;padding-top:17px}
+  .programme-hello-notes dl>div+div{padding-top:17px;border-top:1px solid rgba(47,74,60,.13)}
+  .programme-hello-meta{gap:9px 12px;margin-top:14px}
+}

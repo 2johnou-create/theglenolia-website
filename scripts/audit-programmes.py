@@ -164,6 +164,14 @@ for key,(lang,prefix) in LOCALES.items():
     check(set(c) == set(DATA['copy']['en']) and c['lang'] == lang, key+': incomplete or wrong localized copy')
     check(set(c['clock']) == {'label','place'} and all(c['clock'].values()), key+': analogue clock labels missing')
     check(isinstance(c['lightingThoughts'],list) and len(c['lightingThoughts'])>=2 and all(isinstance(s,str) and s.strip() for s in c['lightingThoughts']), key+': localized light-switching thoughts missing')
+    hello = c.get('sayHello', {})
+    hello_keys = {'hint','chooseLabel','title','button','close','teamLabels','greetings'}
+    check(isinstance(hello,dict) and set(hello) == hello_keys, key+': Say hello copy keys incomplete')
+    if isinstance(hello,dict):
+        check(all(isinstance(hello.get(field),str) and hello[field].strip() for field in hello_keys-{'teamLabels','greetings'}), key+': Say hello labels must be nonempty localized text')
+        for field in ['teamLabels','greetings']:
+            values = hello.get(field, {})
+            check(isinstance(values,dict) and set(values) == set(IDS) and all(isinstance(text,str) and text.strip() for text in values.values()), key+': Say hello '+field+' must cover exactly four departments')
     check(list(c['departments']) == IDS, key+': department names missing')
     check(list(c['growth']['stages']) == GROWTH, key+': optional growth stages missing/order changed')
     check(set(c['statusLabels']) == {'planning','developing','trialling','ready'}, key+': status labels incomplete')
@@ -220,6 +228,7 @@ for key,(lang,prefix) in LOCALES.items():
             check(not any(n.tag=='link' and n.attrs.get('rel')=='stylesheet' and 'programme' in urlsplit(n.attrs.get('href','')).path for n in root.walk()), label+': homepage must not load programme styles')
             check(not any(attribute.startswith(('data-programme','data-weather')) for n in root.walk() for attribute in n.attrs), label+': live programme/weather controls leaked onto homepage')
             check(not root.classes('programme-weather') and not root.classes('programme-clock'), label+': homepage must not display live programme weather or clock')
+            check(not any(attribute.startswith('data-hello') for n in root.walk() for attribute in n.attrs) and not any(name.startswith('programme-hello-') for n in root.walk() for name in n.attrs.get('class','').split()), label+': Say hello interaction leaked onto homepage')
             check(any(n.tag=='a' and n.attrs.get('href')==BASE+'/'+prefix+'progress/' for n in root.walk()), label+': homepage has no route to physical progress')
             continue
         programmes += 1
@@ -245,6 +254,44 @@ for key,(lang,prefix) in LOCALES.items():
         check(poster.tag=='img' and poster.attrs.get('src')==BASE+'/assets/progress/programme-poster.webp' and bool(poster.attrs.get('alt')) and 'hidden' not in poster.attrs, label+': model fallback is missing')
         caption = one(root.find(id='programme-world-caption'), label+': scope caption')
         check(norm(c['worldCaption']) in norm(caption.text()) and norm(c['staffCaption']) in norm(caption.text()), label+': scene/staff illustrative scope missing')
+        hello = c['sayHello']
+        hint = one(world.classes('programme-hello-hint'), label+': Say hello hint')
+        check(norm(hint.text()) == norm(hello['hint']), label+': Say hello hint is not localized')
+        chooser = one(world.classes('programme-hello-chooser'), label+': native greeting chooser')
+        check(chooser.tag == 'details', label+': greeting chooser must work as native disclosure')
+        summary = one([n for n in chooser.children if isinstance(n,Node) and n.tag=='summary'], label+': greeting chooser summary')
+        check(norm(hello['title']) in norm(summary.text()), label+': greeting chooser title is not localized')
+        group = one(chooser.find(role='group'), label+': greeting chooser group')
+        check(group.attrs.get('aria-label') == hello['chooseLabel'], label+': greeting chooser accessible label is not localized')
+        choices = [n for n in root.walk() if 'data-hello-department' in n.attrs]
+        check(len(choices) == 4 and [n.attrs.get('data-hello-department') for n in choices] == IDS, label+': expected exactly four greeting choices')
+        for id,choice in zip(IDS,choices):
+            check(choice in list(group.walk()) and choice.tag=='a' and choice.attrs.get('href')=='#programme-'+id, label+'/'+id+': greeting choice needs a native programme-card fallback link')
+            check(choice.attrs.get('aria-label')==hello['teamLabels'][id] and norm(choice.text())==norm(c['departments'][id]['title']), label+'/'+id+': greeting choice labels differ from localized department')
+            target = one(root.find(id='programme-'+id), label+'/'+id+': greeting fallback target')
+            check(target.attrs.get('data-department-card')==id, label+'/'+id+': greeting fallback must reach the published department notes')
+        bubble = marked(world,'data-hello-bubble',label)
+        check('hidden' in bubble.attrs, label+': greeting bubble must wait for a visitor action')
+        greeting = marked(bubble,'data-hello-greeting',label)
+        check(greeting.attrs.get('role')=='status' and greeting.attrs.get('aria-live')=='polite' and not norm(greeting.text()), label+': greeting needs an initially empty polite live region')
+        dismiss = marked(bubble,'data-hello-dismiss',label)
+        check(dismiss.tag=='button' and dismiss.attrs.get('type')=='button' and dismiss.attrs.get('aria-label')==hello['close'], label+': greeting dismiss control needs a localized button label')
+        more = marked(bubble,'data-hello-more',label)
+        panel = marked(world,'data-hello-panel',label)
+        check(more.tag=='button' and more.attrs.get('type')=='button' and norm(more.text())==norm(hello['button']) and more.attrs.get('aria-expanded')=='false' and bool(panel.attrs.get('id')) and more.attrs.get('aria-controls')==panel.attrs.get('id'), label+': greeting action must label and control the initially collapsed notes panel')
+        check('hidden' in panel.attrs and panel.attrs.get('role')=='region', label+': greeting notes must start hidden in a labelled region')
+        title = marked(panel,'data-hello-title',label)
+        check(title.tag.startswith('h') and title.attrs.get('tabindex')=='-1' and bool(title.attrs.get('id')) and panel.attrs.get('aria-labelledby')==title.attrs.get('id') and not norm(title.text()), label+': greeting notes need an initially empty, focusable linked heading')
+        close = marked(panel,'data-hello-close',label)
+        check(close.tag=='button' and close.attrs.get('type')=='button' and close.attrs.get('aria-label')==hello['close'], label+': greeting notes close control needs a localized button label')
+        check(not norm(marked(panel,'data-hello-status',label).text()), label+': greeting status must wait for published department data')
+        for field in ['now','next']:
+            value = marked(panel,'data-hello-'+field,label)
+            check(value.tag=='dd' and not norm(value.text()), label+': greeting '+field+' hook must wait for published department data')
+            check(value.parent is not None and any(n.tag=='dt' and norm(n.text())==norm(c[field]) for n in value.parent.children if isinstance(n,Node)), label+': greeting '+field+' label is not localized')
+        updated = marked(panel,'data-hello-updated',label)
+        check(updated.tag=='time' and not norm(updated.text()) and not updated.attrs.get('datetime'), label+': greeting date must wait for the published update date')
+        check(norm(c['updatedOn']) in norm(updated.parent.text()), label+': greeting update-date label is not localized')
         tabs = one(root.classes('programme-department-tabs'), label+': department selectors')
         buttons = [n for n in tabs.walk() if n.tag=='button']
         check([n.attrs.get('data-programme-department') for n in buttons] == ['all']+IDS, label+': department controls are incomplete')

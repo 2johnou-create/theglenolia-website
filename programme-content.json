@@ -294,7 +294,26 @@
         "A little glow for this corner.",
         "Just checking the lights.",
         "One last look, then on we go."
-      ]
+      ],
+      "sayHello": {
+        "hint": "Tap a little team member to say hello.",
+        "chooseLabel": "Choose a team to greet",
+        "title": "Say hello to the little team.",
+        "button": "What are you working on?",
+        "close": "Close greeting",
+        "teamLabels": {
+          "cafe": "Say hello to the café and farm experiences team",
+          "coffee": "Say hello to the coffee growing team",
+          "workshops": "Say hello to the workshops team",
+          "local": "Say hello to the local connections team"
+        },
+        "greetings": {
+          "cafe": "Hello there. It’s good to have you here.",
+          "coffee": "Hello there. Let’s look a little closer.",
+          "workshops": "Hello! Bring a little curiosity along.",
+          "local": "Hello there. Every connection starts with a little hello."
+        }
+      }
     },
     "zh": {
       "lang": "zh-Hant",
@@ -590,7 +609,26 @@
         "這個角落，添一點光。",
         "看看燈光，剛剛好。",
         "再看一眼，接著往前走。"
-      ]
+      ],
+      "sayHello": {
+        "hint": "點一下小夥伴，打聲招呼。",
+        "chooseLabel": "選擇想打招呼的團隊",
+        "title": "和小夥伴打聲招呼。",
+        "button": "最近在準備什麼？",
+        "close": "關閉招呼卡",
+        "teamLabels": {
+          "cafe": "向咖啡館與農場體驗團隊打聲招呼",
+          "coffee": "向咖啡種植團隊打聲招呼",
+          "workshops": "向實作工作坊團隊打聲招呼",
+          "local": "向在地連結團隊打聲招呼"
+        },
+        "greetings": {
+          "cafe": "你好呀，很高興在這裡遇見你。",
+          "coffee": "你好呀，一起靠近一點，仔細看看。",
+          "workshops": "你好呀，帶著好奇心，一起看看吧。",
+          "local": "你好呀，小小招呼，也是一段連結的開始。"
+        }
+      }
     },
     "ja": {
       "lang": "ja",
@@ -886,7 +924,26 @@
         "この一角に、やさしい灯りを。",
         "灯りをちょっと確認。",
         "もう一度見てから、次の場所へ。"
-      ]
+      ],
+      "sayHello": {
+        "hint": "小さな仲間をタップして、ごあいさつ。",
+        "chooseLabel": "あいさつするチームを選ぶ",
+        "title": "小さな仲間に、ごあいさつ。",
+        "button": "どんな準備をしているの？",
+        "close": "あいさつを閉じる",
+        "teamLabels": {
+          "cafe": "カフェと農場体験のチームにあいさつする",
+          "coffee": "コーヒー栽培チームにあいさつする",
+          "workshops": "ワークショップチームにあいさつする",
+          "local": "地域とのつながりチームにあいさつする"
+        },
+        "greetings": {
+          "cafe": "こんにちは。ここで会えて、うれしいです。",
+          "coffee": "こんにちは。一緒に、少し近くで見てみましょう。",
+          "workshops": "こんにちは。好奇心を持って、のぞいてみませんか。",
+          "local": "こんにちは。小さなあいさつから、つながりが生まれますね。"
+        }
+      }
     }
   },
   "initial": {

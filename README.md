@@ -37,7 +37,7 @@ Use Node 24 and Python 3.12 or newer:
 ```sh
 npm ci --ignore-scripts
 node integrations/build-admin.mjs
-node --test integrations/*.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs
+node --test integrations/*.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs src/progress/programme-hello.test.mjs
 python -m unittest discover -s scripts -p 'test_mobile_content.py'
 python scripts/build.py
 npm run build:progress

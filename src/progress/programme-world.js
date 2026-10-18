@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createProgrammeNightBehavior,departmentLightStations} from './programme-night.js';
+import {createCharacterTap,pickCharacter,wavePose,waveDuration} from './programme-hello.js';
 
 // An original planning miniature. Its clock, characters and growth previews never
 // establish the real work, attendance, planting or programme status of the farm.
@@ -333,7 +334,7 @@ function buildMiniature(scene,requestRender) {
   };
 }
 
-export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
+export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={}) {
   let renderer;
   try {renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'low-power'});} catch(error) {onError?.(error);return null;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<600?1.25:1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
@@ -362,7 +363,24 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
   for(let i=0;i<rainCount;i++)rainSeeds.push({x:-13+(i*4.771)%26,z:-9+(i*7.713)%18,y:(i*3.733)%11,speed:4.5+(i%5)*.35});
   const rainGeometry=new THREE.BufferGeometry();rainGeometry.setAttribute('position',new THREE.BufferAttribute(rainPositions,3));const rain=new THREE.LineSegments(rainGeometry,new THREE.LineBasicMaterial({color:palette.sage,transparent:true,opacity:.5}));rain.visible=false;rain.frustumCulled=false;scene.add(rain);
   const projected=new THREE.Vector3(),origin=new THREE.Vector3(),cameraOffset=new THREE.Vector3(27,29,32);
-  let tween=null;
+  const raycaster=new THREE.Raycaster(),tap=createCharacterTap();
+  let tween=null,greeting=null,actorPositions=[],lastSight=-Infinity;
+  function hasSight(actor){
+    actor.head.getWorldPosition(origin);projected.copy(origin).project(camera);
+    raycaster.setFromCamera({x:projected.x,y:projected.y},camera);
+    const first=raycaster.intersectObject(model.root,true).find(hit=>{
+      if(hit.object.material?.opacity<.4)return false;
+      let parent=hit.object;while(parent){if(!parent.visible)return false;parent=parent.parent;}return true;
+    });
+    let object=first?.object;while(object){if(object===actor.root)return true;object=object.parent;}return false;
+  }
+  function greet(id){
+    const actor=model.actors.find(actor=>actor.id===id)||model.actors.find(actor=>actor.department===id);
+    if(!actor)return null;
+    greeting=isPaused()?null:{id:actor.id,started:time};
+    if(greeting)canvas.dataset.greetingActor=actor.id;else delete canvas.dataset.greetingActor;dirty=true;
+    return {id:actor.id,department:actor.department};
+  }
   function dimensions(){return{width:Math.max(1,canvas.parentElement.clientWidth),height:Math.max(1,canvas.parentElement.clientHeight)};}
   function resize(){
     if(disposed)return;const {width,height}=dimensions(),aspect=width/height,half=focus?Math.max(5.2,10.7/aspect/2):Math.max(11.3,36/aspect/2);
@@ -392,7 +410,17 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
   }
   function projectActors(){
     const {width,height}=dimensions();
-    onActors?.(model.actors.map(actor=>{actor.root.getWorldPosition(origin);projected.copy(origin);projected.y+=2.15;projected.project(camera);return{id:actor.id,department:actor.department,activity:actor.activity,lightAction:actor.lightAction||null,x:(projected.x*.5+.5)*width,y:(-.5*projected.y+.5)*height,visible:projected.z>-1&&projected.z<1&&Math.abs(projected.x)<.93&&Math.abs(projected.y)<.90};}));
+    const checkSight=isPaused()||performance.now()-lastSight>500;
+    actorPositions=model.actors.map(actor=>{
+      actor.root.getWorldPosition(origin);const position=origin.clone();projected.copy(position);projected.y+=2.15;projected.project(camera);
+      const x=(projected.x*.5+.5)*width,y=(-.5*projected.y+.5)*height,depth=projected.z;
+      const inFrame=projected.z>-1&&projected.z<1&&Math.abs(projected.x)<.93&&Math.abs(projected.y)<.90;
+      if(checkSight)actor.inSight=inFrame&&hasSight(actor);
+      projected.copy(position);projected.y+=1.1;projected.project(camera);
+      return {id:actor.id,department:actor.department,activity:actor.activity,lightAction:actor.lightAction||null,x,y,hitX:(projected.x*.5+.5)*width,hitY:(-.5*projected.y+.5)*height,depth,visible:inFrame&&Boolean(actor.inSight)};
+    });
+    if(checkSight)lastSight=performance.now();
+    onActors?.(actorPositions);
   }
   function animateWeather(){
     const breeze=Math.min(1,environment.wind/35),sway=.01+breeze*.035;
@@ -405,7 +433,7 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
   const visibilityObserver=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;last=0;if(visible)dirty=true;},{rootMargin:'120px'});visibilityObserver.observe(canvas.parentElement);
   const onPreference=()=>{dirty=true;canvas.dataset.paused=String(isPaused());};osMotion.addEventListener('change',onPreference);
   const preferenceObserver=new MutationObserver(onPreference);preferenceObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-reduce-motion']});
-  const onVisibility=()=>{last=0;if(!document.hidden)dirty=true;};document.addEventListener('visibilitychange',onVisibility);
+  const onVisibility=()=>{last=0;tap.reset();if(!document.hidden)dirty=true;};document.addEventListener('visibilitychange',onVisibility);
   const onContextLost=event=>{event.preventDefault();manualPaused=true;onError?.(new Error('WebGL context lost'));};canvas.addEventListener('webglcontextlost',onContextLost);
   const onKey=event=>{
     if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(event.key))return;event.preventDefault();tween=null;
@@ -413,7 +441,21 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
     if(event.key==='ArrowLeft')s.theta-=.13;if(event.key==='ArrowRight')s.theta+=.13;if(event.key==='ArrowUp')s.phi=Math.max(.48,s.phi-.07);if(event.key==='ArrowDown')s.phi=Math.min(1.25,s.phi+.07);
     camera.position.copy(new THREE.Vector3().setFromSpherical(s).add(controls.target));controls.update();dirty=true;
   };canvas.addEventListener('keydown',onKey);
-  const onPointer=()=>{tween=null;};canvas.addEventListener('pointerdown',onPointer,{passive:true});
+  const onPointer=event=>{tween=null;tap.down(event);};
+  const onPointerMove=event=>tap.move(event);
+  const onPointerCancel=event=>tap.cancel(event);
+  const onPointerUp=event=>{
+    const point=tap.up(event);if(!point)return;
+    const hud=canvas.parentElement.querySelector('.programme-clock-hud')?.getBoundingClientRect();
+    if(hud&&point.x>=hud.left&&point.x<=hud.right&&point.y>=hud.top&&point.y<=hud.bottom)return;
+    const bounds=canvas.getBoundingClientRect(),actor=pickCharacter(actorPositions,point.x-bounds.left,point.y-bounds.top);
+    const modelActor=actor&&model.actors.find(item=>item.id===actor.id);
+    if(modelActor&&hasSight(modelActor)){const hello=greet(modelActor.id);onHello?.(hello);}
+  };
+  canvas.addEventListener('pointerdown',onPointer,{passive:true,capture:true});
+  canvas.addEventListener('pointermove',onPointerMove,{passive:true,capture:true});
+  canvas.addEventListener('pointercancel',onPointerCancel,{passive:true,capture:true});
+  canvas.addEventListener('pointerup',onPointerUp,{passive:true,capture:true});
   function loop(now){
     if(disposed)return;requestAnimationFrame(loop);if(!visible||document.hidden){last=0;return;}if(now-lastRendered<1000/30)return;
     const delta=last?Math.min((now-last)/1000,.1):0;last=now;lastRendered=now;const paused=isPaused();if(!paused)time+=delta;
@@ -422,6 +464,17 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
     if(!paused||dirty){
       const routine=model.behavior.advance(delta,environment,{paused,reduced:reduced()});
       model.actors.forEach((actor,i)=>updateActor(actor,routine.actors[i],paused?0:delta,time));
+      if(greeting){
+        const actor=model.actors.find(actor=>actor.id===greeting.id),elapsed=time-greeting.started;
+        const pose=wavePose(elapsed,{paused,reduced:reduced(),activity:actor.activity});
+        if(pose){
+          const arm=actor.arms[pose.arm];arm.rotation.x=THREE.MathUtils.lerp(arm.rotation.x,pose.lift,pose.amount);arm.rotation.z=THREE.MathUtils.lerp(arm.rotation.z,pose.sway,pose.amount);
+          if(pose.arm===1)actor.pencil.visible=false;
+          const toward=Math.atan2(camera.position.x-actor.root.position.x,camera.position.z-actor.root.position.z)-actor.root.rotation.y;
+          actor.head.rotation.y=THREE.MathUtils.clamp(angleTowards(0,toward,1),-.5,.5)*pose.amount;
+        }
+        if(paused||elapsed>=waveDuration){greeting=null;delete canvas.dataset.greetingActor;}
+      }
       model.workLights.forEach((lamp,i)=>{const level=routine.lights[i].level;lamp.light.intensity=14*level;lamp.bulbMaterial.emissiveIntensity=1.9*level;lamp.glowMaterial.opacity=.027*level;});
       animateWeather();
       if(now-lastShadow>750){renderer.shadowMap.needsUpdate=true;lastShadow=now;}
@@ -435,12 +488,14 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors}={}) {
   return {
     pause(value){manualPaused=Boolean(value);canvas.dataset.paused=String(isPaused());dirty=true;},
     reset,
+    greet,
+    clearGreeting(){greeting=null;delete canvas.dataset.greetingActor;dirty=true;},
     focusDepartment(id){moveCamera(id,true);},
     setEnvironment,
     setGrowthStage(stage){if(!growthStages.includes(stage)&&stage!=='actual')return false;model.setGrowth(stage);canvas.dataset.growthStage=stage;renderer.shadowMap.needsUpdate=true;dirty=true;return true;},
     setPlantData(data){model.setPlantData(data);renderer.shadowMap.needsUpdate=true;dirty=true;},
     get paused(){return isPaused();},
     get scene(){return scene;},
-    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();renderer.dispose();},
+    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer,true);canvas.removeEventListener('pointermove',onPointerMove,true);canvas.removeEventListener('pointercancel',onPointerCancel,true);canvas.removeEventListener('pointerup',onPointerUp,true);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();renderer.dispose();},
   };
 }
