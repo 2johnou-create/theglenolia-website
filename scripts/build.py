@@ -5,6 +5,7 @@ import json, shutil, os, hashlib
 from urllib.parse import quote
 import progress_markup as world_markup
 import programme_markup
+import export_website_content
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTENT = json.loads((ROOT / 'content.json').read_text())
@@ -151,3 +152,8 @@ print(f'Built {len(CONTENT)*len(ROUTES)} localized pages in {DIST}')
 if BASE_PATH:
     css=(DIST/'style.css').read_text().replace("url('/",f"url('{BASE_PATH}/")
     (DIST/'style.css').write_text(css)
+
+# Export after dist has been recreated so the native app always receives the
+# same public editorial sources as this deployment, without admin/draft data.
+export_website_content.export(ROOT, DIST/'api/v1')
+shutil.copyfile(ROOT/'scripts/mobile-content-v1.schema.json', DIST/'api/v1/content.schema.json')

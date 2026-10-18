@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://theglenolia.com.au/api/v1/content.schema.json",
+  "title": "The Glenolia native editorial content, version 1",
+  "type": "object",
+  "required": ["schemaVersion", "contentVersion", "updatedAt", "canonicalOrigin", "programmeEndpoint", "instagramFeedURL", "locales", "languages", "assets"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "contentVersion": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "updatedAt": {"type": "string", "format": "date"},
+    "canonicalOrigin": {"const": "https://theglenolia.com.au"},
+    "programmeEndpoint": {"const": "https://glenolia-newsletter.theglenolia.workers.dev/public/programme"},
+    "instagramFeedURL": {"const": "https://theglenolia.com.au/instagram.json"},
+    "locales": {"type": "array", "items": {"enum": ["en", "zh", "ja"]}, "uniqueItems": true, "minItems": 3, "maxItems": 3},
+    "languages": {
+      "type": "object",
+      "required": ["en", "zh", "ja"],
+      "properties": {"en": {"$ref": "#/$defs/language"}, "zh": {"$ref": "#/$defs/language"}, "ja": {"$ref": "#/$defs/language"}}
+    },
+    "assets": {"type": "object", "required": ["logoEnURL", "logoZhURL", "compactLogoURL", "leafURL", "heroImageURL", "heroImageSmallURL"], "additionalProperties": {"$ref": "#/$defs/siteURL"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "maxLength": 12000},
+    "siteURL": {"type": "string", "maxLength": 2048, "format": "uri", "pattern": "^https://theglenolia\\.com\\.au/"},
+    "paragraph": {"type": "object", "required": ["title", "body"], "properties": {"title": {"$ref": "#/$defs/text"}, "body": {"$ref": "#/$defs/text"}}},
+    "direction": {
+      "type": "object",
+      "required": ["id", "title", "summary", "body", "imageURL", "imageAlt"],
+      "properties": {
+        "id": {"enum": ["cafe", "coffee", "workshops", "local"]},
+        "title": {"$ref": "#/$defs/text"}, "summary": {"$ref": "#/$defs/text"}, "body": {"$ref": "#/$defs/text"},
+        "imageURL": {"$ref": "#/$defs/siteURL"}, "imageAlt": {"$ref": "#/$defs/text"}
+      }
+    },
+    "language": {
+      "type": "object",
+      "required": ["locale", "name", "tagline", "heroTitle", "heroText", "heroImageAlt", "status", "openingTarget", "openingNote", "location", "founder", "directions", "coffee", "faqs", "newsletter", "links", "imageDisclosure"],
+      "properties": {
+        "locale": {"enum": ["en-AU", "zh-Hant", "ja"]},
+        "name": {"$ref": "#/$defs/text"}, "tagline": {"$ref": "#/$defs/text"}, "heroTitle": {"$ref": "#/$defs/text"},
+        "heroText": {"$ref": "#/$defs/text"}, "heroImageAlt": {"$ref": "#/$defs/text"}, "status": {"$ref": "#/$defs/text"}, "openingTarget": {"$ref": "#/$defs/text"},
+        "openingNote": {"$ref": "#/$defs/text"}, "location": {"$ref": "#/$defs/text"}, "imageDisclosure": {"$ref": "#/$defs/text"},
+        "founder": {
+          "type": "object", "required": ["title", "intro", "body", "values"],
+          "properties": {"title": {"$ref": "#/$defs/text"}, "intro": {"$ref": "#/$defs/text"}, "body": {"$ref": "#/$defs/text"}, "values": {"type": "array", "maxItems": 12, "items": {"$ref": "#/$defs/paragraph"}}}
+        },
+        "directions": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"$ref": "#/$defs/direction"}},
+        "coffee": {"type": "object", "required": ["title", "intro", "sections"], "properties": {"title": {"$ref": "#/$defs/text"}, "intro": {"$ref": "#/$defs/text"}, "sections": {"type": "array", "maxItems": 30, "items": {"$ref": "#/$defs/paragraph"}}}},
+        "faqs": {"type": "array", "maxItems": 50, "items": {"type": "object", "required": ["question", "answer"], "properties": {"question": {"$ref": "#/$defs/text"}, "answer": {"$ref": "#/$defs/text"}}}},
+        "newsletter": {
+          "type": "object", "required": ["title", "intro", "note", "url", "privacyURL"],
+          "properties": {"title": {"$ref": "#/$defs/text"}, "intro": {"$ref": "#/$defs/text"}, "note": {"$ref": "#/$defs/text"}, "url": {"$ref": "#/$defs/siteURL"}, "privacyURL": {"$ref": "#/$defs/siteURL"}}
+        },
+        "links": {
+          "type": "object", "required": ["home", "privacy", "contact", "partner", "instagram"],
+          "properties": {
+            "home": {"$ref": "#/$defs/siteURL"}, "privacy": {"$ref": "#/$defs/siteURL"},
+            "contact": {"const": "mailto:info@theglenolia.com.au"}, "partner": {"const": "mailto:partner@theglenolia.com.au"},
+            "instagram": {"const": "https://www.instagram.com/theglenolia/"}
+          }
+        }
+      }
+    }
+  }
+}

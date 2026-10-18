@@ -12,6 +12,7 @@ A light, responsive information website in English, Traditional Chinese and Japa
 - Instagram: the official @theglenolia account is linked. Automatic feed import still needs Meta account authorization; no invented posts appear.
 - Google Business Profile: account creation/verification remains separate from completed Workspace setup.
 - Programme updates: `/progress/programmes/`, `/zh-hant/progress/programmes/` and `/ja/progress/programmes/` show four developing areas, dated coffee observations and an illustrative miniature. Our Progress links into these pages. Programme 3D, Sydney day/night and attributed nearby weather run on these subpages without visitor geolocation.
+- Native app content: `/api/v1/content.json` exports the same public editorial sources in all three languages on every website build. See [MOBILE_CONTENT_FEED.md](MOBILE_CONTENT_FEED.md) for the contract and refresh workflow.
 
 ## Owner workflow
 
@@ -36,7 +37,8 @@ Use Node 24 and Python 3.12 or newer:
 ```sh
 npm ci --ignore-scripts
 node integrations/build-admin.mjs
-node --test integrations/*.test.mjs src/progress/programme-time.test.mjs
+node --test integrations/*.test.mjs src/progress/programme-time.test.mjs src/progress/programme-night.test.mjs
+python -m unittest discover -s scripts -p 'test_mobile_content.py'
 python scripts/build.py
 npm run build:progress
 python scripts/audit.py
