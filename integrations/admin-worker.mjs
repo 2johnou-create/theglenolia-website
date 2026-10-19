@@ -1,6 +1,7 @@
 import programmeSeed from '../programme-content.json' with {type:'json'};
-import {fetchProgramme,saveProgramme,publishProgramme,prepareProgrammeTranslations,ProgrammeError} from './programme-store.mjs';
-import {translateDepartmentNotes} from './programme-translation.mjs';
+import {fetchProgramme,saveProgramme,publishProgramme,prepareProgrammeTranslations,retainProgrammeSnapshots,ProgrammeError} from './programme-store.mjs';
+import {translateDepartmentNotes,translateSnapshotNotes} from './programme-translation.mjs';
+import {uploadProgrammeImage,fetchProgrammeImage,programmeImageResponse} from './programme-media.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
 import {html,css,js,programmeJs} from './admin-assets.mjs';
@@ -26,10 +27,10 @@ async function getEdition(env,id){
  return row?{edition:JSON.parse(row.payload),revision:row.revision}:{edition:structuredClone(seeds.find(e=>e.id===id)),revision:0};
 }
 async function phases(env,id){return (await env.DB.prepare('SELECT language, brevo_id, phase FROM campaigns WHERE edition_id = ?').bind(id).all()).results;}
-async function readJson(request){
+async function readJson(request,maximum=40000){
  if(!request.headers.get('Content-Type')?.startsWith('application/json'))return null;
  const reader=request.body?.getReader();if(!reader)return null;let size=0,parts=[];
- try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>40000){await reader.cancel();return null;}parts.push(value);}const data=new Uint8Array(size);let offset=0;for(const p of parts){data.set(p,offset);offset+=p.byteLength;}return JSON.parse(new TextDecoder().decode(data));}catch{return null;}
+ try{for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>maximum){await reader.cancel();return null;}parts.push(value);}const data=new Uint8Array(size);let offset=0;for(const p of parts){data.set(p,offset);offset+=p.byteLength;}return JSON.parse(new TextDecoder().decode(data));}catch{return null;}
 }
 export async function scheduleEdition(env,id,saved,fetcher=runtimeFetch,{background=false}={}){
   if(env.SENDING_READY!=='true'||!positive(env.BREVO_SENDER_ID)||languages.some(l=>!positive(env['BREVO_LIST_'+localeKeys[l]])))return json(503,{error:'sending_not_ready'});
@@ -91,25 +92,39 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  const url=new URL(request.url),path=url.pathname;
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
- const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+ const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
  if(request.method==='GET'&&['/','/admin.css','/admin.js','/programme-admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:path==='/programme-admin.js'?programmeJs:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
  if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true',ownerNotificationsEnabled:env.OWNER_NOTIFICATIONS_ENABLED==='true'});
+ if(path==='/api/programme/images/upload'||path.startsWith('/api/programme/images/')){
+  if(!env.DB)return json(503,{error:'programme_unavailable'});
+  try{
+   if(path==='/api/programme/images/upload'){
+    if(request.method!=='POST')return json(405,{error:'method'});
+    if([...url.searchParams.keys()].some(key=>key!=='department')||url.searchParams.getAll('department').length!==1)return json(400,{error:'invalid_department'});
+    return json(201,{image:await uploadProgrammeImage(env.DB,request,{department:url.searchParams.get('department'),actor:identity.email})});
+   }
+   if(request.method!=='GET')return json(405,{error:'method'});
+   const image=await fetchProgrammeImage(env.DB,path.slice('/api/programme/images/'.length));
+   return image?programmeImageResponse(image):json(404,{error:'not_found'});
+  }catch(error){return json(error.status||503,{error:error.code||'programme_unavailable',...(error.code==='translation_invalid'?{translationFailure:{entryId:error.entryId||null,language:error.language||null,reason:error.reason||'shape'}}:{})});}
+ }
  if(['/api/programme','/api/programme/save','/api/programme/publish','/api/programme/preview-translations'].includes(path)){
   if(!env.DB)return json(503,{error:'programme_unavailable'});
   try{
-   const options={actor:identity.email,initial:programmeSeed.initial,translate:changed=>translateDepartmentNotes(changed,env)};
+   const translationEnv={...env,deadline:Date.now()+45000};
+   const options={actor:identity.email,initial:programmeSeed.initial,translate:changed=>translateDepartmentNotes(changed,translationEnv),translateSnapshots:changed=>translateSnapshotNotes(changed,translationEnv)};
    if(path==='/api/programme'&&request.method==='GET')return json(200,await fetchProgramme(env.DB,programmeSeed.initial));
-   const body=await readJson(request);if(!body)return json(400,{error:'invalid'});
+   const body=await readJson(request,131072);if(!body)return json(400,{error:'invalid'});
    if(path==='/api/programme/save'&&request.method==='POST')return json(200,await saveProgramme(env.DB,body,options));
    if(path==='/api/programme/preview-translations'&&request.method==='POST'){
     if(!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<0||Object.keys(body).sort().join(',')!=='expectedRevision,programme')return json(400,{error:'invalid'});
     const current=await fetchProgramme(env.DB,programmeSeed.initial);
     if(current.revision!==body.expectedRevision)throw new ProgrammeError(409,'changed_elsewhere');
-    return json(200,{programme:await prepareProgrammeTranslations(body.programme,{...options,published:current.published})});
+    return json(200,{programme:await prepareProgrammeTranslations(retainProgrammeSnapshots(body.programme,current.draft),{...options,published:current.published})});
    }
-   if(path==='/api/programme/publish'&&request.method==='POST')return json(200,await publishProgramme(env.DB,{...options,expectedRevision:body.expectedRevision}));
+   if(path==='/api/programme/publish'&&request.method==='POST'){if(Object.keys(body).join(',')!=='expectedRevision')return json(400,{error:'invalid'});return json(200,await publishProgramme(env.DB,{...options,expectedRevision:body.expectedRevision}));}
    return json(405,{error:'method'});
-  }catch(error){return json(error.status||503,{error:error.code||'programme_unavailable'});}
+  }catch(error){return json(error.status||503,{error:error.code||'programme_unavailable',...(error.code==='translation_invalid'?{translationFailure:{entryId:error.entryId||null,language:error.language||null,reason:error.reason||'shape'}}:{})});}
  }
  if(!env.BREVO_API_KEY||!env.DB||!positive(env.BREVO_LIST_ID))return json(503,{error:'not_connected'});
  try{

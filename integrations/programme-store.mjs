@@ -1,3 +1,4 @@
+import {validImageId} from './programme-media.mjs';
 /** Private D1 drafts and an explicitly published, allowlisted public projection.
  * Authentication, request-size/origin checks and response headers belong to the
  * caller. Every mutation requires an authenticated actor and optimistic revision.
@@ -25,6 +26,9 @@ const conflict = () => new ProgrammeError(409, 'changed_elsewhere');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value) && [Object.prototype, null].includes(Object.getPrototypeOf(value));
 function fields(value, names, path) {
   if (!object(value) || Object.keys(value).length !== names.length || !names.every(key => Object.hasOwn(value, key))) invalid(path);
+}
+function departmentFields(value,path) {
+  if (!object(value) || Object.keys(value).some(key => !['status','translations','snapshots'].includes(key)) || !Object.hasOwn(value,'status') || !Object.hasOwn(value,'translations')) invalid(path);
 }
 function text(value, maximum, path, required = false) {
   if (typeof value !== 'string') invalid(path);
@@ -59,7 +63,7 @@ export function normaliseProgramme(value, {complete = false} = {}) {
   const departments = {};
   for (const id of departmentIds) {
     const item = value.departments[id];
-    fields(item, ['status', 'translations'], 'departments.'+id);
+    departmentFields(item, 'departments.'+id);
     if (!programmeStatuses.includes(item.status)) invalid('departments.'+id+'.status');
     fields(item.translations, programmeLanguages, 'departments.'+id+'.translations');
     const translations = {};
@@ -76,7 +80,10 @@ export function normaliseProgramme(value, {complete = false} = {}) {
     }
     if (complete && new Set(programmeLanguages.map(language => translations[language].done.length)).size !== 1) invalid('departments.'+id+'.translations.done');
     departments[id] = {status:item.status, translations};
+    if (Object.hasOwn(item,'snapshots')) departments[id].snapshots = normaliseSnapshots(item.snapshots, 'departments.'+id+'.snapshots', complete);
   }
+  const imageIds=Object.values(departments).flatMap(d => (d.snapshots||[]).map(s=>s.imageId));
+  if (new Set(imageIds).size!==imageIds.length) invalid('snapshots.imageId');
   const c = value.coffee;
   fields(c, ['seedVarieties', 'seedStage', 'trialName', 'trialStage', 'heightCm', 'observedOn'], 'coffee');
   if (!Array.isArray(c.seedVarieties) || c.seedVarieties.length !== 3 || c.seedVarieties.some((name, index) => name !== seedVarieties[index])) invalid('coffee.seedVarieties');
@@ -85,6 +92,32 @@ export function normaliseProgramme(value, {complete = false} = {}) {
   if (!trialStages.includes(c.trialStage)) invalid('coffee.trialStage');
   if (typeof c.heightCm !== 'number' || !Number.isFinite(c.heightCm) || c.heightCm < 0 || c.heightCm > 300) invalid('coffee.heightCm');
   return {version:1, updatedAt:isoDate(value.updatedAt, 'updatedAt'), departments, coffee:{seedVarieties:[...seedVarieties], seedStage:c.seedStage, trialName:'Paraíso', trialStage:c.trialStage, heightCm:c.heightCm, observedOn:isoDate(c.observedOn, 'coffee.observedOn', true)}};
+}
+export function normaliseSnapshots(value,path='snapshots',complete=false) {
+  if(!Array.isArray(value)||value.length>4)invalid(path);
+  return value.map((entry,index)=>{
+    const at=path+'.'+index;fields(entry,['imageId','kind','capturedOn','translations'],at);
+    if(!validImageId(entry.imageId)||!['photo','concept'].includes(entry.kind))invalid(at);
+    fields(entry.translations,programmeLanguages,at+'.translations');
+    const translations={};
+    for(const language of programmeLanguages){const t=entry.translations[language];fields(t,['caption','alt'],at+'.translations.'+language);translations[language]={caption:text(t.caption,120,at+'.caption'),alt:text(t.alt,160,at+'.alt',complete)};}
+    return {imageId:entry.imageId,kind:entry.kind,capturedOn:isoDate(entry.capturedOn,at+'.capturedOn',true),translations};
+  });
+}
+/** Older clients omit attachments. Omission retains current images; [] deliberately clears. */
+export function retainProgrammeSnapshots(value,current) {
+  if(!object(value)||!object(value.departments))return value;
+  const result=structuredClone(value);
+  for(const id of departmentIds)if(object(result.departments[id])&&!Object.hasOwn(result.departments[id],'snapshots')&&current?.departments?.[id]?.snapshots!==undefined)result.departments[id].snapshots=structuredClone(current.departments[id].snapshots);
+  return result;
+}
+const imageReferences=programme=>departmentIds.flatMap(department=>(programme.departments[department].snapshots||[]).map(s=>({imageId:s.imageId,department})));
+function referenceGate(programme){const refs=imageReferences(programme);return {sql:refs.map(()=> 'EXISTS (SELECT 1 FROM programme_media WHERE image_id=? AND department=?)').join(' AND ')||'1',values:refs.flatMap(s=>[s.imageId,s.department])};}
+async function validateImageReferences(db,programme){
+  for(const {imageId,department}of imageReferences(programme)){
+    let row;try{row=await db.prepare('SELECT department FROM programme_media WHERE image_id=?').bind(imageId).first();}catch{throw unavailable();}
+    if(!row||row.department!==department)throw new ProgrammeError(400,'invalid_image_reference');
+  }
 }
 export function validateProgramme(value, options) {
   try { normaliseProgramme(value, options); return true; } catch { return false; }
@@ -97,7 +130,7 @@ function storedDocument(json, complete = false) {
   try { return normaliseProgramme(JSON.parse(json), {complete}); } catch { throw unavailable(); }
 }
 function publicProjection(programme, publishedAt) {
-  return {version:1, updatedAt:programme.updatedAt, publishedAt, departments:programme.departments, coffee:programme.coffee};
+  return {version:1, updatedAt:programme.updatedAt, publishedAt, departments:structuredClone(programme.departments), coffee:programme.coffee};
 }
 async function readState(db) {
   if (!db?.prepare) throw unavailable();
@@ -129,10 +162,10 @@ export async function fetchPublicProgramme(db, initial) {
 function statement(db, sql, values) {
   try { return db.prepare(sql).bind(...values); } catch { throw unavailable(); }
 }
-async function atomicWrite(db, statement, audit, expected) {
+async function atomicWrite(db, statement, audit, expected, extra = []) {
   if (!db?.batch || !db?.prepare) throw unavailable();
   let results;
-  try { results = await db.batch([statement, audit]); } catch { throw unavailable(); }
+  try { results = await db.batch([statement, audit, ...extra]); } catch { throw unavailable(); }
   if (Number(results?.[0]?.meta?.changes) !== 1) throw conflict();
   if (Number(results?.[1]?.meta?.changes) !== 1) throw unavailable();
   return expected;
@@ -141,29 +174,38 @@ async function atomicWrite(db, statement, audit, expected) {
 /** Save a draft, retaining the last publication or reviewed initial baseline. */
 export async function saveProgramme(db, input, {actor, now, initial} = {}) {
   fields(input, ['programme', 'expectedRevision'], 'input');
-  const expected = revision(input.expectedRevision), programme = normaliseProgramme(input.programme), baseline = initialDocument(initial), meta = editorialMeta(actor, now);
+  const expected = revision(input.expectedRevision), baseline = initialDocument(initial), meta = editorialMeta(actor, now);
+  const row=await readState(db),current=row?privateState(row,baseline):{revision:0,draft:baseline};
+  if(current.revision!==expected)throw conflict();
+  const programme=normaliseProgramme(retainProgrammeSnapshots(input.programme,current.draft));
+  await validateImageReferences(db,programme);
+  const gate=referenceGate(programme);
   programme.updatedAt = meta.day;
   if (!db?.prepare) throw unavailable();
   const update = expected === 0
-    ? statement(db, 'INSERT OR IGNORE INTO programme_state (id,draft_json,published_json,revision,published_revision,updated_at,published_at,updated_by,published_by) VALUES (1,?,?,1,0,?,NULL,?,NULL)', [JSON.stringify(programme), baseline ? JSON.stringify(baseline) : null, meta.at, meta.actor])
-    : statement(db, 'UPDATE programme_state SET draft_json=?,revision=revision+1,updated_at=?,updated_by=? WHERE id=1 AND revision=?', [JSON.stringify(programme), meta.at, meta.actor, expected]);
+    ? statement(db, 'INSERT OR IGNORE INTO programme_state (id,draft_json,published_json,revision,published_revision,updated_at,published_at,updated_by,published_by) SELECT 1,?,?,1,0,?,NULL,?,NULL WHERE '+gate.sql, [JSON.stringify(programme), baseline ? JSON.stringify(baseline) : null, meta.at, meta.actor,...gate.values])
+    : statement(db, 'UPDATE programme_state SET draft_json=?,revision=revision+1,updated_at=?,updated_by=? WHERE id=1 AND revision=? AND '+gate.sql, [JSON.stringify(programme), meta.at, meta.actor, expected,...gate.values]);
   const audit = statement(db, "INSERT INTO programme_audit (action,revision,published_revision,actor,created_at) SELECT 'save',revision,published_revision,?,? FROM programme_state WHERE id=1 AND revision=? AND changes()=1", [meta.actor, meta.at, expected+1]);
   await atomicWrite(db, update, audit, expected+1);
   return fetchProgramme(db, baseline);
 }
 
 /** English is the source of truth; caller-supplied target text cannot establish freshness. */
-export async function prepareProgrammeTranslations(programme, {published, initial, translate} = {}) {
+async function prepareDepartmentTranslations(programme, {published, initial, translate} = {}) {
   fields(programme, ['version', 'updatedAt', 'departments', 'coffee'], 'programme');
   fields(programme.departments, departmentIds, 'departments');
   const source = {...programme, departments:{}};
   for (const id of departmentIds) {
     const department = programme.departments[id];
-    fields(department, ['status', 'translations'], 'departments.'+id);
+    departmentFields(department, 'departments.'+id);
     fields(department.translations, programmeLanguages, 'departments.'+id+'.translations');
     // Fill internal placeholders so the existing complete validator checks English
     // and structured observations without trusting possibly stale target strings.
     source.departments[id] = {status:department.status, translations:Object.fromEntries(programmeLanguages.map(language => [language, department.translations.en]))};
+    if(Object.hasOwn(department,'snapshots')){
+      if(!Array.isArray(department.snapshots))invalid('departments.'+id+'.snapshots');
+      source.departments[id].snapshots=department.snapshots.map(entry=>{if(!object(entry)||!object(entry.translations))invalid('snapshots');return {...entry,translations:Object.fromEntries(programmeLanguages.map(language=>[language,entry.translations.en]))};});
+    }
   }
   const candidate = normaliseProgramme(source, {complete:true});
   let previous = null, baseline = null;
@@ -212,19 +254,50 @@ export async function prepareProgrammeTranslations(programme, {published, initia
   } catch { throw new ProgrammeError(502, 'translation_invalid'); }
 }
 
+/** Translate only changed English image text. Byte metadata is never sent to AI. */
+export async function prepareProgrammeTranslations(programme,{published,initial,translate,translateSnapshots}={}) {
+  const candidate=await prepareDepartmentTranslations(programme,{published,initial,translate});
+  const records=[published,initial].filter(Boolean).map(value=>normaliseProgramme(value,{complete:true}));
+  const changed=[],targets=new Map();
+  for(const id of departmentIds)for(const snapshot of candidate.departments[id].snapshots||[]){
+    const reviewed=records.flatMap(record=>record.departments[id].snapshots||[]).filter(s=>s.imageId===snapshot.imageId);
+    for(const field of ['caption','alt']){
+      const source=snapshot.translations.en[field],matching=reviewed.find(s=>s.translations.en[field]===source);
+      if(!source){for(const language of ['zh','ja'])snapshot.translations[language][field]='';continue;}
+      if(matching){for(const language of ['zh','ja'])snapshot.translations[language][field]=matching.translations[language][field];continue;}
+      const key=id+'.snapshot.'+snapshot.imageId+'.'+field;
+      changed.push({id:key,text:source,maximum:field==='caption'?120:160});targets.set(key,{snapshot,field});
+    }
+  }
+  if(changed.length){
+    if(typeof translateSnapshots!=='function')throw new ProgrammeError(503,'translation_unavailable');
+    let result;try{result=await translateSnapshots(changed);}catch(error){if(typeof error?.code==='string'&&error.code.startsWith('translation_'))throw error;throw new ProgrammeError(503,'translation_unavailable');}
+    try{
+      fields(result,['entries'],'snapshots.translations');
+      if(!Array.isArray(result.entries)||result.entries.length!==changed.length)invalid('snapshots.translations');
+      const remaining=new Set(changed.map(e=>e.id));
+      for(const entry of result.entries){fields(entry,['id','zh','ja'],'snapshots.translations');if(!remaining.delete(entry.id))invalid('snapshots.translations');const {snapshot,field}=targets.get(entry.id);for(const language of ['zh','ja'])snapshot.translations[language][field]=text(entry[language],field==='caption'?120:160,'snapshots.translations',true);}
+    }catch{throw new ProgrammeError(502,'translation_invalid');}
+  }
+  return normaliseProgramme(candidate,{complete:true});
+}
 /** Translate the reviewed English snapshot before one atomic three-language publication. */
-export async function publishProgramme(db, {expectedRevision, actor, now, initial, translate} = {}) {
+export async function publishProgramme(db, {expectedRevision, actor, now, initial, translate, translateSnapshots} = {}) {
   const expected = revision(expectedRevision), meta = editorialMeta(actor, now), baseline = initialDocument(initial);
   const state = privateState(await readState(db), baseline);
   if (state.revision !== expected) throw conflict();
   if (expected === 0) throw new ProgrammeError(409, 'save_before_publish');
   if (state.publishedRevision === expected) return state;
-  const candidate = await prepareProgrammeTranslations(state.draft, {published:state.published, initial:baseline, translate});
+  const candidate = await prepareProgrammeTranslations(state.draft, {published:state.published, initial:baseline, translate, translateSnapshots});
+  await validateImageReferences(db,candidate);
+  const gate=referenceGate(candidate);
   const payload = JSON.stringify(candidate);
   // A new save during inference invalidates this exact English revision. The
   // paired targets, public snapshot and audit either commit together or not at all.
-  const update = statement(db, 'UPDATE programme_state SET draft_json=?,published_json=?,published_revision=revision,published_at=?,published_by=? WHERE id=1 AND revision=? AND published_revision<>revision', [payload, payload, meta.at, meta.actor, expected]);
+  const update = statement(db, 'UPDATE programme_state SET draft_json=?,published_json=?,published_revision=revision,published_at=?,published_by=? WHERE id=1 AND revision=? AND published_revision<>revision AND '+gate.sql, [payload, payload, meta.at, meta.actor, expected,...gate.values]);
   const audit = statement(db, "INSERT INTO programme_audit (action,revision,published_revision,actor,created_at) SELECT 'publish',revision,published_revision,?,? FROM programme_state WHERE id=1 AND revision=? AND published_revision=? AND changes()=1", [meta.actor, meta.at, expected, expected]);
-  await atomicWrite(db, update, audit, expected);
+  const refs=imageReferences(candidate);
+  const promote=refs.length?[statement(db,"UPDATE programme_media SET first_published_at=COALESCE(first_published_at,?) WHERE image_id IN ("+refs.map(()=>'?').join(',')+") AND EXISTS (SELECT 1 FROM programme_state WHERE id=1 AND revision=? AND published_revision=? AND published_at=?) AND changes()=1",[meta.at,...refs.map(r=>r.imageId),expected,expected,meta.at])]:[];
+  await atomicWrite(db, update, audit, expected,promote);
   return fetchProgramme(db, baseline);
 }

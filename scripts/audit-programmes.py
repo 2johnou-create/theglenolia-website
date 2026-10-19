@@ -25,6 +25,8 @@ SITE = json.loads((ROOT/'config.json').read_text())
 LOCALES = {'en':('en-AU',''), 'zh':('zh-Hant','zh-hant/'), 'ja':('ja','ja/')}
 IDS = ['cafe','coffee','workshops','local']
 GROWTH = ['seed','germinating','seedling','grafting','growing','flowering','cherries','harvest']
+MEDIA = 'https://glenolia-newsletter.theglenolia.workers.dev/public/programme/images/'
+IMAGE_ID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
 errors, checks = [], 0
 
 
@@ -98,6 +100,55 @@ def marked(node, attribute, label):
     return one([n for n in node.walk() if attribute in n.attrs], label+': '+attribute)
 
 
+def valid_snapshot(item):
+    if not isinstance(item,dict) or set(item) != {'imageId','kind','capturedOn','translations'}:
+        return False
+    if not isinstance(item['imageId'],str) or not IMAGE_ID.fullmatch(item['imageId']) or item['kind'] not in ['photo','concept']:
+        return False
+    if not isinstance(item['capturedOn'],str):
+        return False
+    if item['capturedOn']:
+        try:
+            if date.fromisoformat(item['capturedOn']).isoformat() != item['capturedOn']:
+                return False
+        except ValueError:
+            return False
+    translations = item['translations']
+    if not isinstance(translations,dict) or set(translations) != set(LOCALES):
+        return False
+    for entry in translations.values():
+        if not isinstance(entry,dict) or set(entry) != {'caption','alt'}:
+            return False
+        for field,limit in [('caption',120),('alt',160)]:
+            text = entry[field]
+            if not isinstance(text,str) or len(text)>limit or (field=='alt' and not text.strip()) or re.search(r'[<>\x00-\x08\x0b\x0c\x0e-\x1f\x7f]',text):
+                return False
+    return True
+
+
+def snapshot_gallery(container, items, c, key, label):
+    section = marked(container,'data-programme-snapshots',label)
+    check(section.tag=='section' and ('hidden' in section.attrs)==(not items), label+': empty snapshot gallery must stay hidden; populated gallery must be visible')
+    heading = one([n for n in section.walk() if n.tag=='h4'], label+': snapshot heading')
+    check(norm(heading.text())==norm(c['snapshots']['title']), label+': snapshot heading is not localized')
+    grid = marked(section,'data-snapshot-grid',label)
+    figures = [n for n in grid.walk() if n.tag=='figure']
+    check([n.attrs.get('data-snapshot-image') for n in figures]==[item['imageId'] for item in items], label+': snapshot figures differ from the published source/order')
+    check(len([n for n in grid.walk() if n.tag=='img'])==len(items), label+': wrong snapshot image count')
+    for item,figure in zip(items,figures):
+        copy = item['translations'][key]
+        image = one([n for n in figure.walk() if n.tag=='img'], label+': snapshot image')
+        check(image.attrs.get('src')==MEDIA+item['imageId'] and image.attrs.get('alt')==copy['alt'], label+': snapshot URL or localized alternative text differs')
+        check(image.attrs.get('loading')=='lazy' and image.attrs.get('decoding')=='async' and image.attrs.get('referrerpolicy')=='no-referrer' and image.attrs.get('crossorigin')=='anonymous', label+': snapshot image must load lazily without owner credentials/referrer')
+        captions = [norm(n.text()) for n in figure.walk() if n.tag=='figcaption']
+        check(captions==([norm(copy['caption'])] if copy['caption'] else []), label+': localized snapshot caption differs')
+        times = [n for n in figure.walk() if n.tag=='time']
+        expected = item['kind']=='photo' and bool(item['capturedOn'])
+        check(len(times)==int(expected), label+': only a dated actual photo may display a capture date')
+        if expected and times:
+            check(times[0].attrs.get('datetime')==item['capturedOn'] and norm(times[0].text())==norm(c['snapshots']['capturedOn']+' '+item['capturedOn']), label+': snapshot photo date/label differs')
+
+
 def local_target(value, page, label):
     parts = urlsplit(value)
     if parts.scheme or parts.netloc or not parts.path:
@@ -159,6 +210,13 @@ except (TypeError,ValueError):
 check(set(coffee) == {'seedVarieties','seedStage','trialName','trialStage','heightCm','observedOn'}, 'Coffee baseline has unsupported/private fields')
 check(coffee['seedVarieties'] == ['IPR107','NR25','Marsellesa'], 'Confirmed seed names are wrong')
 check(coffee['seedStage'] == 'seed' and coffee['trialName'] == 'Paraíso' and coffee['trialStage'] == 'seedling' and coffee['heightCm'] == 20, 'Initial seed and separate Paraíso report differ from the reviewed launch facts')
+for id,department in initial['departments'].items():
+    items = department.get('snapshots', [])
+    check(isinstance(items,list) and len(items)<=4, id+': snapshots must be an optional list of at most four images')
+    if isinstance(items,list):
+        check(all(valid_snapshot(item) for item in items), id+': snapshot metadata must contain only a valid image ID, kind, calendar date and complete safe EN/TC/JA caption/alt text')
+        image_ids = [item.get('imageId') for item in items if isinstance(item,dict) and isinstance(item.get('imageId'),str)]
+        check(len(image_ids)==len(items) and len(image_ids)==len(set(image_ids)), id+': snapshot image IDs must be unique')
 for key,(lang,prefix) in LOCALES.items():
     c = DATA['copy'][key]
     check(set(c) == set(DATA['copy']['en']) and c['lang'] == lang, key+': incomplete or wrong localized copy')
@@ -175,9 +233,10 @@ for key,(lang,prefix) in LOCALES.items():
     check(list(c['departments']) == IDS, key+': department names missing')
     check(list(c['growth']['stages']) == GROWTH, key+': optional growth stages missing/order changed')
     check(set(c['statusLabels']) == {'planning','developing','trialling','ready'}, key+': status labels incomplete')
+    check(isinstance(c.get('snapshots'),dict) and set(c['snapshots'])=={'title','unavailable','capturedOn'} and all(isinstance(text,str) and text.strip() for text in c['snapshots'].values()), key+': snapshot interface copy is incomplete')
     for id in IDS:
         department = initial['departments'][id]
-        check(set(department) == {'status','translations'} and set(department['translations']) == set(LOCALES), key+'/'+id+': initial record has private/missing fields')
+        check({'status','translations'} <= set(department) <= {'status','translations','snapshots'} and set(department['translations']) == set(LOCALES), key+'/'+id+': initial record has private/missing fields')
         translation = department['translations'][key]
         check(set(translation) == {'now','next','done'} and all(isinstance(translation[f],str) and translation[f].strip() for f in ['now','next']) and isinstance(translation['done'],list), key+'/'+id+': incomplete public status copy')
 
@@ -229,6 +288,7 @@ for key,(lang,prefix) in LOCALES.items():
             check(not any(attribute.startswith(('data-programme','data-weather')) for n in root.walk() for attribute in n.attrs), label+': live programme/weather controls leaked onto homepage')
             check(not root.classes('programme-weather') and not root.classes('programme-clock'), label+': homepage must not display live programme weather or clock')
             check(not any(attribute.startswith('data-hello') for n in root.walk() for attribute in n.attrs) and not any(name.startswith('programme-hello-') for n in root.walk() for name in n.attrs.get('class','').split()), label+': Say hello interaction leaked onto homepage')
+            check(not root.classes('programme-snapshots') and not any(attribute.startswith('data-snapshot') for n in root.walk() for attribute in n.attrs), label+': programme snapshots leaked onto homepage')
             check(any(n.tag=='a' and n.attrs.get('href')==BASE+'/'+prefix+'progress/' for n in root.walk()), label+': homepage has no route to physical progress')
             continue
         programmes += 1
@@ -292,6 +352,8 @@ for key,(lang,prefix) in LOCALES.items():
         updated = marked(panel,'data-hello-updated',label)
         check(updated.tag=='time' and not norm(updated.text()) and not updated.attrs.get('datetime'), label+': greeting date must wait for the published update date')
         check(norm(c['updatedOn']) in norm(updated.parent.text()), label+': greeting update-date label is not localized')
+        snapshot_gallery(panel,[],c,key,label+'/greeting')
+        check(len([n for n in root.walk() if 'data-programme-snapshots' in n.attrs])==len(IDS)+1, label+': expected one greeting snapshot wrapper and one per department')
         tabs = one(root.classes('programme-department-tabs'), label+': department selectors')
         buttons = [n for n in tabs.walk() if n.tag=='button']
         check([n.attrs.get('data-programme-department') for n in buttons] == ['all']+IDS, label+': department controls are incomplete')
@@ -327,6 +389,8 @@ for key,(lang,prefix) in LOCALES.items():
             check(norm(marked(card,'data-next',label).text())==norm(t['next']), label+'/'+id+': next copy differs from published initial')
             done=marked(card,'data-done',label)
             check([norm(n.text()) for n in done.children if isinstance(n,Node) and n.tag=='li']==[norm(v) for v in t['done']], label+'/'+id+': completed list differs')
+            items = d.get('snapshots', [])
+            snapshot_gallery(card,items if isinstance(items,list) and all(valid_snapshot(item) for item in items) else [],c,key,label+'/'+id)
         check(all(name in root.text() for name in ['IPR107','NR25','Marsellesa','Paraíso']), label+': accepted seed direction and separate trial name missing')
         check(norm(marked(root,'data-seed-actual',label).text())==norm(c['growth']['seedActual']) and norm(marked(root,'data-trial-actual',label).text())==norm(c['growth']['trialActual']), label+': current seed/seedling facts missing')
         check('20' in marked(root,'data-plant-height',label).text(), label+': approximate reported 20 cm seedling height missing')

@@ -35,6 +35,8 @@ the explicitly published notes from the API origin in `config.json`:
   and publication metadata.
 - `GET /public/weather`: a bounded nearby weather estimate with source and
   freshness information.
+- `GET /public/programme/images/{imageId}`: immutable images included in a
+  successfully published update. New uploads are private until publication.
 
 These routes are read-only. They do not return drafts, editor identities,
 subscriber records or credentials. The public content projection is allowlisted.
@@ -85,6 +87,36 @@ an already-open public page to refresh.
 Write public notes only. Keep personal information, internal budgets, supplier
 negotiations, subscriber details and credentials out of these fields. Notes are
 plain text; HTML and URLs are rejected. Status/date fields are validated too.
+
+### Status images
+
+Each area can hold up to four ordered images. Choose JPEG, PNG or WebP files in
+**Images for this area**, add an English caption and a required image description,
+and choose **Progress photo** for actual photographs or **Product or design image**
+for product visuals and proposed designs. Photo dates are optional. Captions and
+descriptions translate with the notes when previewing or publishing.
+
+The browser prepares images at up to 1600px and 300KB, removes original metadata
+and preserves the complete composition. The server accepts a bounded still-image
+profile. Draft previews remain behind the existing owner login. Saving keeps
+attachments private; publication releases the image references, bytes and three
+language versions together. Removing or reordering images changes the draft until
+it is published again. Previously published image bytes remain available for
+cached versions of the page.
+
+Compact galleries appear in the department's status card and its character's
+**What are you working on?** panel. They are 128px high on desktop and 96px on small
+screens, with uncropped images, captions and translated image descriptions. Areas
+without images have no empty public gallery. The homepage has no programme model.
+
+Programme version1 now permits an optional `snapshots` array per department.
+Each item contains only `imageId`, `kind`, `capturedOn` and `translations` with
+English/Traditional Chinese/Japanese `caption` and `alt`. Clients construct the
+fixed public image endpoint from the validated UUID; arbitrary image URLs are not
+accepted. Legacy saves that omit `snapshots` retain existing attachments; an
+explicit empty array clears the draft's attachments. The optional offline
+programme baseline uses the same allowlist. The separate editorial feed is
+unchanged.
 
 ## Translation service and safeguards
 

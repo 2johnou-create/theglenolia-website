@@ -330,3 +330,66 @@ test('translation caches and attempt ledgers never alter published programme dat
  assert.equal(JSON.stringify(after).includes('cache_key'),false);assert.equal(JSON.stringify(after).includes('translation_attempts'),false);
  assert.ok(queries.filter(q=>/^(INSERT|UPDATE|DELETE)/.test(q)).every(q=>/programme_translation_(cache|attempts)/.test(q)));
 });
+
+
+const productSource=()=>({cafe:{now:'A 100 mL Magnolia room and linen spray and a 200 mL aroma diffuser are in preparation.',next:'Share visitor details.',done:['A fragrance spray on warm ivory.']}});
+const productResult=()=>({entries:[
+ {id:'cafe.now',zh:'Magnolia 空間與織品香氛噴霧 100 mL 與擴香 200 mL 正在籌備中。',ja:'Magnoliaの100 mLルーム＆リネンスプレーと200 mLアロマディフューザーを準備中です。'},
+ {id:'cafe.next',zh:'分享到訪資訊。',ja:'来訪のご案内をお知らせします。'},
+ {id:'cafe.done.0',zh:'暖象牙白背景中的香氛噴霧。',ja:'温かみのあるアイボリー背景のフレグランススプレー。'}
+]});
+
+test('product terminology is contextual, natural and retains all supplied Magnolia and mL facts',()=>{
+ const source=productSource(),value=productResult(),result=validateTranslationResult(source,value);
+ assert.match(result.cafe.zh.now,/空間與織品香氛噴霧/);assert.match(result.cafe.ja.now,/ルーム＆リネンスプレー/);
+ const ampersand=productSource();ampersand.cafe.now=ampersand.cafe.now.replace('room and linen spray','room & linen spray');assert.doesNotThrow(()=>validateTranslationResult(ampersand,value));
+ const ordinary={cafe:{now:'A room for conversation is being prepared.',next:'Review the next step.',done:[]}};
+ assert.doesNotThrow(()=>validateTranslationResult(ordinary,{entries:[{id:'cafe.now',zh:'正在籌備交流空間。',ja:'会話を楽しむ部屋を準備中です。'},{id:'cafe.next',zh:'確認下一步。',ja:'次の段階を確認します。'}]}));
+});
+
+test('known literal product errors reject the entire paired result without enforcing one exact wording',()=>{
+ const mutations=[
+  r=>r.entries[0].zh=r.entries[0].zh.replace('空間與織品香氛噴霧','香氛房間與牀單噴霧'),
+  r=>r.entries[0].ja=r.entries[0].ja.replace('ルーム＆リネンスプレー','香りの部屋と布団スプレー'),
+  r=>r.entries[0].ja=r.entries[0].ja.replace('ルーム＆リネンスプレー','ルーム＆リネンスプレイ'),
+  r=>r.entries[0].zh=r.entries[0].zh.replace('擴香','香氣擴散器'),
+  r=>r.entries[0].ja=r.entries[0].ja.replace('アロマディフューザー','香りを拡散する機械'),
+  r=>r.entries[1].zh=r.entries[1].zh.replace('到訪資訊','實務細節'),
+  r=>r.entries[1].ja=r.entries[1].ja.replace('来訪のご案内','実務的な詳細'),
+  r=>r.entries[2].zh=r.entries[2].zh.replace('香氛噴霧','香氣噴灑器'),
+  r=>r.entries[2].ja=r.entries[2].ja.replace('フレグランススプレー','香りの噴射器'),
+  r=>r.entries[0].ja+='香りの部屋。',
+  r=>r.entries[0].zh+='床單噴霧。',
+ ];
+ for(const mutation of mutations){const value=productResult();mutation(value);assert.throws(()=>validateTranslationResult(productSource(),value),expectError(502,'translation_invalid'));}
+});
+
+test('generation and final editor receive the same approved product glossary and concise caption guidance',async t=>{
+ const {db}=database(t),source=productSource();
+ const localized=(text,language)=>text.replace(/room and linen spray/gi,language==='zh'?'空間與織品香氛噴霧':'ルーム＆リネンスプレー').replace(/aroma diffuser/gi,language==='zh'?'擴香':'アロマディフューザー').replace(/fragrance spray/gi,language==='zh'?'香氛噴霧':'フレグランススプレー').replace(/warm ivory/gi,language==='zh'?'暖象牙白':'温かみのあるアイボリー').replace(/visitor details/gi,language==='zh'?'到訪資訊':'来訪のご案内');
+ const AI=fakeAI(input=>({entries:JSON.parse(input.messages[1].content).entries.map(({id,text})=>({id,zh:'籌備：'+localized(text,'zh'),ja:'準備：'+localized(text,'ja')}))}));
+ await translateDepartmentNotes(source,{AI,DB:db,now});assert.equal(AI.calls.length,2);
+ for(const {input}of AI.calls){const prompt=input.messages[0].content;for(const term of ['空間與織品香氛噴霧','ルーム＆リネンスプレー','擴香','アロマディフューザー','香氛噴霧','フレグランススプレー','暖象牙白','温かみのあるアイボリー','到訪資訊','来訪のご案内','Magnolia','mL'])assert.ok(prompt.includes(term),term);assert.match(prompt,/Avoid redundant literal/);assert.match(prompt,/Never add promises/);}
+ assert.match(AI.calls[1].input.messages[0].content,/FINAL BILINGUAL EDITOR/);
+});
+
+
+test('official English product names and natural typography variants remain valid in localized prose',()=>{
+ const source={cafe:{now:'Magnolia Fragrance Spray on warm ivory.',next:'Review the Magnolia room and linen spray.',done:['Magnolia Aroma Diffuser.']}};
+ const value={entries:[
+  {id:'cafe.now',zh:'暖象牙白背景中的 Magnolia Fragrance Spray。',ja:'暖かなアイボリー背景に置いたMagnolia Fragrance Spray。'},
+  {id:'cafe.next',zh:'了解 Magnolia 空間與織品香氛噴霧。',ja:'Magnoliaのルーム&リネンスプレーを確認します。'},
+  {id:'cafe.done.0',zh:'Magnolia Aroma Diffuser 產品圖。',ja:'Magnolia Aroma Diffuserの商品イメージ。'}
+ ]};
+ assert.doesNotThrow(()=>validateTranslationResult(source,value));
+ value.entries[1].ja=value.entries[1].ja.replace('&','＆');assert.doesNotThrow(()=>validateTranslationResult(source,value));
+});
+
+test('the bilingual editor can repair generation terminology before the final paired glossary guard',async t=>{
+ const {db}=database(t),source={cafe:{now:'Magnolia room and linen spray.',next:'Review the next confirmed step.',done:[]}};
+ const AI=fakeAI((input,n)=>({entries:JSON.parse(input.messages[1].content).entries.map(({id,text})=>({id,zh:'籌備：'+text.replace('room and linen spray','空間與織品香氛噴霧'),ja:'準備：'+text.replace('room and linen spray',n===1?'香りの部屋と布団スプレー':'ルーム&リネンスプレー')}))}));
+ const output=await translateDepartmentNotes(source,{AI,DB:db,now});
+ assert.equal(AI.calls.length,2,'generation reaches the editor instead of triggering a terminology retry');
+ assert.match(output.cafe.ja.now,/ルーム&リネンスプレー/);assert.equal(output.cafe.ja.now.includes('布団'),false);
+ const cached=await translateDepartmentNotes(source,{DB:db,now});assert.deepEqual(cached,output);
+});

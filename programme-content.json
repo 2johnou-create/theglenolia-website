@@ -313,6 +313,11 @@
           "workshops": "Hello! Bring a little curiosity along.",
           "local": "Hello there. Every connection starts with a little hello."
         }
+      },
+      "snapshots": {
+        "title": "A little of what’s taking shape.",
+        "unavailable": "This image is unavailable for now.",
+        "capturedOn": "Photo reported"
       }
     },
     "zh": {
@@ -628,6 +633,11 @@
           "workshops": "你好呀，帶著好奇心，一起看看吧。",
           "local": "你好呀，小小招呼，也是一段連結的開始。"
         }
+      },
+      "snapshots": {
+        "title": "籌備中的小片段。",
+        "unavailable": "圖片暫時無法顯示。",
+        "capturedOn": "照片日期"
       }
     },
     "ja": {
@@ -943,32 +953,77 @@
           "workshops": "こんにちは。好奇心を持って、のぞいてみませんか。",
           "local": "こんにちは。小さなあいさつから、つながりが生まれますね。"
         }
+      },
+      "snapshots": {
+        "title": "準備のひとこま。",
+        "unavailable": "画像を一時的に表示できません。",
+        "capturedOn": "写真の日付"
       }
     }
   },
   "initial": {
     "version": 1,
-    "updatedAt": "2026-10-17",
+    "updatedAt": "2026-10-20",
     "departments": {
       "cafe": {
         "status": "planning",
         "translations": {
           "en": {
-            "now": "Programme details for the café and farm experiences are being developed. The café is planned as vegetarian, with eggs, dairy and honey allowed.",
-            "next": "Share a confirmed first programme outline and the practical details visitors will need.",
+            "now": "The café and farm-experience programme is being developed. Two Magnolia products for the home are also in preparation: a 100 mL room and linen spray and a 200 mL aroma diffuser. The café is planned as vegetarian, with eggs, dairy and honey allowed.",
+            "next": "Share a confirmed first programme outline and visitor details, with further product news as it is confirmed.",
             "done": []
           },
           "zh": {
-            "now": "咖啡館與農場體驗的內容仍在籌備中。咖啡館採素食方向，允許使用蛋、乳製品與蜂蜜。",
-            "next": "在確認後分享第一份活動方向，以及訪客需要的實際資訊。",
+            "now": "咖啡館與農場體驗活動正在籌備中。同時也正在準備兩款 Magnolia 家用產品：100 mL 空間與織品香氛噴霧及 200 mL 擴香。咖啡館規劃為素食，允許使用蛋、乳製品與蜂蜜。",
+            "next": "確認後分享第一份活動內容與到訪資訊，產品消息將在確認後另行公佈。",
             "done": []
           },
           "ja": {
-            "now": "カフェと農場体験のプログラムを検討しています。カフェはベジタリアンの方針で、卵・乳製品・はちみつは使用します。",
-            "next": "最初のプログラム概要と来訪に必要な情報を、確定後にお知らせします。",
+            "now": "カフェと農場体験プログラムの準備が進められています。また、Magnolia のホーム用製品2種類も準備中です：100 mL のルーム＆リネンスプレーと200 mL のアロマディフューザー。カフェはベジタリアン向けに計画されており、卵・乳製品・ハチミツの使用が許可されています。",
+            "next": "確定した最初のプログラム内容と来訪のご案内をお知らせします。製品に関する情報は確認次第お伝えします。",
             "done": []
           }
-        }
+        },
+        "snapshots": [
+          {
+            "imageId": "6ae0585f-1ee0-4c3a-89ac-bec78a1509f5",
+            "kind": "concept",
+            "capturedOn": "",
+            "translations": {
+              "en": {
+                "caption": "Our Magnolia room and linen spray, in preparation.",
+                "alt": "Marketing image of the Magnolia Fragrance Spray 100 mL bottle on a warm ivory studio background."
+              },
+              "zh": {
+                "caption": "籌備中的 Magnolia 空間與織品香氛噴霧。",
+                "alt": "暖象牙白工作室背景上的 Magnolia 香氛噴霧 100 mL 瓶。"
+              },
+              "ja": {
+                "caption": "準備中の Magnolia ルーム＆リネンスプレー。",
+                "alt": "温かみのあるアイボリーのスタジオ背景に、Magnolia フレグランススプレー 100 mL のボトルが配置されたマーケティング画像。"
+              }
+            }
+          },
+          {
+            "imageId": "80747ed0-124a-42b3-b929-5cd19dccf759",
+            "kind": "concept",
+            "capturedOn": "",
+            "translations": {
+              "en": {
+                "caption": "Our Magnolia aroma diffuser, in preparation.",
+                "alt": "Marketing image of the Magnolia Aroma Diffuser 200 mL bottle and reeds on a warm ivory studio background."
+              },
+              "zh": {
+                "caption": "籌備中的 Magnolia 擴香。",
+                "alt": "暖象牙白工作室背景上的 Magnolia 擴香 200 mL 瓶與擴香枝。"
+              },
+              "ja": {
+                "caption": "準備中の Magnolia アロマディフューザー。",
+                "alt": "温かみのあるアイボリーのスタジオ背景に、Magnolia アロマディフューザー 200 mL のボトルとリードが配置されたマーケティング画像。"
+              }
+            }
+          }
+        ]
       },
       "coffee": {
         "status": "trialling",

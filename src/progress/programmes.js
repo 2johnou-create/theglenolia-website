@@ -1,6 +1,7 @@
 import {nearby} from './motion.js';
 import {sydneyState,moonPhasePath} from './programme-time.js';
 import {helloDepartments,placeGreeting,createCharacterTap} from './programme-hello.js';
+import {validSnapshots,snapshotItems} from './programme-snapshots.js';
 const source=document.getElementById('programme-data');
 const {copy:c,initial,language,apiOrigin}=JSON.parse(source.textContent);
 const root=document.querySelector('[data-programme-world]'),canvas=document.getElementById('programme-world-canvas');
@@ -48,6 +49,7 @@ function renderProgramme(){
   const ul=card.querySelector('[data-done]');ul.replaceChildren();
   for(const text of t.done){const li=document.createElement('li');li.textContent=text;ul.append(li);}
   ul.hidden=!t.done.length;card.querySelector('[data-no-done]').hidden=Boolean(t.done.length);
+  renderSnapshots(card.querySelector('[data-programme-snapshots]'),d.snapshots);
  }
  all('[data-programme-updated]').forEach(el=>{el.textContent=day(state.programme.updatedAt);el.dateTime=state.programme.updatedAt;});
  plantSummary();
@@ -55,7 +57,7 @@ function renderProgramme(){
 }
 function validProgramme(data){
  return data?.version===1&&/^\d{4}-\d{2}-\d{2}$/.test(data.updatedAt)&&['cafe','coffee','workshops','local'].every(id=>{
-  const d=data.departments?.[id],t=d?.translations?.[language];return c.statusLabels[d?.status]&&typeof t?.now==='string'&&typeof t?.next==='string'&&Array.isArray(t?.done)&&t.done.length<=4&&t.done.every(s=>typeof s==='string');
+  const d=data.departments?.[id],t=d?.translations?.[language];return c.statusLabels[d?.status]&&typeof t?.now==='string'&&typeof t?.next==='string'&&Array.isArray(t?.done)&&t.done.length<=4&&t.done.every(s=>typeof s==='string')&&validSnapshots(d.snapshots);
  })&&Object.hasOwn(c.growth.stages,data.coffee?.seedStage)&&Object.hasOwn(c.growth.stages,data.coffee?.trialStage)&&Number.isFinite(data.coffee?.heightCm);
 }
 async function get(path){
@@ -111,6 +113,21 @@ function thoughts(actors){
 }
 const helloBubble=$('[data-hello-bubble]'),helloPanel=$('[data-hello-panel]'),helloTargets=$('[data-hello-targets]'),helloMore=$('[data-hello-more]');
 const targetButtons=new Map();let lastActors=[],helloSize={width:244,height:180};
+function renderSnapshots(section,snapshots){
+ if(!section)return;
+ const items=snapshotItems(snapshots,language),key=JSON.stringify(items);section.hidden=!items.length;
+ if(section.dataset.snapshotKey===key)return;section.dataset.snapshotKey=key;
+ const grid=section.querySelector('[data-snapshot-grid]');grid.replaceChildren();
+ for(const item of items){
+  const figure=document.createElement('figure'),image=document.createElement('img');
+  figure.dataset.snapshotImage=item.imageId;image.alt=item.alt;image.loading='lazy';image.decoding='async';image.referrerPolicy='no-referrer';image.crossOrigin='anonymous';image.src=item.url;
+  image.addEventListener('error',()=>{image.hidden=true;const note=document.createElement('p');note.className='snapshot-unavailable';note.textContent=c.snapshots.unavailable;figure.prepend(note);},{once:true});
+  figure.append(image);
+  if(item.caption){const caption=document.createElement('figcaption');caption.textContent=item.caption;figure.append(caption);}
+  if(item.capturedOn&&item.kind==='photo'){const date=document.createElement('time');date.dateTime=item.capturedOn;date.textContent=c.snapshots.capturedOn+' '+day(item.capturedOn);figure.append(date);}
+  grid.append(figure);
+ }
+}
 function renderHelloNotes(){
  if(!state.hello||!helloPanel)return;
  const id=state.hello.department,record=state.programme.departments[id],notes=record.translations[language];
@@ -119,6 +136,7 @@ function renderHelloNotes(){
  $('[data-hello-now]').textContent=notes.now;$('[data-hello-next]').textContent=notes.next;
  const date=$('[data-hello-updated]');date.textContent=day(state.programme.updatedAt);date.dateTime=state.programme.updatedAt;
  $('[data-hello-data-status]').textContent=state.programmeMessage;
+ renderSnapshots(helloPanel.querySelector('[data-programme-snapshots]'),record.snapshots);
 }
 function positionHello(){
  if(!state.hello||!helloBubble||helloBubble.hidden)return;

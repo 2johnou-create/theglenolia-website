@@ -2,6 +2,8 @@
 from pathlib import Path
 from html import escape as e
 import json
+import re
+from datetime import date
 
 DATA=json.loads((Path(__file__).resolve().parents[1]/'programme-content.json').read_text())
 IDS=['cafe','coffee','workshops','local']
@@ -24,11 +26,33 @@ def hello_overlay(c):
     close=f'''<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>'''
     return f'''<div class="programme-hello-targets" data-hello-targets hidden></div><div class="programme-hello-bubble" data-hello-bubble hidden><button type="button" class="programme-hello-dismiss" data-hello-dismiss aria-label="{e(h['close'])}">{close}</button><p data-hello-greeting role="status" aria-live="polite"></p><button type="button" class="programme-hello-more" data-hello-more aria-controls="programme-hello-panel" aria-expanded="false">{e(h['button'])}<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>'''
 
+def snapshots(c,items=None):
+    items=[] if items is None else items
+    if not isinstance(items,list) or len(items)>4:
+        raise ValueError('A department may publish up to four snapshots')
+    figures=[]
+    for item in items:
+        if not re.fullmatch(r'[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}',item['imageId']):
+            raise ValueError('Invalid public snapshot image ID')
+        if item['kind'] not in ('photo','concept'):
+            raise ValueError('Invalid snapshot kind')
+        if item['capturedOn'] and date.fromisoformat(item['capturedOn']).isoformat()!=item['capturedOn']:
+            raise ValueError('Invalid snapshot photo date')
+        language={'en-AU':'en','zh-Hant':'zh','ja':'ja'}[c['lang']]
+        copy=item['translations'][language]
+        if not isinstance(copy['caption'],str) or len(copy['caption'])>120 or not isinstance(copy['alt'],str) or not copy['alt'].strip() or len(copy['alt'])>160:
+            raise ValueError('Invalid snapshot caption or alternative text')
+        url='https://glenolia-newsletter.theglenolia.workers.dev/public/programme/images/'+item['imageId']
+        reported=f'<time datetime="{e(item["capturedOn"])}">{e(c["snapshots"]["capturedOn"])} {e(item["capturedOn"])}</time>' if item['kind']=='photo' and item['capturedOn'] else ''
+        caption=f'<figcaption>{e(copy["caption"])}</figcaption>' if copy['caption'] else ''
+        figures.append(f'<figure data-snapshot-image="{item["imageId"]}"><img src="{url}" alt="{e(copy["alt"])}" loading="lazy" decoding="async" referrerpolicy="no-referrer" crossorigin="anonymous">{caption}{reported}</figure>')
+    return f'<section class="programme-snapshots" data-programme-snapshots {"hidden" if not items else ""}><h4>{e(c["snapshots"]["title"])}</h4><div class="programme-snapshot-grid" data-snapshot-grid>{"".join(figures)}</div></section>'
+
 def hello_controls(c):
     h=c['sayHello']
     teams=''.join(f'''<a href="#programme-{id}" data-hello-department="{id}" aria-label="{e(h['teamLabels'][id])}">{e(c['departments'][id]['title'])}</a>''' for id in IDS)
     close='''<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>'''
-    return f'''<p class="programme-hello-hint">{e(h['hint'])}</p><details class="programme-hello-chooser"><summary>{e(h['title'])}<span aria-hidden="true">+</span></summary><div role="group" aria-label="{e(h['chooseLabel'])}">{teams}</div></details><section id="programme-hello-panel" class="programme-hello-notes" data-hello-panel hidden role="region" aria-labelledby="programme-hello-title"><header><h3 id="programme-hello-title" data-hello-title tabindex="-1"></h3><button type="button" class="programme-hello-close" data-hello-close aria-label="{e(h['close'])}">{close}</button></header><div class="programme-hello-meta"><span class="programme-status" data-hello-status></span><p>{e(c['updatedOn'])} <time data-hello-updated></time></p></div><p class="small" data-hello-data-status></p><dl><div><dt>{e(c['now'])}</dt><dd data-hello-now></dd></div><div><dt>{e(c['next'])}</dt><dd data-hello-next></dd></div></dl></section>'''
+    return f'''<p class="programme-hello-hint">{e(h['hint'])}</p><details class="programme-hello-chooser"><summary>{e(h['title'])}<span aria-hidden="true">+</span></summary><div role="group" aria-label="{e(h['chooseLabel'])}">{teams}</div></details><section id="programme-hello-panel" class="programme-hello-notes" data-hello-panel hidden role="region" aria-labelledby="programme-hello-title"><header><h3 id="programme-hello-title" data-hello-title tabindex="-1"></h3><button type="button" class="programme-hello-close" data-hello-close aria-label="{e(h['close'])}">{close}</button></header><div class="programme-hello-meta"><span class="programme-status" data-hello-status></span><p>{e(c['updatedOn'])} <time data-hello-updated></time></p></div><p class="small" data-hello-data-status></p><dl><div><dt>{e(c['now'])}</dt><dd data-hello-now></dd></div><div><dt>{e(c['next'])}</dt><dd data-hello-next></dd></div></dl>{snapshots(c)}</section>'''
 
 def world(c,compact=False):
     options=''.join(f'<button type="button" data-programme-department="{id}" aria-pressed="false">{e(c["departments"][id]["title"])}</button>' for id in IDS)
@@ -41,7 +65,7 @@ def cards(key):
     for i,id in enumerate(IDS):
         d=DATA['initial']['departments'][id];t=d['translations'][key]
         done=''.join('<li>'+e(s)+'</li>' for s in t['done'])
-        result+=f'''<article class="programme-card" id="programme-{id}" data-department-card="{id}"><div class="programme-card-top"><span class="programme-index">0{i+1}</span><span class="programme-status" data-status>{e(c['statusLabels'][d['status']])}</span></div><h3>{e(c['departments'][id]['title'])}</h3><dl><div><dt>{e(c['now'])}</dt><dd data-now>{e(t['now'])}</dd></div><div class="programme-next"><dt>{e(c['next'])}</dt><dd data-next>{e(t['next'])}</dd></div></dl><div class="programme-done"><span>{e(c['done'])}</span><ul data-done {'hidden' if not done else ''}>{done}</ul><p data-no-done {'' if not done else 'hidden'}>{e(c['noDone'])}</p></div></article>'''
+        result+=f'''<article class="programme-card" id="programme-{id}" data-department-card="{id}"><div class="programme-card-top"><span class="programme-index">0{i+1}</span><span class="programme-status" data-status>{e(c['statusLabels'][d['status']])}</span></div><h3>{e(c['departments'][id]['title'])}</h3><dl><div><dt>{e(c['now'])}</dt><dd data-now>{e(t['now'])}</dd></div><div class="programme-next"><dt>{e(c['next'])}</dt><dd data-next>{e(t['next'])}</dd></div></dl>{snapshots(c,d.get("snapshots"))}<div class="programme-done"><span>{e(c['done'])}</span><ul data-done {'hidden' if not done else ''}>{done}</ul><p data-no-done {'' if not done else 'hidden'}>{e(c['noDone'])}</p></div></article>'''
     return result
 
 def home(key,api_origin,programme_url):

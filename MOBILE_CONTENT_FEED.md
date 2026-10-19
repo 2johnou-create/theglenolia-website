@@ -25,6 +25,15 @@ python -m unittest discover -s scripts -p 'test_mobile_content.py'
 
 Programme notes remain on the existing public programme endpoint. Staff can publish the paired English, Traditional Chinese and Japanese updates through the protected admin without rebuilding the website or releasing the app. The editorial feed links to that endpoint and does not copy drafts or pretend a bundled baseline is live. The website build does not publish `programme.snapshot.json`. The exporter can explicitly create that labelled offline fallback with `--include-programme-snapshot` for native development.
 
+Programme version1 optionally includes up to four `snapshots` per department.
+Each item contains a validated UUIDv4 `imageId`, `photo` or `concept` kind,
+optional `capturedOn` date and paired `caption`/`alt` strings under `en`, `zh` and
+`ja`. Images use the programme host's fixed `/public/programme/images/{imageId}`
+route and become public only when staff publish. Older clients can ignore this
+additive array. The optional offline baseline preserves the same allowlisted
+metadata; image URLs, private upload metadata and image bytes are not embedded.
+The main editorial feed's schema and version calculation remain unchanged.
+
 ## Client behaviour and hosting
 
 Validate schema version, required fields, language mapping, bounded text and trusted URLs before replacing a cached document. Ignore unknown additive keys. Retain the last valid cache on a malformed response or network failure, identify saved information clearly, and display actual observation dates separately from download time. September 2027 remains a qualified target; a department marked ready does not establish that the whole destination is open.

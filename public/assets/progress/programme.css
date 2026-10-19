@@ -319,6 +319,14 @@ html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!importan
 .programme-hello-notes dl>div{min-width:0}
 .programme-hello-notes dt{font-size:11px;line-height:1.7;color:var(--green)}
 .programme-hello-notes dd{max-width:65ch;margin:9px 0 0;font-size:14px;line-height:1.85;overflow-wrap:break-word}
+.programme-snapshots{margin:20px 0;padding-top:17px;border-top:1px solid rgba(47,74,60,.14)}
+.programme-snapshots h4{font-family:var(--serif);font-weight:400;font-size:20px;line-height:1.4;margin:0 0 12px;color:var(--green)}
+.programme-snapshot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:560px}
+.programme-snapshot-grid figure{min-width:0;margin:0;border:1px solid rgba(47,74,60,.11);border-radius:5px;overflow:hidden;background:var(--ivory)}
+.programme-snapshot-grid img{display:block;width:100%;height:128px;object-fit:contain;background:var(--ivory)}
+.programme-snapshot-grid figcaption{margin:0;padding:9px 11px;font-size:12px;line-height:1.7;color:var(--green);overflow-wrap:anywhere}
+.programme-snapshot-grid time{display:block;padding:0 11px 10px;font-size:10px;line-height:1.6;color:var(--green)}
+.programme-snapshot-grid .snapshot-unavailable{display:grid;place-items:center;min-height:128px;margin:0;padding:16px;font-size:11px;line-height:1.7;color:var(--green)}
 @media(max-width:520px){
   .programme-hello-bubble{width:226px;padding:17px 15px 12px;border-radius:17px}
   .programme-hello-bubble p{font-size:12px;line-height:1.75}
@@ -332,4 +340,9 @@ html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!importan
   .programme-hello-notes dl{grid-template-columns:1fr;gap:19px;padding-top:17px}
   .programme-hello-notes dl>div+div{padding-top:17px;border-top:1px solid rgba(47,74,60,.13)}
   .programme-hello-meta{gap:9px 12px;margin-top:14px}
+  .programme-snapshot-grid{gap:9px}
+  .programme-snapshot-grid img{height:96px}
+  .programme-snapshot-grid .snapshot-unavailable{min-height:96px}
+  .programme-snapshot-grid figcaption{font-size:12px;padding:8px 9px}
+  .programme-snapshots h4{font-size:18px}
 }

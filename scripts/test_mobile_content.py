@@ -42,6 +42,18 @@ def load_exporter():
     return module
 
 
+def snapshot_image(index=1):
+    return {
+        "imageId": f"12345678-1234-4abc-8def-{index:012d}",
+        "kind": "concept", "capturedOn": "",
+        "translations": {
+            "en": {"caption": "A product in preparation.", "alt": "A product presentation on an ivory background."},
+            "zh": {"caption": "籌備中的產品。", "alt": "暖象牙白背景上的產品示意圖。"},
+            "ja": {"caption": "準備中の商品。", "alt": "アイボリー背景の商品イメージ。"},
+        },
+    }
+
+
 class MobileContentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -258,6 +270,137 @@ class MobileContentTests(unittest.TestCase):
         self.assertIsNone(snapshot["publishedAt"])
         self.assertNotIn(PRIVATE_MARKER, json.dumps(snapshot))
         self.assertEqual(set(snapshot["coffee"]), {"seedVarieties", "seedStage", "trialName", "trialStage", "heightCm", "observedOn"})
+
+    def test_optional_snapshot_metadata_is_additive_and_does_not_version_editorial_feed(self):
+        before = self.export()
+        editorial_bytes = (self.output / "content.json").read_bytes()
+        items = [snapshot_image(), snapshot_image(2)]
+        items[1].update({"kind": "photo", "capturedOn": "2024-02-29"})
+        self.sources["programme-content.json"]["initial"]["departments"]["cafe"]["snapshots"] = items
+        self.write_sources()
+        after = self.export(include_programme_snapshot=True)
+        self.assertEqual(after, before)
+        self.assertEqual(after["schemaVersion"], 1)
+        self.assertEqual((self.output / "content.json").read_bytes(), editorial_bytes)
+        baseline = json.loads((self.output / "programme.snapshot.json").read_text())
+        exported = baseline["departments"]["cafe"]["snapshots"]
+        self.assertEqual(exported, items)
+        self.assertIsNone(baseline["publishedAt"])
+        for item in exported:
+            self.assertEqual(set(item), {"imageId", "kind", "capturedOn", "translations"})
+            self.assertEqual(set(item["translations"]), set(LOCALES))
+            self.assertTrue(all(set(entry) == {"caption", "alt"} for entry in item["translations"].values()))
+        self.assertNotIn("/public/programme/images/", json.dumps(baseline))
+
+    def test_legacy_snapshot_omission_and_explicit_empty_galleries_are_preserved(self):
+        initial = copy.deepcopy(self.sources["programme-content.json"]["initial"])
+        for department in initial["departments"].values():
+            department.pop("snapshots", None)
+        projected = self.exporter.public_programme(initial)
+        self.assertTrue(all("snapshots" not in item for item in projected["departments"].values()))
+        initial["departments"]["cafe"]["snapshots"] = []
+        self.assertEqual(self.exporter.public_programme(initial)["departments"]["cafe"]["snapshots"], [])
+
+    def test_snapshot_projection_does_not_mutate_or_alias_public_source(self):
+        initial = copy.deepcopy(self.sources["programme-content.json"]["initial"])
+        initial["departments"]["cafe"]["snapshots"] = [snapshot_image()]
+        before = copy.deepcopy(initial)
+        projected = self.exporter.public_programme(initial)
+        self.assertEqual(initial, before)
+        projected["departments"]["cafe"]["snapshots"][0]["translations"]["en"]["alt"] = "A changed output."
+        self.assertEqual(initial, before)
+
+    def test_snapshot_collections_require_at_most_four_unique_metadata_records(self):
+        initial = self.sources["programme-content.json"]["initial"]
+        for count in range(1, 5):
+            initial["departments"]["cafe"]["snapshots"] = [snapshot_image(i + 1) for i in range(count)]
+            self.assertEqual(len(self.exporter.public_programme(initial)["departments"]["cafe"]["snapshots"]), count)
+        for value in (None, {}, "images", [None], [snapshot_image()] * 2, [snapshot_image(i + 1) for i in range(5)]):
+            with self.subTest(value=value):
+                self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": value}), include_programme_snapshot=True)
+
+    def test_snapshot_image_ids_reject_urls_non_uuid4_values_and_property_injection(self):
+        valid = snapshot_image()["imageId"]
+        for image_id in (None, 7, {}, [valid], valid.upper(), valid.replace("-4abc-", "-1abc-"), valid.replace("-8def-", "-7def-"), valid + "\n", valid + "?token=private", "../" + valid, "https://private.invalid/image.jpg", "data:image/png;base64,AAAA"):
+            with self.subTest(image_id=image_id):
+                item = snapshot_image()
+                item["imageId"] = image_id
+                self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+        for field in ("url", "src", "storageKey", "ownerEmail", "__proto__"):
+            with self.subTest(field=field):
+                item = snapshot_image()
+                item[field] = PRIVATE_MARKER
+                self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+        for field in ("imageId", "kind", "capturedOn", "translations"):
+            with self.subTest(missing=field):
+                item = snapshot_image()
+                del item[field]
+                self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+
+    def test_snapshot_kind_and_real_optional_calendar_date_are_checked(self):
+        for field, values in {
+            "kind": ("image", "Photo", "", None, {}),
+            "capturedOn": ("2026-02-29", "2026-04-31", "2026-13-01", "20261020", "2026-W43-2", "2026-10-20T00:00:00Z", None, 0),
+        }.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    item = snapshot_image()
+                    item[field] = value
+                    self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+
+    def test_snapshot_translations_require_exact_complete_three_language_pairs(self):
+        invalid = []
+        for language in LOCALES:
+            item = snapshot_image()
+            del item["translations"][language]
+            invalid.append(item)
+            for field in ("caption", "alt"):
+                item = snapshot_image()
+                del item["translations"][language][field]
+                invalid.append(item)
+        for translations in (None, [], {}, "text"):
+            item = snapshot_image()
+            item["translations"] = translations
+            invalid.append(item)
+        item = snapshot_image()
+        item["translations"]["fr"] = {"caption": "texte", "alt": "image"}
+        invalid.append(item)
+        item = snapshot_image()
+        item["translations"]["zh-Hant"] = item["translations"].pop("zh")
+        invalid.append(item)
+        item = snapshot_image()
+        item["translations"]["en"]["url"] = "https://private.invalid/"
+        invalid.append(item)
+        for item in invalid:
+            with self.subTest(item=item):
+                self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+
+    def test_snapshot_caption_and_alt_text_are_safe_bounded_unicode_and_alt_is_required(self):
+        initial = copy.deepcopy(self.sources["programme-content.json"]["initial"])
+        item = snapshot_image()
+        item["translations"]["en"]["caption"] = ""
+        item["translations"]["zh"]["caption"] = "花" * 120
+        item["translations"]["ja"]["alt"] = "🌱" * 160
+        initial["departments"]["cafe"]["snapshots"] = [item]
+        self.assertEqual(self.exporter.public_programme(initial)["departments"]["cafe"]["snapshots"], [item])
+        for field, values in {
+            "caption": ("🌱" * 121, None, 0, "<script>private()</script>", "text\x00private", "text\x7fprivate"),
+            "alt": ("", " \n\t ", "花" * 161, None, {}, "<img src=x>", "text\x01private"),
+        }.items():
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    item = snapshot_image()
+                    item["translations"]["ja"][field] = value
+                    self.reject(lambda s: s["programme-content.json"]["initial"]["departments"]["cafe"].update({"snapshots": [item]}), include_programme_snapshot=True)
+
+    def test_default_editorial_export_ignores_even_invalid_optional_offline_snapshot_data(self):
+        before = self.export()
+        before_bytes = (self.output / "content.json").read_bytes()
+        self.sources["programme-content.json"]["initial"]["departments"]["cafe"]["snapshots"] = [{"url": PRIVATE_MARKER}]
+        self.write_sources()
+        self.assertEqual(self.export(), before)
+        self.assertEqual((self.output / "content.json").read_bytes(), before_bytes)
+        self.assertFalse((self.output / "programme.snapshot.json").exists())
 
     def test_official_hosts_credentials_and_token_urls_are_enforced(self):
         cases = {

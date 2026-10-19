@@ -14,8 +14,13 @@ const millis=Date.parse('2026-10-17T00:37:00Z');
 const iso=time=>new Date(time).toISOString();
 function database() {
   const sqlite=new DatabaseSync(':memory:');
-  const migrations=readdirSync(new URL('./migrations/',import.meta.url)).filter(name=>/^00[345]-.*\.sql$/.test(name)).sort();
+  const migrations=readdirSync(new URL('./migrations/',import.meta.url)).filter(name=>/^00[3456]-.*\.sql$/.test(name)).sort();
   for(const file of ['admin-schema.sql',...migrations.map(name=>'migrations/'+name)])sqlite.exec(readFileSync(new URL('./'+file,import.meta.url),'utf8'));
+  // Public baseline references are real IDs, but the isolated DB uses tiny
+  // synthetic image bytes instead of importing website marketing photography.
+  const picture=Uint8Array.from(Buffer.from('UklGRh4AAABXRUJQVlA4TBEAAAAvAYAAAAdQwqb1rf+BiOh/AAA=','base64'));
+  const media=sqlite.prepare('INSERT INTO programme_media (image_id,department,mime,width,height,byte_length,sha256,bytes,created_at,created_by,first_published_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  for(const [department,value]of Object.entries(seed.initial.departments))for(const image of value.snapshots||[])media.run(image.imageId,department,'image/webp',2,3,picture.length,'a'.repeat(64),picture,'2026-10-20T00:00:00Z',owner,'2026-10-20T00:00:00Z');
   const queries=[];
   const db={prepare(sql){queries.push(sql);const statement=sqlite.prepare(sql);let values=[];return {bind(...args){values=args;return this;},async first(){return statement.get(...values)||null;},async all(){return {results:statement.all(...values)};},async run(){return this._run();},_run(){return {meta:{changes:Number(statement.run(...values).changes)}};}};},async batch(statements){sqlite.exec('BEGIN IMMEDIATE');try{const result=statements.map(s=>s._run());sqlite.exec('COMMIT');return result;}catch(error){sqlite.exec('ROLLBACK');throw error;}}};
   return {db,sqlite,queries};
@@ -74,6 +79,10 @@ test('authenticated cross-origin and missing-origin writes are denied before tou
 
 test('owner editor works without Brevo and exposes no-store state while public endpoint never sees drafts',async()=>{
   const {db,sqlite}=database(),env=adminEnv(db);
+  for(const department of Object.values(seed.initial.departments))for(const image of department.snapshots||[]){
+    const response=await handleRequest(publicRequest('/public/programme/images/'+image.imageId),{DB:db});
+    assert.equal(response.status,200);assert.equal(response.headers.get('Content-Type'),'image/webp');
+  }
   const first=await handleAdmin(adminRequest(),env,access);
   assert.equal(first.status,200);assert.equal(first.headers.get('Cache-Control'),'no-store');
   assert.equal((await first.json()).revision,0);

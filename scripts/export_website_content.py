@@ -87,6 +87,35 @@ def iso_date(value, *, allow_empty=False):
     return value
 
 
+def public_snapshots(value):
+    """Accept only published image IDs and bounded, paired public descriptions."""
+    result, seen = [], set()
+    for item in entries(value, 4):
+        if not isinstance(item, dict) or set(item) != {"imageId", "kind", "capturedOn", "translations"}:
+            raise ValueError("Unexpected public snapshot fields")
+        image_id = item["imageId"]
+        if not isinstance(image_id, str) or not re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", image_id) or image_id in seen:
+            raise ValueError("Invalid or duplicate public snapshot image ID")
+        if item["kind"] not in ("photo", "concept"):
+            raise ValueError("Unsupported public snapshot kind")
+        captured_on = iso_date(item["capturedOn"], allow_empty=True)
+        source_translations = item["translations"]
+        if not isinstance(source_translations, dict) or set(source_translations) != set(LANGUAGES):
+            raise ValueError("Snapshot descriptions require all three public languages")
+        translations = {}
+        for language in LANGUAGES:
+            entry = source_translations[language]
+            if not isinstance(entry, dict) or set(entry) != {"caption", "alt"}:
+                raise ValueError("Unexpected snapshot translation fields")
+            caption, alt = text(entry["caption"], maximum=120), text(entry["alt"], maximum=160)
+            if not alt.strip():
+                raise ValueError("Snapshot alternative text must be meaningful")
+            translations[language] = {"caption": caption, "alt": alt}
+        seen.add(image_id)
+        result.append({"imageId": image_id, "kind": item["kind"], "capturedOn": captured_on, "translations": translations})
+    return result
+
+
 def public_programme(value):
     """Project a strict public baseline, dropping all unrecognised fields."""
     if value["version"] != 1 or set(value["departments"]) != set(DEPARTMENTS):
@@ -108,6 +137,8 @@ def public_programme(value):
                 "done": [text(line, maximum=120) for line in entry["done"]],
             }
         departments[department] = {"status": item["status"], "translations": translations}
+        if "snapshots" in item:
+            departments[department]["snapshots"] = public_snapshots(item["snapshots"])
     coffee = value["coffee"]
     if coffee["seedVarieties"] != ["IPR107", "NR25", "Marsellesa"] or coffee["trialName"] != "Paraíso":
         raise ValueError("Review changed coffee trial identity")
