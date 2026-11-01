@@ -118,6 +118,14 @@ explicit empty array clears the draft's attachments. The optional offline
 programme baseline uses the same allowlist. The separate editorial feed is
 unchanged.
 
+The dedicated Coffee Trial page also shows the Coffee Growing area's images
+from the reviewed `programme-content.json` baseline, in their saved order. These
+uncropped photographs have translated captions and reported dates. That page is
+static: after an owner publishes new images, reconcile the public baseline and
+rebuild the website to update its gallery. The programme world's gallery still
+refreshes directly from the published backend. Keep both views aligned during
+each reviewed website release.
+
 ## Translation service and safeguards
 
 Translation runs in the protected admin Worker through its server-side
@@ -167,9 +175,30 @@ observation date. Either track can use the full stage set:
 
 Grafting is optional. It is not a required stage or a claim that grafting has
 occurred. Advance either actual record only from a confirmed, dated observation.
-The reviewed 17 October 2026 baseline records seed starting for the three-variety
-group and separate Paraíso seedlings around 20 cm tall. It does not establish
-harvest, cultivar identity, field layout or visitor readiness.
+The current owner report, dated **1 November 2026**, records the separate
+**Paraíso pilot planting: 27 seedlings, 1 m apart, averaging 17 cm tall**. The
+reported readings are **26°C**, **soil moisture 9 (scale unspecified)** and
+**pH 6.5**. These are dated owner observations, not live sensor measurements;
+the soil-moisture value must not be shown as a percentage or assigned a scale.
+The live MET Norway weather estimate is a separate source. Keep the actual
+Paraíso stage at `seedling`; planting is a confirmed milestone, not evidence of
+flowering, harvest, crop health, yield or visitor readiness.
+
+The **IPR107, NR25 and Marsellesa** seed-starting group remains separate, with its
+`seed` stage unchanged. The **17 October 2026** owner report recorded seed
+starting for that group and separate Paraíso seedlings around **20 cm** tall.
+That earlier value is dated history. The later **17 cm average** must not be
+presented as a measured decrease or a health trend: no comparable individual
+plant measurements or cause were supplied. Neither report resolves NR25's
+identity or establishes coffee production.
+
+The structured coffee record keeps its existing fields: update `heightCm` and
+`observedOn` for the current Paraíso observation. Put planting count, spacing and
+dated readings in the area's public notes or completed milestone, and attach
+actual progress photos through its existing image gallery. Do not invent extra
+JSON fields or advance the other seed selections. Reconcile the published
+record into `programme-content.json` for static HTML and offline fallback; its
+height/date must match the current published observation before release.
 
 Visitors can explore all eight illustrated stages with the coffee controls,
 then choose **Return to the reported stage**. Those controls change only the

@@ -112,12 +112,12 @@
         "selectStage": "Choose a growing stage",
         "seedTrack": "Trial started from seed",
         "trialTrack": "Separate Paraíso trial",
-        "seedActual": "Seed starting is under way for IPR107, NR25 and Marsellesa.",
-        "trialActual": "The separate Paraíso trial has seedlings around 20 cm tall.",
+        "seedActual": "Seed starting for IPR107, NR25 and Marsellesa was reported on 17 October 2026.",
+        "trialActual": "Reported 1 November 2026: 27 Paraíso plants planted at 1 m spacing, averaging 17 cm tall.",
         "varietyNote": "NR25 is the supplied trial name; its identity is still being checked.",
         "graftNote": "Grafting is an optional technique to explore with consultants, rather than a required step in this growing journey.",
         "futureNote": "The scenes explore different growing stages. Dated trial notes record the reported progress separately; harvest timing depends on how the real plants develop.",
-        "observedOn": "Reported on",
+        "observedOn": "Paraíso reported on",
         "height": "Approximate seedling height",
         "stages": {
           "seed": {
@@ -432,12 +432,12 @@
         "selectStage": "選擇生長階段",
         "seedTrack": "從種子起步的試種",
         "trialTrack": "獨立的 Paraíso 試種",
-        "seedActual": "IPR107、NR25 與 Marsellesa 正從種子開始培育。",
-        "trialActual": "另行進行的 Paraíso 試種，幼苗約有 20 公分高。",
+        "seedActual": "依 2026 年 10 月 17 日的回報，IPR107、NR25 與 Marsellesa 正從種子開始培育。",
+        "trialActual": "2026 年 11 月 1 日回報：Paraíso 試種已完成 27 株定植，株距 1 公尺，平均株高 17 公分。",
         "varietyNote": "NR25 是目前提供的試種名稱，品種身分仍待釐清。",
         "graftNote": "嫁接是可與顧問探討的繁殖選項，並非這段生長過程的必經階段。",
         "futureNote": "這些場景用來認識各個生長階段。實際進度另以附有日期的試種小記記錄；採收時機須視真正植株的生長情況而定。",
-        "observedOn": "回報日期",
+        "observedOn": "Paraíso 回報日期",
         "height": "幼苗約高",
         "stages": {
           "seed": {
@@ -752,12 +752,12 @@
         "selectStage": "生育段階を選ぶ",
         "seedTrack": "種から始めた試験",
         "trialTrack": "別に進めるParaísoの試験",
-        "seedActual": "IPR107、NR25、Marsellesaは、種から育て始めています。",
-        "trialActual": "別に進めているParaísoの試験では、苗の高さは約20cmです。",
+        "seedActual": "2026年10月17日の報告では、IPR107、NR25、Marsellesaを種から育て始めています。",
+        "trialActual": "2026年11月1日の報告：Paraísoの試験栽培用に27株を定植。株間1m、平均の高さ17cm。",
         "varietyNote": "NR25は提供された試験名で、品種の正確な情報は引き続き確認中です。",
         "graftNote": "接ぎ木は、コンサルタントと検討できる繁殖方法のひとつです。生育のために必ず通る段階ではありません。",
         "futureNote": "各シーンは、生育段階を知るためのイメージです。実際の進捗は日付付きの試験の近況でお伝えします。収穫の時期や見通しは、実際の生育状況を踏まえて判断します。",
-        "observedOn": "報告日",
+        "observedOn": "Paraísoの報告日",
         "height": "苗のおおよその高さ",
         "stages": {
           "seed": {
@@ -963,7 +963,7 @@
   },
   "initial": {
     "version": 1,
-    "updatedAt": "2026-10-20",
+    "updatedAt": "2026-11-01",
     "departments": {
       "cafe": {
         "status": "planning",
@@ -1029,21 +1029,86 @@
         "status": "trialling",
         "translations": {
           "en": {
-            "now": "Seed starting is under way for IPR107, NR25 and Marsellesa. Paraíso is a separate early trial, with seedlings around 20 cm tall. John Ou is leading the trial with plantation consultants.",
-            "next": "Record germination and early growth observations, and share the next dated trial update.",
-            "done": []
+            "now": "Paraíso pilot planted 1 November 2026: 27 plants, 1 m apart; average height 17 cm. Reported temperature 26°C, soil moisture 9 (unit/scale unspecified), pH 6.5. The 3 seed varieties IPR107, NR25 and Marsellesa were separately reported as starting from seed on 17 October 2026.",
+            "next": "Keep dated Paraíso and seed-starting observations. John Ou is the project lead. He works with coffee plantation consultants. NR25’s identity is still being checked.",
+            "done": [
+              "1 November 2026: 27 Paraíso plants planted for the pilot at 1 m spacing."
+            ]
           },
           "zh": {
-            "now": "IPR107、NR25 與 Marsellesa 正從種子開始培育。Paraíso 是另行進行的早期試種，幼苗約有 20 公分高。John Ou 主導試種，並與咖啡種植顧問合作。",
-            "next": "記錄發芽與初期生長的實際觀察，再分享下一則附有日期的試種近況。",
-            "done": []
+            "now": "Paraíso 試種於2026年11月1日定植：27株、株距1 m，平均株高17 cm。回報溫度26°C、土壤濕度9（單位及量尺未註明）、pH 6.5。另據2026年10月17日回報，IPR107、NR25 與 Marsellesa 這3種正從種子開始培育。",
+            "next": "持續記錄 Paraíso 與種子培育的觀察，並註明日期。計畫由 John Ou 主導，與咖啡種植顧問合作。NR25 的品種身分仍待確認。",
+            "done": [
+              "2026年11月1日：Paraíso 試種完成27株定植，株距1 m。"
+            ]
           },
           "ja": {
-            "now": "IPR107、NR25、Marsellesaは、種から育て始めています。Paraísoは別に進めている初期試験で、苗の高さは約20cmです。John Ouが栽培コンサルタントとともに試験を進めています。",
-            "next": "発芽や初期の生育を観察・記録し、次の試験の近況を日付とともにお伝えします。",
-            "done": []
+            "now": "Paraísoの試験栽培では2026年11月1日に27株を定植。株間1 m、平均の高さ17 cm。報告値は温度26°C、土壌水分9（単位・尺度の記載なし）、pH 6.5です。IPR107、NR25、Marsellesaの3種類を種から育て始めたことは、2026年10月17日に別途報告されています。",
+            "next": "Paraísoと種からの育成について、日付を添えて観察を記録します。プロジェクトはJohn Ouが主導し、コーヒー栽培コンサルタントと協力して進めています。NR25の品種は引き続き確認中です。",
+            "done": [
+              "2026年11月1日：Paraísoの試験栽培用に27株を定植。株間1 m。"
+            ]
           }
-        }
+        },
+        "snapshots": [
+          {
+            "imageId": "1f4bdd91-c4cb-4b70-bf1c-dbafb57ef7f0",
+            "kind": "photo",
+            "capturedOn": "2026-11-01",
+            "translations": {
+              "en": {
+                "caption": "Paraíso planting day: a guarded young plant.",
+                "alt": "A young plant inside a wire guard, beside a stake and irrigation pipe, with a Paraíso planting marker."
+              },
+              "zh": {
+                "caption": "Paraíso 定植日：鐵網護圈裡的幼苗。",
+                "alt": "幼苗圍在鐵網護圈內，旁有支柱及灌溉管，並立有 Paraíso 定植標示牌。"
+              },
+              "ja": {
+                "caption": "Paraísoの定植日。金網で囲んだ苗。",
+                "alt": "金網で囲まれた苗。支柱と灌水管があり、Paraísoの植え付けを示すラベルが立っています。"
+              }
+            }
+          },
+          {
+            "imageId": "747c5fd9-1487-4e2f-a650-1f1d30758d00",
+            "kind": "photo",
+            "capturedOn": "2026-11-01",
+            "translations": {
+              "en": {
+                "caption": "Preparing the line for the Paraíso pilot.",
+                "alt": "Young plants in nursery bags follow a string line between established trees; two people use an auger at the far end to prepare holes."
+              },
+              "zh": {
+                "caption": "沿著拉線，準備 Paraíso 的定植位置。",
+                "alt": "在原有樹木之間，裝在育苗袋裡的幼苗沿拉線排列；遠端有兩人使用鑽土機準備種植穴。"
+              },
+              "ja": {
+                "caption": "Paraísoを植える列を準備しています。",
+                "alt": "木々の間に張ったひもに沿って、育苗袋に入った苗が並び、奥では2人が穴掘り機で植え穴を準備しています。"
+              }
+            }
+          },
+          {
+            "imageId": "0b203c96-7820-4e6b-a82e-97479c73e989",
+            "kind": "photo",
+            "capturedOn": "2026-11-01",
+            "translations": {
+              "en": {
+                "caption": "A closer look at a young Paraíso plant.",
+                "alt": "Close view of a leafy young plant still in its black nursery bag at a prepared soil spot."
+              },
+              "zh": {
+                "caption": "近看一株 Paraíso 幼苗。",
+                "alt": "一株仍裝在黑色育苗袋中的幼苗近照，放在已整理的土面上。"
+              },
+              "ja": {
+                "caption": "Paraísoの若い苗を、少し近くから。",
+                "alt": "整えた土の場所に置かれた、黒い育苗袋に入ったままの苗の近景。"
+              }
+            }
+          }
+        ]
       },
       "workshops": {
         "status": "planning",
@@ -1095,8 +1160,8 @@
       "seedStage": "seed",
       "trialName": "Paraíso",
       "trialStage": "seedling",
-      "heightCm": 20,
-      "observedOn": "2026-10-17"
+      "heightCm": 17,
+      "observedOn": "2026-11-01"
     }
   }
 }

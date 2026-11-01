@@ -96,11 +96,11 @@ test('owner editor works without Brevo and exposes no-store state while public e
   const baseline=await handleRequest(publicRequest(),{DB:db});
   assert.equal(baseline.status,200);assert.equal(baseline.headers.get('Access-Control-Allow-Origin'),'*');
   assert.equal(baseline.headers.has('Access-Control-Allow-Credentials'),false);
-  const before=await baseline.json();assert.equal(before.coffee.heightCm,20);
+  const before=await baseline.json();assert.deepEqual(before.coffee,seed.initial.coffee);
   assert.equal(JSON.stringify(before).includes('Private draft'),false);
   assert.equal((await publish(env,1)).status,200);
   const live=await (await handleRequest(publicRequest(),{DB:db})).json();
-  assert.equal(live.coffee.heightCm,22);
+  assert.deepEqual(live.coffee,{...seed.initial.coffee,heightCm:22});
   assert.equal(live.departments.workshops.translations.en.now,'Private draft en');
   assert.equal(live.departments.workshops.translations.zh.now,'備註：Private draft en');
   assert.equal(live.departments.workshops.translations.ja.now,'内容：Private draft en');
@@ -122,7 +122,7 @@ test('stale, malformed, oversize and incomplete programme edits never publish th
   assert.equal((await publish(env,2)).status,400);
   const unsafe=structuredClone(seed.initial);unsafe.departments.local.translations.en.now='<script>alert(1)</script>';
   assert.equal((await save(env,unsafe,2)).status,400);
-  assert.equal((await (await handleRequest(publicRequest(),{DB:db})).json()).coffee.heightCm,20);
+  assert.deepEqual((await (await handleRequest(publicRequest(),{DB:db})).json()).coffee,seed.initial.coffee);
 });
 
 test('anonymous public routes are GET-only, ignore injected query fields and cannot route to admin',async()=>{

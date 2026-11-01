@@ -9,6 +9,7 @@ from urllib.parse import urlsplit, unquote
 from xml.etree import ElementTree as ET
 from datetime import date
 import argparse
+import copy
 import json
 import os
 import re
@@ -209,7 +210,11 @@ except (TypeError,ValueError):
     check(False,'Initial plant-report date is not a real date')
 check(set(coffee) == {'seedVarieties','seedStage','trialName','trialStage','heightCm','observedOn'}, 'Coffee baseline has unsupported/private fields')
 check(coffee['seedVarieties'] == ['IPR107','NR25','Marsellesa'], 'Confirmed seed names are wrong')
-check(coffee['seedStage'] == 'seed' and coffee['trialName'] == 'Paraíso' and coffee['trialStage'] == 'seedling' and coffee['heightCm'] == 20, 'Initial seed and separate Paraíso report differ from the reviewed launch facts')
+check(coffee['seedStage'] == 'seed' and coffee['trialName'] == 'Paraíso' and coffee['trialStage'] == 'seedling', 'Confirmed seed-starting group and separate Paraíso seedling stages differ')
+height = coffee['heightCm']
+valid_height = type(height) in (int,float) and 0 <= height <= 300
+check(valid_height, 'Reported Paraíso height must be a finite observation from 0 to 300 cm')
+reported_height = f'~{height:g} cm' if valid_height else ''
 for id,department in initial['departments'].items():
     items = department.get('snapshots', [])
     check(isinstance(items,list) and len(items)<=4, id+': snapshots must be an optional list of at most four images')
@@ -393,7 +398,7 @@ for key,(lang,prefix) in LOCALES.items():
             snapshot_gallery(card,items if isinstance(items,list) and all(valid_snapshot(item) for item in items) else [],c,key,label+'/'+id)
         check(all(name in root.text() for name in ['IPR107','NR25','Marsellesa','Paraíso']), label+': accepted seed direction and separate trial name missing')
         check(norm(marked(root,'data-seed-actual',label).text())==norm(c['growth']['seedActual']) and norm(marked(root,'data-trial-actual',label).text())==norm(c['growth']['trialActual']), label+': current seed/seedling facts missing')
-        check('20' in marked(root,'data-plant-height',label).text(), label+': approximate reported 20 cm seedling height missing')
+        check(norm(marked(root,'data-plant-height',label).text())==reported_height, label+': approximate height differs from current reported Paraíso observation')
         observed=marked(root,'data-plant-observed',label)
         check(observed.tag=='time' and observed.attrs.get('datetime')==coffee['observedOn'], label+': report date missing/wrong')
         updated=marked(root,'data-programme-updated',label)
@@ -414,12 +419,71 @@ for key,(lang,prefix) in LOCALES.items():
                 check(re.search(r'\bimport\s*\([\"\']\./programme-world-[^\"\']+\.js[\"\']\)',entry.read_text()) is not None, label+': world is not lazy imported')
         check(not any(n.tag=='link' and n.attrs.get('rel') in ['preload','modulepreload'] and n.attrs.get('as')!='image' and '/assets/progress/' in n.attrs.get('href','') for n in root.walk()), label+': heavy programme module is preloaded')
 
+# Exercise different observations in memory: initial HTML must follow the data
+# before JavaScript/API refresh, including decimal and zero/boundary heights.
+# No public JSON, active observation or generated release file is mutated.
+import programme_markup
+saved_markup_data = programme_markup.DATA
+try:
+    for observed_height,observed_date in [(0,'2026-11-01'),(17,'2026-11-01'),(17.5,'2028-02-29'),(300,'2028-02-29')]:
+        example = copy.deepcopy(DATA)
+        example['initial']['coffee'].update(heightCm=observed_height,observedOn=observed_date)
+        programme_markup.DATA = example
+        for key,(_,prefix) in LOCALES.items():
+            label = key+'/simulated-observation/'+str(observed_height)
+            html = programme_markup.page(key,SITE['programmeApiOrigin'],'/'+prefix,'/'+prefix+'progress/','/'+prefix+'progress/programmes/','/'+prefix+'register/')
+            root = Document(html).root
+            check(norm(marked(root,'data-plant-height',label).text())==f'~{observed_height:g} cm', label+': SSR height is hard-coded or rounded away')
+            check(marked(root,'data-plant-observed',label).attrs.get('datetime')==observed_date, label+': SSR observation date is hard-coded')
+finally:
+    programme_markup.DATA = saved_markup_data
+
 for key,(_,prefix) in LOCALES.items():
     progress=DIST/prefix/'progress/index.html'
     check(progress.is_file(), prefix+'progress/: missing parent page')
     if progress.is_file():
         root=Document(progress.read_text()).root
         check(any(n.tag=='a' and n.attrs.get('href')==BASE+'/'+prefix+'progress/programmes/' for n in root.walk()), prefix+'progress/: missing programme entry')
+
+# Dedicated coffee pages use the same published metadata as the status cards,
+# with a modest static gallery before the newsletter action, never draft URLs.
+from coffee_gallery import HEADINGS as COFFEE_GALLERY_HEADINGS
+coffee_images = initial['departments']['coffee'].get('snapshots', [])
+for key,(_,prefix) in LOCALES.items():
+    file = DIST/prefix/'coffee-trial/index.html'
+    label = prefix+'coffee-trial/'
+    check(file.is_file(),label+': missing dedicated coffee page')
+    if not file.is_file():
+        continue
+    root = Document(file.read_text()).root
+    galleries = [node for node in root.walk() if 'data-coffee-gallery' in node.attrs]
+    if not coffee_images:
+        check(not galleries and not root.classes('coffee-gallery'),label+': empty coffee images must not create a public gallery')
+        continue
+    gallery = one(galleries,label+': one published coffee gallery')
+    check('coffee-gallery' in gallery.attrs.get('class','').split(),label+': gallery layout class missing')
+    heading = one([n for n in gallery.walk() if n.tag=='h2'],label+': gallery heading')
+    check(norm(heading.text())==COFFEE_GALLERY_HEADINGS[key] and gallery.attrs.get('aria-labelledby')==heading.attrs.get('id'),label+': gallery needs its approved localized accessible heading')
+    sections = [n for n in root.walk() if n.tag=='section']
+    details = one(root.classes('coffee-details'),label+': coffee details')
+    signup = one(root.classes('signup-band'),label+': newsletter action')
+    check(gallery in sections and details in sections and signup in sections and sections.index(details)<sections.index(gallery)<sections.index(signup),label+': gallery must follow coffee details and precede signup')
+    figures = [n for n in gallery.walk() if n.tag=='figure']
+    check([n.attrs.get('data-coffee-image') for n in figures]==[item['imageId'] for item in coffee_images],label+': gallery must retain public coffee images and ordering')
+    for figure,item in zip(figures,coffee_images):
+        picture = one([n for n in figure.walk() if n.tag=='img'],label+': coffee picture')
+        check(picture.attrs.get('src')==MEDIA+item['imageId'] and picture.attrs.get('alt')==item['translations'][key]['alt'],label+': image URL or localized alternative text differs from published source')
+        check(picture.attrs.get('width')=='1200' and picture.attrs.get('height')=='1600' and picture.attrs.get('loading')=='lazy' and picture.attrs.get('decoding')=='async',label+': pictures need reserved dimensions and lazy decoding')
+        check(picture.attrs.get('crossorigin')=='anonymous' and picture.attrs.get('referrerpolicy')=='no-referrer',label+': public image privacy headers missing')
+        captions = [n for n in figure.walk() if n.tag=='p']
+        expected_caption = item['translations'][key]['caption']
+        check([norm(n.text()) for n in captions]==([norm(expected_caption)] if expected_caption else []),label+': localized image caption differs')
+        times = [n for n in figure.walk() if n.tag=='time']
+        expected_date = item['capturedOn'] if item['kind']=='photo' else ''
+        check(len(times)==bool(expected_date),label+': photo date was lost or invented')
+        if times and expected_date:
+            check(times[0].attrs.get('datetime')==expected_date and norm(times[0].text())==norm(DATA['copy'][key]['snapshots']['capturedOn']+' '+expected_date),label+': photo date must use localized label and reported calendar value')
+    check(not any(n.tag in ('script','canvas','iframe') for n in gallery.walk()),label+': coffee gallery must remain a static public section')
 
 for file in (DIST/'assets/progress').glob('*.js'):
     source=file.read_text()

@@ -513,7 +513,7 @@ class MobileContentTests(unittest.TestCase):
     def test_build_hook_regenerates_feed_after_cleaning_dist_and_preserves_routes(self):
         scripts = self.website / "scripts"
         scripts.mkdir()
-        for name in ("build.py", "progress_markup.py", "programme_markup.py", EXPORTER.name, "mobile-content-v1.schema.json"):
+        for name in ("build.py", "progress_markup.py", "programme_markup.py", "coffee_gallery.py", EXPORTER.name, "mobile-content-v1.schema.json"):
             shutil.copyfile(ROOT / "scripts" / name, scripts / name)
         shutil.copyfile(ROOT / "progress-content.json", self.website / "progress-content.json")
         public = self.website / "public"
@@ -548,6 +548,31 @@ class MobileContentTests(unittest.TestCase):
         second = build()
         self.assertEqual(second["languages"]["en"]["heroText"], "A public edit made before the next site build.")
         self.assertNotEqual(first["contentVersion"], second["contentVersion"])
+
+        # Public coffee photos belong on all localized trial pages, without
+        # turning a programme-baseline change into an editorial-feed revision.
+        pictures = [snapshot_image(index) for index in (11, 12, 13)]
+        for picture in pictures:
+            picture.update(kind="photo", capturedOn="2026-11-01")
+        self.sources["programme-content.json"]["initial"]["departments"]["coffee"]["snapshots"] = pictures
+        self.write_sources()
+        third = build()
+        for language, (_, prefix) in LOCALES.items():
+            html = (dist / prefix / "coffee-trial/index.html").read_text()
+            self.assertEqual(html.count("data-coffee-gallery"), 1)
+            self.assertEqual(html.count("data-coffee-image="), 3)
+            self.assertLess(html.index('class="section coffee-details"'), html.index("data-coffee-gallery"))
+            self.assertLess(html.index("data-coffee-gallery"), html.index('class="signup-band"'))
+            for picture in pictures:
+                self.assertIn('src="https://glenolia-newsletter.theglenolia.workers.dev/public/programme/images/' + picture["imageId"] + '"', html)
+                self.assertIn(picture["translations"][language]["caption"], html)
+        self.assertEqual(third["contentVersion"], second["contentVersion"])
+        self.sources["programme-content.json"]["initial"]["departments"]["coffee"]["snapshots"] = []
+        self.write_sources()
+        fourth = build()
+        for _, prefix in LOCALES.values():
+            self.assertNotIn("data-coffee-gallery", (dist / prefix / "coffee-trial/index.html").read_text())
+        self.assertEqual(fourth["contentVersion"], third["contentVersion"])
 
 
 if __name__ == "__main__":

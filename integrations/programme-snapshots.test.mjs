@@ -160,6 +160,9 @@ test('media existence is gated inside the same SQL transaction even if an asset 
 
 test('preview is private, leaves programme state unchanged and publication reuses the typed bilingual cache',async()=>{
  const {db,sqlite}=database();let calls=0;const env=environment(db,ai(()=>calls++)),image=await upload(env),p=programmeWith(image.imageId);
+ // This DB owns only the newly uploaded café fixture. Explicitly clear other
+ // galleries so legacy omission does not retain real published baseline IDs.
+ for(const [id,department]of Object.entries(p.departments))if(id!=='cafe')department.snapshots=[];
  const request=()=>admin('/api/programme/preview-translations','POST',{programme:p,expectedRevision:0});
  const before=stateRows(sqlite),preview=await handleAdmin(request(),env,access);assert.equal(preview.status,200);assert.equal(calls,2);
  assert.deepEqual(stateRows(sqlite),before);assert.equal((await handleRequest(publicRequest('/public/programme/images/'+image.imageId),{DB:db})).status,404);

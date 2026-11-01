@@ -2,7 +2,7 @@
   "en": {
     "coffeeLabel": "THE COFFEE PROJECT",
     "coffeeTitle": "A growing trial. A patient beginning.",
-    "coffeeIntro": "Our coffee project is led by John Ou, working alongside coffee plantation consultants. Seed starting and the separate Paraíso seedling trial are the beginning of a project built around observation and care for this land.",
+    "coffeeIntro": "Our coffee project is led by John Ou, working alongside coffee plantation consultants. The separate Paraíso pilot was planted on 1 November 2026, with 27 plants. The IPR107, NR25 and Marsellesa seed-starting work is recorded separately.",
     "coffeeLink": "Explore the coffee trial",
     "coffeeSections": [
       {
@@ -11,7 +11,7 @@
       },
       {
         "title": "A separate early trial",
-        "body": "Paraíso is a separate early trial, with seedlings around 20 cm tall, as reported on 17 October 2026. It is separate from the three seed-starting selections."
+        "body": "John reported the Paraíso pilot planting on 1 November 2026: 27 plants at 1 m spacing, with an average height of 17 cm. Reported readings were temperature 26°C, soil moisture 9 (unit and scale not supplied), and soil pH 6.5. This pilot is separate from the IPR107, NR25 and Marsellesa seed-starting work reported on 17 October 2026."
       },
       {
         "title": "What we hope to learn",
@@ -80,7 +80,7 @@
   "zh": {
     "coffeeLabel": "咖啡種植計畫",
     "coffeeTitle": "從試種開始，耐心觀察成長。",
-    "coffeeIntro": "咖啡種植計畫由 John Ou 帶領，與咖啡種植顧問共同推進。從種子培育與獨立的 Paraíso 幼苗試種開始，我們用心觀察這片土地，記錄每一步生長。",
+    "coffeeIntro": "咖啡種植計畫由 John Ou 主導，並與咖啡種植顧問合作。獨立的 Paraíso 試種已於 2026 年 11 月 1 日完成 27 株定植；IPR107、NR25 與 Marsellesa 的種子培育則分開記錄。",
     "coffeeLink": "了解咖啡試種計畫",
     "coffeeSections": [
       {
@@ -89,7 +89,7 @@
       },
       {
         "title": "獨立的早期試種",
-        "body": "Paraíso 是另一項早期試種，與三項從種子培育的選擇分開進行。依 2026 年 10 月 17 日的回報，幼苗約有 20 公分高。"
+        "body": "John 回報，2026 年 11 月 1 日已完成 Paraíso 試種定植：27 株、株距 1 公尺，平均株高 17 公分。回報溫度為 26°C，土壤濕度讀數為 9（未提供單位或量尺），土壤 pH 為 6.5。這與 2026 年 10 月 17 日回報的 IPR107、NR25 與 Marsellesa 種子培育分開進行。"
       },
       {
         "title": "希望從觀察中學習",
@@ -158,7 +158,7 @@
   "ja": {
     "coffeeLabel": "コーヒー栽培の計画",
     "coffeeTitle": "試験栽培から、ゆっくりと。",
-    "coffeeIntro": "コーヒー栽培の計画はJohn Ouが中心となり、コーヒー農園の専門コンサルタントと進めています。種からの栽培と、別に進めるParaísoの苗の試験から、土地を大切にしながら観察と学びを重ねていきます。",
+    "coffeeIntro": "コーヒー栽培はJohn Ouが主導し、栽培コンサルタントとともに進めています。別に進めるParaísoの試験栽培では、2026年11月1日に27株を定植しました。IPR107、NR25、Marsellesaの種からの育成とは分けて記録しています。",
     "coffeeLink": "試験栽培の計画を読む",
     "coffeeSections": [
       {
@@ -167,7 +167,7 @@
       },
       {
         "title": "別の初期試験について",
-        "body": "Paraísoは、種から育てる3つとは別に進めている初期試験です。2026年10月17日の報告では、苗の高さは約20cmです。"
+        "body": "Johnの報告によると、2026年11月1日にParaísoの試験栽培用として27株を定植しました。株間は1m、平均の高さは17cmです。同日の報告値は温度26°C、土壌水分9（単位・尺度は未提供）、土壌pH6.5。2026年10月17日に報告されたIPR107、NR25、Marsellesaの種からの育成とは別の取り組みです。"
       },
       {
         "title": "観察から学ぶこと",

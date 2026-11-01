@@ -218,7 +218,25 @@ test('the reviewed public seed document satisfies the same publish boundary',()=
   assert.equal(validateProgramme(seed,{complete:true}),true);
   assert.deepEqual(seed.coffee.seedVarieties,['IPR107','NR25','Marsellesa']);
   assert.equal(seed.coffee.seedStage,'seed');assert.equal(seed.coffee.trialName,'Paraíso');
-  assert.equal(seed.coffee.trialStage,'seedling');assert.equal(seed.coffee.heightCm,20);
+  assert.equal(seed.coffee.trialStage,'seedling');
+  assert.deepEqual(normaliseProgramme(seed,{complete:true}).coffee,seed.coffee,'reviewed current observations must not be silently changed');
+  assert.ok(Number.isFinite(seed.coffee.heightCm)&&seed.coffee.heightCm>=0&&seed.coffee.heightCm<=300);
+  assert.equal(new Date(seed.coffee.observedOn+'T00:00:00Z').toISOString().slice(0,10),seed.coffee.observedOn);
+});
+
+
+test('a dated Paraíso planting observation stays separate from the three-variety seed-starting record',async()=>{
+  const {db}=database(),baseline=initial(),document=initial();
+  document.coffee.heightCm=17;document.coffee.observedOn='2026-11-01';
+  document.departments.coffee.translations.en.now='On 1 November 2026, 27 Paraíso seedlings were planted 1 m apart, averaging 17 cm. Reported readings: 26°C, soil moisture 9 (scale unspecified), pH 6.5. IPR107, NR25 and Marsellesa remain a separate seed-starting trial.';
+  document.departments.coffee.translations.en.done=['1 November 2026: Planted 27 Paraíso seedlings at 1 m spacing.'];
+  await save(db,document);await publish(db);const live=await fetchPublicProgramme(db);
+  assert.deepEqual(live.coffee,{...baseline.coffee,heightCm:17,observedOn:'2026-11-01'});
+  assert.equal(live.coffee.seedStage,'seed');assert.equal(live.coffee.trialStage,'seedling');
+  assert.equal(live.departments.coffee.translations.en.now,document.departments.coffee.translations.en.now);
+  assert.deepEqual(live.departments.coffee.translations.en.done,document.departments.coffee.translations.en.done);
+  for(const id of ['cafe','workshops','local'])assert.deepEqual(live.departments[id],baseline.departments[id]);
+  assert.equal(baseline.coffee.heightCm,20);assert.equal(baseline.coffee.observedOn,'2026-10-17','earlier historical fixture remains unchanged');
 });
 
 
