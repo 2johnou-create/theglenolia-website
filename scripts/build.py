@@ -1,10 +1,11 @@
 """Build the multilingual Glenolia brochure site with Python's standard library."""
 from pathlib import Path
 from html import escape as e
-import json, shutil, os, hashlib
+import json, shutil, os, hashlib, re
 from urllib.parse import quote
 import progress_markup as world_markup
 import programme_markup
+import teachers_markup
 from coffee_gallery import render_gallery as coffee_gallery
 import export_website_content
 
@@ -14,6 +15,21 @@ ADDITIONS = json.loads((ROOT / 'content-additions.json').read_text())
 for key in CONTENT:
     CONTENT[key].update(ADDITIONS[key])
 CONFIG = json.loads((ROOT / 'config.json').read_text())
+EDUCATION = json.loads((ROOT / 'education-catalogue.json').read_text())
+# Only deliberately public catalogue metadata enters the static build. Full
+# packs, worksheets, school records and PDFs belong in the education service.
+EDUCATION_FIELDS = {'id','title','stage','years','term','question','summary','image','availability','kind','version','publicSample'}
+if EDUCATION.get('language') != 'en' or not isinstance(EDUCATION.get('resources'), list):
+    raise ValueError('Education catalogue must contain English resource summaries')
+for resource in EDUCATION['resources']:
+    if (not isinstance(resource,dict) or set(resource) - EDUCATION_FIELDS
+            or not isinstance(resource.get('summary'), str)
+            or not re.fullmatch(r'[a-z0-9-]{1,100}',str(resource.get('id','')))
+            or resource.get('availability') not in ['public','teacher','selected']):
+        raise ValueError('Restricted or invalid fields in public education catalogue')
+PUBLIC_SAMPLES = [r for r in EDUCATION['resources'] if r.get('availability') == 'public']
+if len(PUBLIC_SAMPLES) != 2:
+    raise ValueError('The public education introduction requires exactly two approved samples')
 DIST = ROOT / 'dist'
 if DIST.exists():
     shutil.rmtree(DIST)
@@ -37,6 +53,18 @@ def button(href, text, cls='button'):
     return f'<a class="{cls}" href="{href}">{e(text)}<span aria-hidden="true">↗</span></a>'
 
 def label(text): return f'<p class="eyebrow">{e(text)}</p>'
+
+def teachers_callout():
+    return '<section class="section teacher-callout" aria-labelledby="teacher-callout-title">'+label('FOR TEACHERS')+'<h2 id="teacher-callout-title">A growing place for curious minds.</h2><p>Bring plants, places and people into your classroom with free, teacher-led learning resources. Start with a sample, then build a collection for your class.</p>'+button('/teachers/','Explore learning with The Glenolia','text-link')+'<p class="small">English resources · Kindergarten to Year 10 · No visit or student account required</p></section>'
+
+def education_privacy():
+    return '''<section id="education-privacy" lang="en-AU"><h2>Teacher accounts and learning records</h2>
+<p>The English learning portal is a separate service at <a href="https://glenolia-education.theglenolia.workers.dev">glenolia-education.theglenolia.workers.dev</a>. Public samples need no account. An adult teacher account stores your email address, chosen name and school label, favourites, private planning notes, groups and selected resource editions. Email verification confirms access to that email; it does not certify a person’s employment or a school’s approval.</p>
+<p>The portal and its API use the same service origin, running on Cloudflare Workers with a separate Cloudflare D1 education database. These records are kept separate from the website newsletter database. Brevo delivers transactional sign-in messages; creating a teacher account does not subscribe you or your school to marketing. A secure session cookie supports sign-in, with a maximum session of eight hours and expiry after 30 minutes without activity. Sign out on a shared computer.</p>
+<p>Teachers’ private planning notes are accessed through their own authenticated account. Approved school members can access the school groups permitted to them; authorised Glenolia staff manage school access, content permissions and support. Personal teacher workspaces cannot store learner records. School learner observations are off by default: they require an approved school processing agreement and a staff-enabled permission for the teacher. The school decides what evidence is necessary and remains responsible for its teaching and assessment decisions.</p>
+<p>There are no student accounts or student file uploads. Use short learner codes, keeping the identity key at school; do not enter pupil names, contact details, birth dates, health information, photographs or identifying stories in group names, notes, observations or feedback. Codes are pseudonyms, not anonymous data: a school may still be able to identify a learner. Do not use a personal planning note to bypass the school approval requirement.</p>
+<p>By default, learner codes, observations and generated reports are deleted 90 days after a group is closed; an approved school agreement may set another recorded period. Group plans and adult account information follow their separate purposes and are not all erased by closing a group. Security audit records are retained for up to one year. Downloaded or printed reports are controlled by the school and are not removed when online records expire.</p>
+<p>For access, correction, account closure, deletion requests or questions about the school agreement and processing arrangements, email <a href="mailto:info@theglenolia.com.au">info@theglenolia.com.au</a>. Ask the school about its learner records and retained exports. Send no learner details in an initial enquiry.</p></section>'''
 
 def motion(c, hero=False):
     return f'''<figure class="landscape {'story-landscape' if hero else ''}" data-depth>
@@ -84,16 +112,30 @@ def footer(c):
     contact=f'<a href="mailto:{e(CONFIG["contactEmail"])}">{e(CONFIG["contactEmail"])}</a>' if CONFIG['contactEmail'] else f'<span>{e(c["contactPending"])}</span>'
     return f'''<footer class="footer"><div class="footer-brand"><a href="{url(c,'home')}"><img class="footer-logo-full" src="/assets/logos/logo-{'zh' if c['lang']=='zh-Hant' else 'en'}-web.svg" alt="THE GLENOLIA — {e(c['tagline'] if c['lang']=='zh-Hant' else 'A place to grow and gather.')}" width="660" height="390" loading="lazy"><img class="footer-logo-compact" src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="660" height="335" loading="lazy"></a><p>{e(c['footerLine'])}</p></div><div class="footer-info"><p>{e(c['location'])}</p><p>{e(c['footerStatus'])}</p><p>{e(c['target'])}</p>{contact}<nav aria-label="{e(c['privacy'])}"><a href="{url(c,'privacy')}">{e(c['privacy'])}</a><button data-motion-toggle data-off="{e(c['motionOff'])}" data-on="{e(c['motionOn'])}" type="button">{e(c['motionOff'])}</button><a href="#top">{e(c['top'])} ↑</a><a href="{url(c,'admin')}">{e(c['adminLabel'])}</a></nav><p class="small">© 2026 THE GLENOLIA</p></div></footer>'''
 
-def build_page(key, page):
+def build_page(key, page, resource=None):
     c=CONTENT[key]
+    education_page=page in ['teachers','teacher-sample']
+    if education_page and key!='en':
+        raise ValueError('Education pages are English only')
+    if page=='teacher-sample' and resource not in PUBLIC_SAMPLES:
+        raise ValueError('Only public sample summaries can be built')
     titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'coffee':c['coffeeTitle'], 'progress':c['nav'][2], 'programmes':programme_markup.DATA['copy'][key]['metaTitle'], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle'],'admin':c['adminLabel']}
+    titles.update(teachers='For teachers — Learning with The Glenolia', **{'teacher-sample':resource['title'] if resource else 'Learning sample'})
     page_title=titles[page] if page=='home' else titles[page]+' | The Glenolia'
     descriptions={'programmes':programme_markup.DATA['copy'][key]['metaDescription'],'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'coffee':c['coffeeIntro'],'progress':world_markup.DATA['copy'][key]['currentText'][world_markup.CONFIG['currentStage']],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText'],'admin':c['adminIntro']}
+    descriptions.update(teachers='Free English teaching resources connecting plants, places and people. Explore classroom samples, plan groups and follow a growing farm in Glenorie, NSW.', **{'teacher-sample':resource['summary'] if resource else 'English teacher-led learning sample from The Glenolia.'})
     description=descriptions[page]
-    canon=ORIGIN+url(c,page)
-    alternates=''.join(f'<link rel="alternate" hreflang="{v["lang"]}" href="{ORIGIN+url(v,page)}">' for v in CONTENT.values())+f'<link rel="alternate" hreflang="x-default" href="{ORIGIN+url(CONTENT["en"],page)}">'
-    languages=''.join(f'<a href="{url(v,page)}" lang="{v["lang"]}" hreflang="{v["lang"]}" {"aria-current=\"true\"" if v==c else ""}>{v["name"]}</a>' for v in CONTENT.values())
+    route=('/teachers/' if page=='teachers' else '/teachers/samples/'+resource['id']+'/') if education_page else url(c,page)
+    canon=ORIGIN+route
+    if education_page:
+        alternates=f'<link rel="alternate" hreflang="en-AU" href="{canon}"><link rel="alternate" hreflang="x-default" href="{canon}">'
+        languages=f'<a href="{route}" lang="en-AU" hreflang="en-AU" aria-current="true">English</a><span>Learning resources in English</span>'
+    else:
+        alternates=''.join(f'<link rel="alternate" hreflang="{v["lang"]}" href="{ORIGIN+url(v,page)}">' for v in CONTENT.values())+f'<link rel="alternate" hreflang="x-default" href="{ORIGIN+url(CONTENT["en"],page)}">'
+        languages=''.join(f'<a href="{url(v,page)}" lang="{v["lang"]}" hreflang="{v["lang"]}" {"aria-current=\"true\"" if v==c else ""}>{v["name"]}</a>' for v in CONTENT.values())
     nav=''.join(f'<a href="{url(c,p)}" {"aria-current=\"page\"" if (page==p or (p=='progress' and page=='programmes')) else ""}>{e(c["nav"][i])}</a>' for i,p in enumerate(['about','making','progress']))
+    if key=='en':
+        nav+=f'<a href="/teachers/" {"aria-current=\"page\"" if education_page else ""}>For teachers</a>'
     header=f'''<a class="skip-link" href="#main">{e(c['skip'])}</a><header class="site-header" id="top"><a class="brand" href="{url(c,'home')}" aria-label="THE GLENOLIA · {e(c['home'])}"><img src="/assets/logos/logo-compact-web.svg" width="660" height="335" alt="THE GLENOLIA"></a><div class="header-tools"><nav class="languages" aria-label="Language / 語言 / 言語">{languages}</nav><button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" data-close="{e(c['close'])}" data-open="{e(c['menu'])}">{e(c['menu'])}<span aria-hidden="true">☰</span></button></div><nav class="main-nav" id="main-nav" aria-label="{e(c['menu'])}">{nav}{button(url(c,'register'),c['register'],'button button-small')}</nav></header>'''
     if page=='home':
         h=''.join(f'<span>{e(x)}</span>' for x in c['hero'])
@@ -110,11 +152,21 @@ def build_page(key, page):
     elif page=='register': body=signup(c,True)+faq(c)
     elif page=='privacy':
         body=f'<section class="page-intro section prose">{label(c["privacyDate"])}<h1>{e(c["privacyTitle"])}</h1><p class="lead">{e(c["privacyIntro"])}</p>'+''.join(f'<section><h2>{e(x["title"])}</h2><p>{e(x["body"])}</p></section>' for x in c['privacySections'])+'</section>'
+        if key=='en':
+            body=body.removesuffix('</section>')+education_privacy()+'</section>'
+    elif page=='teachers':
+        body=teachers_markup.landing(EDUCATION)
+        for sample in PUBLIC_SAMPLES:
+            body=body.replace(teachers_markup.APP_URL+'/#resource/'+sample['id'], '/teachers/samples/'+sample['id']+'/')
+    elif page=='teacher-sample':
+        body=teachers_markup.public_resource_page(resource)
     elif page=='admin':
         admin=CONFIG.get('adminUrl','')
         action=button(e(admin),c['adminAction']) if admin else f'<p class="admin-pending" role="status">{e(c["adminPending"])}</p>'
         body=f'<section class="page-intro section prose">{label(c["adminLabel"])}<h1>{e(c["adminTitle"])}</h1><p class="lead">{e(c["adminIntro"])}</p>{action}<p class="small admin-privacy">{e(c["adminPrivacy"])}</p></section>'
     else: body=f'<section class="page-intro section prose"><h1>{e(c["confirmTitle"])}</h1><p class="lead">{e(c["confirmText"])}</p>{button(url(c,"home"),c["home"])}</section>'
+    if page=='home' and key=='en':
+        body=body.replace('<section class="section journal">', teachers_callout()+'<section class="section journal">', 1)
     schema={'@context':'https://schema.org','@graph':[{'@type':'Organization','@id':ORIGIN+'/#organization','name':'THE GLENOLIA','url':ORIGIN,'logo':ORIGIN+'/assets/logos/logo-en-tagline.svg'}, {'@type':'WebSite','@id':ORIGIN+'/#website','name':'THE GLENOLIA','url':ORIGIN,'inLanguage':['en-AU','zh-Hant','ja']},{'@type':'WebPage','@id':canon,'url':canon,'name':page_title,'description':c['description'],'inLanguage':c['lang'],'isPartOf':{'@id':ORIGIN+'/#website'}}]}
     result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page in ['confirmed','admin'] else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
     if page=='coffee':
@@ -125,6 +177,8 @@ def build_page(key, page):
             result=result.replace('</head>',f'<script type="module" src="/assets/progress/progress.js?v={WORLD_REVISION}"></script></head>')
     if page=='programmes':
         result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/programme.css?v={WORLD_REVISION}"><script type="module" src="/assets/progress/programmes.js?v={WORLD_REVISION}"></script></head>')
+    if education_page:
+        result=result.replace('</head>','<link rel="stylesheet" href="/teachers/teacher-ui.css"></head>')
     if BASE_PATH:
         result=result.replace('href="/', f'href="{BASE_PATH}/').replace('src="/', f'src="{BASE_PATH}/').replace('data-desktop="/',f'data-desktop="{BASE_PATH}/').replace('data-mobile="/',f'data-mobile="{BASE_PATH}/').replace('srcset="/',f'srcset="{BASE_PATH}/').replace(', /assets/', f', {BASE_PATH}/assets/')
     result=result.replace('content="'+c['lang'].replace('-', '_')+'"', 'content="'+{'en':'en_AU','zh':'zh_TW','ja':'ja_JP'}[key]+'"')
@@ -132,7 +186,7 @@ def build_page(key, page):
     if BASE_PATH and page!='confirmed':
         result=result.replace('</head>','<meta name="robots" content="noindex,follow"></head>')
     result=result.replace('</head>',f'<meta name="site-base" content="{BASE_PATH}"></head>')
-    path=DIST/c['prefix']/ROUTES[page]/'index.html';path.parent.mkdir(parents=True,exist_ok=True);path.write_text(result)
+    path=DIST/route.lstrip('/')/'index.html';path.parent.mkdir(parents=True,exist_ok=True);path.write_text(result)
     return canon
 
 urls=[]
@@ -140,6 +194,9 @@ for key in CONTENT:
     for page in ROUTES:
         canon=build_page(key,page)
         if page not in ['confirmed','admin']: urls.append(canon)
+urls.append(build_page('en','teachers'))
+for sample in PUBLIC_SAMPLES:
+    urls.append(build_page('en','teacher-sample',sample))
 (DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+u+'</loc><lastmod>'+CONFIG['updated']+'</lastmod></url>' for u in urls)+'</urlset>')
 (DIST/'robots.txt').write_text('User-agent: *\nAllow: /\n'+('' if BASE_PATH else 'Sitemap: '+ORIGIN+'/sitemap.xml\n'))
 (DIST/'CNAME').write_text('theglenolia.com.au\n')
@@ -152,7 +209,7 @@ if BASE_PATH:
     (DIST/'404.html').write_text(error_page)
 error_page=(DIST/'404.html').read_text().replace('logo-compact.svg" width="300" height="80"','logo-compact-web.svg" width="285" height="145"')
 (DIST/'404.html').write_text(error_page)
-print(f'Built {len(CONTENT)*len(ROUTES)} localized pages in {DIST}')
+print(f'Built {len(CONTENT)*len(ROUTES)} localized brochure pages and 3 English education pages in {DIST}')
 if BASE_PATH:
     css=(DIST/'style.css').read_text().replace("url('/",f"url('{BASE_PATH}/")
     (DIST/'style.css').write_text(css)

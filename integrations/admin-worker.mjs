@@ -4,7 +4,7 @@ import {translateDepartmentNotes,translateSnapshotNotes} from './programme-trans
 import {uploadProgrammeImage,fetchProgrammeImage,programmeImageResponse} from './programme-media.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
-import {html,css,js,programmeJs} from './admin-assets.mjs';
+import {html,css,js,programmeJs,educationHtml,educationJs,educationCss} from './admin-assets.mjs';
 import {runOwnerNotifications} from './owner-notifications.mjs';
 const localeKeys={'en-AU':'EN','zh-Hant':'ZH',ja:'JA'};
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
@@ -93,6 +93,23 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+ // Education remains behind the same runtime-verified, exact-owner Access gate.
+ // A service binding carries the private staff credential; it is never sent to
+ // the browser and caller-supplied identity headers are not forwarded.
+ if(request.method==='GET'&&(path==='/education'||path==='/education/'))return new Response(educationHtml,{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au','font-src \'self\'')}});
+ if(request.method==='GET'&&['/education-assets/teacher-ui.js','/education-assets/teacher-ui.css'].includes(path))return new Response(path.endsWith('.js')?educationJs:educationCss,{headers:{...headers,'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au',"font-src 'self'")}});
+ if(path.startsWith('/api/education/')){
+  if(!env.EDUCATION||!env.EDUCATION_STAFF_TOKEN)return json(503,{error:'education_unavailable'});
+  if(path==='/api/education/session'&&request.method==='GET')return json(200,{user:{email:identity.email,name:'John Ou'},owner:true});
+  const target=new URL('https://education/internal/admin/'+path.slice('/api/education/'.length));
+  target.search=url.search;
+  const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
+  try{const response=await env.EDUCATION.fetch(upstream);return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':response.headers.get('Content-Type')||'application/json'}});}catch{return json(503,{error:'education_unavailable'});}
+ }
+ if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){
+  if(!env.EDUCATION)return json(503,{error:'education_unavailable'});
+  const response=await env.EDUCATION.fetch(new Request('https://education'+path.replace('/education-assets/','/teachers/')));const h=new Headers(response.headers);for(const [k,v] of Object.entries(headers))h.set(k,v);h.set('Content-Security-Policy',csp);return new Response(response.body,{status:response.status,headers:h});
+ }
  if(request.method==='GET'&&['/','/admin.css','/admin.js','/programme-admin.js'].includes(path))return new Response(path==='/'?html:path==='/admin.css'?css:path==='/programme-admin.js'?programmeJs:js,{headers:{...headers,'Content-Type':path==='/'?'text/html; charset=utf-8':path==='/admin.css'?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Content-Security-Policy':csp}});
  if(path==='/api/session'&&request.method==='GET')return json(200,{email:identity.email,sendingReady:env.SENDING_READY==='true',ownerNotificationsEnabled:env.OWNER_NOTIFICATIONS_ENABLED==='true'});
  if(path==='/api/programme/images/upload'||path.startsWith('/api/programme/images/')){

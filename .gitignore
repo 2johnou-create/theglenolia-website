@@ -11,3 +11,7 @@ node_modules/
 wrangler.local*.jsonc
 admin-assets.mjs
 edm-previews/
+education-assets/
+education-admin-shell.html
+education-seed*.sql
+education-full-content*.json

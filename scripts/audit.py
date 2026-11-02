@@ -41,7 +41,13 @@ for path in DIST.rglob('*.html'):
  if not any(d.get('name')=='description' and len(d.get('content',''))>(30 if p.lang.startswith('en') else 15) for d in metas):errors.append(rel+': missing description')
  if not any(t=='link' and d.get('rel')=='canonical' for t,d in p.tags):errors.append(rel+': missing canonical')
  alts=[d.get('hreflang') for t,d in p.tags if t=='link' and d.get('rel')=='alternate']
- if set(alts)!={'en-AU','zh-Hant','ja','x-default'}:errors.append(rel+': incomplete language alternatives')
+ education=rel.startswith('teachers/')
+ expected_alts={'en-AU','x-default'} if education else {'en-AU','zh-Hant','ja','x-default'}
+ if set(alts)!=expected_alts:errors.append(rel+': incomplete language alternatives')
+ if education and p.lang!='en-AU':errors.append(rel+': education pages must be English only')
+ if education:
+  canonical=next((d.get('href') for t,d in p.tags if t=='link' and d.get('rel')=='canonical'),None)
+  if any(d.get('href')!=canonical for t,d in p.tags if t=='link' and d.get('rel')=='alternate'):errors.append(rel+': English-only education alternatives must point to this page')
  for t,d in p.tags:
   if t=='video' and ('controls' in d or 'muted' not in d or 'playsinline' not in d):errors.append(rel+': background video configuration')
  if 'register/' in rel:

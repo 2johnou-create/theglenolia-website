@@ -1,4 +1,5 @@
 import {handlePublicProgramme} from './programme-public.mjs';
+import {handleEducationMail} from './education-mailer.mjs';
 // Optional small API for the static site. Provision and verify its bindings before enabling registration.
 const locales = { 'en-AU': ['EN', ''], 'zh-Hant': ['ZH', 'zh-hant/'], ja: ['JA', 'ja/'] };
 const allowedInterests = new Set(['opening', 'coffee', 'workshops', 'local']);
@@ -8,6 +9,8 @@ const json = (status, body, origin) => new Response(JSON.stringify(body), {statu
 
 const runtimeFetch=(...args)=>globalThis.fetch(...args);
 export async function handleRequest(request, env, fetcher = runtimeFetch) {
+  const educationMail=await handleEducationMail(request,env,fetcher);
+  if(educationMail)return educationMail;
   const publicResponse=await handlePublicProgramme(request,env,fetcher);
   if(publicResponse)return publicResponse;
   const origin = request.headers.get('Origin');

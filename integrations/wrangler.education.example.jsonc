@@ -1,0 +1,35 @@
+{
+  "name": "glenolia-education",
+  "main": "education-worker.mjs",
+  "compatibility_date": "2026-11-02",
+  "workers_dev": true,
+  "assets": {
+    "directory": "education-assets",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "none"
+  },
+  "vars": {
+    "APP_ORIGIN": "https://glenolia-education.theglenolia.workers.dev",
+    "ADMIN_EMAIL": "john@theglenolia.com.au",
+    "MAX_AUTH_EMAILS_DAILY": "20"
+  },
+  "d1_databases": [
+    {
+      "binding": "EDU_DB",
+      "database_name": "glenolia-education",
+      "database_id": ""
+    }
+  ],
+  "services": [
+    {
+      "binding": "MAILER",
+      "service": "glenolia-newsletter"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "15 14 * * *"
+    ]
+  }
+}
