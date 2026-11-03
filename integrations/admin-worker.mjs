@@ -106,7 +106,7 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
   const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
   try{const response=await env.EDUCATION.fetch(upstream);return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':response.headers.get('Content-Type')||'application/json'}});}catch{return json(503,{error:'education_unavailable'});}
  }
- if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){
+ if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/education\/stories\/sl(?:0[1-9]|[12][0-9]|3[0-9]|40)\.(?:webp|jpg)$/.test(path)||path==='/teachers/story-library.json'||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){
   if(!env.EDUCATION)return json(503,{error:'education_unavailable'});
   const response=await env.EDUCATION.fetch(new Request('https://education'+path.replace('/education-assets/','/teachers/')));const h=new Headers(response.headers);for(const [k,v] of Object.entries(headers))h.set(k,v);h.set('Content-Security-Policy',csp);return new Response(response.body,{status:response.status,headers:h});
  }

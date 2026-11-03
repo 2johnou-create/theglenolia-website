@@ -71,3 +71,42 @@ Run `node integrations/build-admin.mjs` before the admin/education tests, then
 foreign keys and transactions with fabricated school and learner records.
 Public builds run the generic, progress, programme and teacher leakage audits.
 No private full-pack input is needed by the public CI build.
+
+## Character stories and classroom tools
+
+The English collection adds 40 story scenes in eight learning sets, alongside
+the 12 original scenes. `/teachers/story-library.json` contains public-safe
+titles, questions, alt text and tool metadata. Scene previews use WebP; JPG
+downloads support common classroom software. The classroom shelf offers 12
+PDFs (41 pages), including a 2027 calendar, reusable journals, role cards,
+cooperative boards and calibrated 0-180 cm height-chart editions. No school
+holiday dates, farm events or learner records are prefilled.
+
+An optional `storyScenes` array belongs to a resource's immutable edition. Up
+to six entries use unique `opening`, `lesson-1` through `lesson-4`, or
+`reflection` placements, allowlisted `sl01` through `sl40` IDs, an optional
+question and Pip/Milla/Dot/Together. The staff editor presents native choices;
+an empty question uses the scene library question. Review the matching PDF
+before publication. Earlier assignments retain their original illustrations.
+
+Illustrated Revision 02 retains the original 56 learning sequences and 856
+pages, adding five thematic story moments per pack. Teaching, factual and
+curriculum wording is unchanged. Original V1 payloads and PDFs remain available
+through the authorised version gateway. The classroom tools are intentionally
+public; full teaching packs retain their existing public/teacher/selected access.
+
+Refresh public-safe Worker assets with the private preparation tool's
+`--assets-only` mode after initial setup. Do not rerun the write-once V1 seed
+to publish revisions. Use the staff draft/PDF/publish workflow, preserving
+optimistic revisions, audience grants and existing editions.
+
+The height scale uses native vector geometry. Print at actual size (100%),
+check the 100 mm bar, match the A-G overlaps, then check an assembled interval
+and mount the zero at floor level. Digital geometry is not a printer test.
+
+PDF upload checks parse dictionary/name structure rather than scanning encoded
+image bytes for active-looking text. The pinned parser applies a 2 MiB input
+limit, bounded object-stream inflation, object/depth/page limits and rejects
+active, encrypted or malformed structures. It permits ordinary static image
+streams containing coincidental reserved-looking bytes. This narrow profile
+is not malware scanning or PDF accessibility certification.

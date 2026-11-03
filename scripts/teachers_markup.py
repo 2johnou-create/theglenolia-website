@@ -16,7 +16,7 @@ def _art(name, alt='', eager=False):
 def _link(href, label, secondary=False):
     return f'<a class="edu-button{" edu-button-secondary" if secondary else ""}" href="{e(href)}">{e(label)}<span aria-hidden="true">↗</span></a>'
 
-def landing(resources=None, app_url=APP_URL):
+def landing(resources=None, app_url=APP_URL, story_library=None):
     """Body fragment for the public site's English shell; summaries only."""
     resources = resources or []
     if isinstance(resources, dict):
@@ -33,12 +33,23 @@ def landing(resources=None, app_url=APP_URL):
         sample_cards=f'<div class="edu-sample-card"><h3>A useful place to begin.</h3><p>Explore the current library, preview a sample and choose the right stage for your class.</p>{_link(app_url+"/#library","Explore the library",True)}</div>'
     themes=''.join(f'<article class="edu-theme-card"><div class="edu-theme-image">{_art(image)}</div><div><p class="edu-kicker">0{i+1} · {title}</p><h3>{body}</h3></div></article>' for i,(title,body,image) in enumerate(THEMES))
     stages=''.join(f'<a href="{e(app_url)}/#library?stage={key}"><strong>{"Early Stage 1" if key=="ES1" else ("Senior extension" if key=="S6" else "Stage "+key[1:])}</strong><span>{e(label)}</span><span aria-hidden="true">↗</span></a>' for key,label in STAGES.items())
+    scenes=(story_library or {}).get('scenes',[])
+    previews=[]
+    for index in [0,14,34]:
+        if len(scenes)<=index: continue
+        scene=scenes[index]
+        if not re.fullmatch(r'sl(?:0[1-9]|[12][0-9]|3[0-9]|40)',str(scene.get('id',''))): continue
+        previews.append(f'<figure>{_art("stories/"+scene["id"],scene.get("alt",""))}<figcaption><strong>{e(scene.get("title","A learning moment"))}</strong><p>{e(scene.get("question",""))}</p></figcaption></figure>')
+    classroom_section=''
+    if previews:
+        classroom_section=f'<section class="edu-public-section edu-classroom-public"><div class="edu-section-heading"><div><p class="edu-kicker">LITTLE COMPANIONS FOR YOUR CLASSROOM</p><h2>Stories to explore.<br>Tools to use every day.</h2></div><p>Meet Pip, Milla and Dot in a growing collection of learning moments. Find useful classroom posters, calendars, cooperative boards and careful measuring tools.</p></div><div class="edu-story-preview">{"".join(previews)}</div><div class="edu-actions">{_link(app_url+"/#stories","Explore the character stories",True)}{_link(app_url+"/#classroom","Find classroom printables",True)}</div><p class="edu-small">Free English classroom materials. Choose a scene to start a conversation, then let your learners bring the evidence.</p></section>'
     return f'''<div class="edu-public">
 <section class="edu-public-hero"><div><p class="edu-kicker">FOR TEACHERS · A PLACE TO GROW AND GATHER</p><h1>Little questions.<br>A growing world.</h1><p class="edu-lead">Bring a growing farm into your classroom. Free, teacher-led activities connect plants, places and people with a year of discovery.</p><div class="edu-actions">{_link(app_url+'/#library','Explore the learning library')}{_link('#teacher-samples','Try a sample',True)}</div><p class="edu-small">Kindergarten to Year 10 + optional Year 11 projects · Print-first learning · No student accounts</p></div><figure class="edu-welcome-art">{_art('welcome','Pip, Milla and Dot welcome curious learners with plants and a field notebook.',True)}<figcaption>Pip, Milla &amp; Dot · A little company for big questions.</figcaption></figure></section>
 <section class="edu-promise-strip"><div><strong>Start in the classroom.</strong><p>No visit or purchase is needed to use the learning resources.</p></div><div><strong>Make it your lesson.</strong><p>Choose a stage, adapt the activity and keep judgement with the teacher.</p></div><div><strong>Return as the story grows.</strong><p>Dated farm updates offer questions to revisit, with evidence and limits made clear.</p></div></section>
 <section class="edu-public-section"><div class="edu-section-heading"><div><p class="edu-kicker">A YEAR OF CURIOSITY</p><h2>Notice. Try. Connect. Reflect.</h2></div><p>Short sequences build from careful observation to thoughtful explanations. Classroom, school-ground and print alternatives keep the learning practical.</p></div><div class="edu-theme-grid">{themes}</div></section>
 <section class="edu-public-section edu-stage-section"><div><p class="edu-kicker">FIND YOUR STARTING POINT</p><h2>Made for different stages.</h2><p>Resources identify their syllabus edition, learning focus and evidence task. Check the fit with your school’s programme before teaching.</p></div><div class="edu-stage-grid">{stages}</div></section>
 <section class="edu-public-section" id="teacher-samples"><div class="edu-section-heading"><div><p class="edu-kicker">A SMALL START, ON US</p><h2>Try a learning sample.</h2></div><p>Open a sample first. A free verified adult account adds saved resources, private planning notes and group collections.</p></div><div class="edu-sample-grid">{sample_cards}</div></section>
+{classroom_section}
 <section class="edu-public-section edu-teacher-invite"><div><p class="edu-kicker">YOUR TEACHING WORKSPACE</p><h2>Less searching.<br>More useful learning.</h2><p>Keep favourites, prepare a group and assign a particular edition. School learner observations stay off until the school’s processing agreement is approved.</p><div class="edu-actions">{_link(app_url+'/#signin','Create your free teacher account')}{_link(app_url+'/#visit','Discuss a future visit',True)}</div></div><div class="edu-note-panel"><p class="edu-kicker">A FARM IN PREPARATION</p><h3>Come for the question.<br>Follow what happens next.</h3><p>School visits are in preparation. An expression of interest starts a conversation; it is not a booking or an opening-date commitment.</p><p class="edu-small">The Glenolia · Glenorie, NSW<br>Target opening: September 2027</p></div></section>
 <p class="edu-public-footnote">Original English teaching resources support selected NSW syllabus contexts. They are not NESA-endorsed courses or a replacement for school assessment. Teachers choose the activities, adjustments and evidence that are right for their learners.</p></div>'''
 
@@ -56,7 +67,7 @@ def portal_html(mode='teacher', api_base='/api', asset_base='/teachers', illustr
     if mode not in ('teacher','staff') or not api_base.startswith('/') or '..' in api_base:
         raise ValueError('Invalid education application configuration')
     asset_base=asset_base.rstrip('/')
-    teacher_nav=[('library','Library'),('groups','My groups'),('reports','Reports'),('visit','Plan a visit')]
+    teacher_nav=[('library','Library'),('stories','Story scenes'),('classroom','Classroom tools'),('groups','My groups'),('reports','Reports'),('visit','Plan a visit')]
     staff_nav=[('staff-schools','Schools'),('staff-teachers','Teachers'),('staff-resources','Content'),('staff-enquiries','Visit enquiries')]
     nav=''.join(f'<a href="#{key}" data-edu-route="{key}">{label}</a>' for key,label in (staff_nav if mode=='staff' else teacher_nav))
     title='Education staff workspace' if mode=='staff' else 'Learning with The Glenolia'

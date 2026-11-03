@@ -56,5 +56,28 @@ class PublicTeachersTests(unittest.TestCase):
                 teachers_markup.public_resource_page(source)
 
 
+    def test_classroom_story_preview_uses_only_safe_scene_metadata(self):
+        scene={'id':'sl01','title':'<script>not code</script>','alt':'An illustrated map.',
+               'question':'What do we notice?', 'privatePrompt':'PRIVATE_PROMPT_SENTINEL'}
+        html=teachers_markup.landing([resource()],story_library={'scenes':[scene]})
+        doc=Document(html)
+        self.assertIn('&lt;script&gt;',html)
+        self.assertIn('/assets/education/stories/sl01.webp',html)
+        self.assertIn(teachers_markup.APP_URL+'/#stories',html)
+        self.assertIn(teachers_markup.APP_URL+'/#classroom',html)
+        self.assertNotIn('PRIVATE_PROMPT_SENTINEL',html)
+        self.assertFalse(any(t in ['script','form','canvas','video'] for t,_ in doc.tags))
+        bad=dict(scene,id='../private')
+        self.assertNotIn('/stories/../private',teachers_markup.landing([],story_library={'scenes':[bad]}))
+
+    def test_teacher_navigation_exposes_stories_and_tools_without_staff_access_changes(self):
+        teacher=teachers_markup.portal_html()
+        staff=teachers_markup.portal_html(mode='staff',api_base='/api/education')
+        self.assertIn('href="#stories"',teacher)
+        self.assertIn('href="#classroom"',teacher)
+        self.assertNotIn('href="#classroom"',staff)
+        self.assertIn('href="#staff-resources"',staff)
+
+
 if __name__=='__main__':
     unittest.main()

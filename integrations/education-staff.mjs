@@ -1,12 +1,23 @@
 import {json,fail,keys,text,emailValue,uuid,id,nowISO,all,resourceId,stageValue,revision,confirmUpdated,audit} from './education-common.mjs';
 import {listResources} from './education-resources.mjs';
 import {ownerHandoff} from './education-auth.mjs';
+import {validateStaticPDF} from './education-pdf.mjs';
 const availability=v=>{if(!['public','teacher','selected'].includes(v))fail(400,'invalid_availability');return v;};
 const bool=v=>{if(typeof v!=='boolean')fail(400,'invalid_boolean');return v?1:0;};
 async function ownerUser(db,email){let u=await db.prepare('SELECT * FROM edu_users WHERE email=?').bind(email).first();if(!u){const stamp=nowISO();await db.prepare("INSERT OR IGNORE INTO edu_users(id,email,name,requested_school,created_at,verified_at) VALUES(?,?,'John Ou','',?,?)").bind(id(),email,stamp,stamp).run();u=await db.prepare('SELECT * FROM edu_users WHERE email=?').bind(email).first();}return u;}
 function validatePack(p){
  if(!p||typeof p!=='object'||Array.isArray(p))fail(400,'invalid_resource');resourceId(p.id);text(p.title,180);stageValue(p.stage);text(p.summary,2000);text(p.question,500);if(!Number.isInteger(p.term)||p.term<1||p.term>4)fail(400,'invalid_term');
- const fields=['id','title','stage','years','term','question','summary','outcomes','learningIntentions','successCriteria','equipment','safety','adjustments','lessons','fieldAlternative','classroomAlternative','homeAlternative','studentSheets','rubric','teacherMisconceptions','characterPrompts','sources','image','language','status','kind','curriculumNote','version','availability','pdfAvailable','pdfUrl','htmlUrl','publishedAt','revision'];keys(p,fields);
+ const fields=['id','title','stage','years','term','question','summary','outcomes','learningIntentions','successCriteria','equipment','safety','adjustments','lessons','fieldAlternative','classroomAlternative','homeAlternative','studentSheets','rubric','teacherMisconceptions','characterPrompts','sources','image','storyScenes','language','status','kind','curriculumNote','version','availability','pdfAvailable','pdfUrl','htmlUrl','publishedAt','revision'];keys(p,fields);
+ if(p.storyScenes!==undefined){
+  if(!Array.isArray(p.storyScenes)||p.storyScenes.length>6)fail(400,'invalid_story_scenes');
+  const placements=new Set();
+  for(const scene of p.storyScenes){
+   if(!scene||typeof scene!=='object'||Array.isArray(scene))fail(400,'invalid_story_scene');
+   keys(scene,['sceneId','placement','question','character']);
+   if(!/^sl(?:0[1-9]|[12][0-9]|3[0-9]|40)$/.test(scene.sceneId)||!['opening','lesson-1','lesson-2','lesson-3','lesson-4','reflection'].includes(scene.placement)||placements.has(scene.placement))fail(400,'invalid_story_scene');
+   placements.add(scene.placement);if(scene.question!==undefined)text(scene.question,500);if(scene.character!==undefined&&!['Pip','Milla','Dot','Together'].includes(scene.character))fail(400,'invalid_story_character');
+  }
+ }
  if(!Array.isArray(p.lessons)||p.lessons.length>12||!Array.isArray(p.studentSheets)||p.studentSheets.length>12||!Array.isArray(p.rubric)||p.rubric.length>12)fail(400,'invalid_resource_structure');
  const serialized=JSON.stringify(p);if(serialized.length>125000||serialized.includes('\u0000'))fail(413,'resource_too_large');
  for(const s of p.sources||[]){const u=typeof s==='string'?s:s.url;if(u){let url;try{url=new URL(u);}catch{fail(400,'invalid_source_url');}if(url.protocol!=='https:'||url.username||url.password)fail(400,'invalid_source_url');}}
@@ -51,7 +62,7 @@ export async function staffRoutes(request,env,path,body){
  const pdf=path.match(/^\/resources\/([a-z0-9-]+)\/pdf$/);
  if(pdf&&method==='POST'){
   const b=keys(body,['version','pdfBase64']),rid=resourceId(pdf[1]),v=revision(b.version),r=await db.prepare('SELECT published_at FROM edu_resource_versions WHERE resource_id=? AND version=?').bind(rid,v).first();if(!r)fail(404,'resource_version_not_found');if(r.published_at)fail(409,'published_file_immutable');const encoded=text(b.pdfBase64,2900000).replace(/^data:application\/pdf;base64,/,'');let bytes;try{const raw=atob(encoded);if(raw.length>2097152)fail(413,'pdf_too_large');bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));}catch(e){if(e?.status)throw e;fail(400,'invalid_pdf');}
-  const data=new TextDecoder('latin1').decode(bytes);if(!data.startsWith('%PDF-')||!data.includes('%%EOF')||/\/(?:JavaScript|JS|OpenAction|AA|Launch|EmbeddedFiles|RichMedia|SubmitForm|XFA|Encrypt)\b/.test(data))fail(400,'pdf_requires_safe_static_copy');
+  try{await validateStaticPDF(bytes);}catch{fail(400,'pdf_requires_safe_static_copy');}
   await db.prepare('UPDATE edu_resource_versions SET pdf_blob=?,pdf_size=?,pdf_key=NULL WHERE resource_id=? AND version=? AND published_at IS NULL').bind(bytes.buffer,bytes.length,rid,v).run();await audit(db,actor,'resource_pdf_uploaded',rid);return json({uploaded:true,bytes:bytes.length,notice:'Static-file checks are not a malware or accessibility certification. Check rights, content and accessible alternatives before publishing.'});
  }
  const pub=path.match(/^\/resources\/([a-z0-9-]+)\/(publish|withdraw)$/);

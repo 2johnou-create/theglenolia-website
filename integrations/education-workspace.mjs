@@ -15,7 +15,7 @@ export async function groupDetail(db,a,g){
  const observations=canUseEvidence?await all(db.prepare('SELECT * FROM edu_observations WHERE school_id=? AND group_id=? ORDER BY observed_on DESC').bind(a.schoolId,g.id)):[];
  return {group:groupDTO(g),canUseEvidence,assignments:assignments.map(x=>({id:x.id,resourceId:x.resource_id,title:x.title,version:x.version,instructions:x.instructions,selectedSections:JSON.parse(x.selected_sections),dueDate:x.due_date,printUrl:`/api/groups/${g.id}/assignments/${x.id}/print`})),learners,observations};
 }
-const printing=(body,title)=>{const nonce=token();return new Response(printablePage(title,body,{nonce}),{headers:{...SECURITY,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; style-src 'nonce-${nonce}'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`}});};
+const printing=(body,title)=>{const nonce=token();return new Response(printablePage(title,body,{nonce}),{headers:{...SECURITY,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':`default-src 'none'; style-src 'nonce-${nonce}'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'`}});};
 export async function workspaceRoutes(request,env,path,a,body){
  const db=env.EDU_DB,method=request.method;
  if(path==='/api/workspace'&&method==='GET')return json(await workspace(db,a));

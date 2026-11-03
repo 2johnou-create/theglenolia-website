@@ -28,7 +28,7 @@ export async function handleEducation(request,env,ctx={}){
    if(resource&&['GET','HEAD'].includes(request.method)){
     const actor=await loadActor(request,env,{required:false}),p=await getResource(env.EDU_DB,resource[1],actor,{version:url.searchParams.get('version')});
     if(resource[2]==='pdf'){const response=await pdfResponse(request,env,p,actor);return request.method==='HEAD'?new Response(null,{status:response.status,headers:response.headers}):response;}
-    if(resource[2]==='print')return new Response(printablePage(p.title,printableResource(p)),{headers:{...SECURITY,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}});
+    if(resource[2]==='print')return new Response(printablePage(p.title,printableResource(p)),{headers:{...SECURITY,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'"}});
     return json({resource:p});
    }
    const actor=await loadActor(request,env);if(request.method==='POST')requireCSRF(request,actor);const body=request.method==='POST'?await readBody(request):null;

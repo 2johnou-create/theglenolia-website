@@ -5,6 +5,56 @@ import {readFileSync} from 'node:fs';
 import {handleEducation,purgeEducation} from '../education-worker.mjs';
 import {digest,token,loadActor,evidenceGate,dateValue} from '../education-common.mjs';
 import {handleEducationMail} from '../education-mailer.mjs';
+import {PDFDocument,PDFName} from 'pdf-lib';
+
+test('story placements validate IDs, unique chapters and restrained characters before any save',async t=>{
+ const f=await fixture(t);
+ const cases=[
+  null,{},[{sceneId:'sl41',placement:'opening'}],[{sceneId:'../private',placement:'opening'}],
+  [{sceneId:'sl01',placement:'lesson-5'}],[{sceneId:'sl01',placement:'opening',character:'New Mascot'}],
+  [{sceneId:'sl01',placement:'opening',image:'https://evil.example.test'}],
+  [{sceneId:'sl01',placement:'opening'},{sceneId:'sl02',placement:'opening'}],
+  Array.from({length:7},(_,i)=>({sceneId:'sl01',placement:'opening'}))
+ ];
+ for(const storyScenes of cases){const p=pack('invalid-stories');p.storyScenes=storyScenes;assert.equal((await f.staff('/resources/save',{resource:p,expectedRevision:0})).status,400);}
+ assert.equal((await f.db.prepare("SELECT COUNT(*) n FROM edu_resources WHERE id='invalid-stories'").first()).n,0);
+ const p=pack('valid-stories');p.storyScenes=[{sceneId:'sl01',placement:'opening',character:'Together',question:'What could help?'},{sceneId:'sl40',placement:'lesson-4',character:'Dot'}];
+ assert.equal((await f.staff('/resources/save',{resource:p,expectedRevision:0})).status,201);
+ const detail=await(await f.staff('/resources/valid-stories')).json();assert.deepEqual(detail.draft.storyScenes,p.storyScenes);
+});
+
+test('new illustrated publication leaves previously pinned legacy resource and answers isolated',async t=>{
+ const f=await fixture(t);await f.resource();const g=await f.group(f.a),aid=await f.assignment(f.a,g,{version:1});
+ const p=pack('test-pack',2);p.storyScenes=[{sceneId:'sl05',placement:'opening',character:'Pip',question:'A new illustration question'}];
+ const saved=await code(await f.staff('/resources/save',{resource:p,expectedRevision:1,availability:'teacher'}),201);
+ await code(await f.staff('/resources/test-pack/publish',{version:saved.version,expectedRevision:saved.revision,availability:'teacher',schoolIds:[],teacherIds:[],reviewNote:'Illustration revision fixture.'}),200);
+ const current=(await(await f.req('/api/resources/test-pack',{actor:f.a})).json()).resource;
+ assert.equal(current.version,2);assert.deepEqual(current.storyScenes,p.storyScenes);
+ const legacy=(await(await f.req('/api/resources/test-pack?version=1',{actor:f.a})).json()).resource;
+ assert.equal(legacy.storyScenes,undefined);assert.equal(legacy.version,1);
+ const handout=await(await f.req('/api/groups/'+g.id+'/assignments/'+aid+'/print',{actor:f.a})).text();
+ assert.ok(handout.includes('VERSION 1'));assert.ok(!handout.includes('A new illustration question'));assert.ok(!handout.includes('SECRET_'));
+});
+
+test('story illustrations use bounded local URLs and escaped questions in printable resource',async t=>{
+ const f=await fixture(t),p=pack();p.storyScenes=[{sceneId:'sl02',placement:'opening',character:'Dot',question:'<script>bad()</script>'},{sceneId:'sl04',placement:'lesson-1',character:'Milla',question:'Which source?'}];
+ await f.resource({availability:'public',payload:p});const response=await f.req('/api/resources/test-pack/print'),text=await response.text();
+ assert.equal(response.status,200);assert.ok(response.headers.get('Content-Security-Policy').includes("img-src 'self'"));
+ assert.ok(text.includes('/assets/education/stories/sl02.webp'));assert.ok(text.includes('/assets/education/stories/sl04.webp'));
+ assert.ok(text.includes('&lt;script&gt;bad()&lt;/script&gt;'));assert.ok(!text.includes('<script>'));assert.ok(text.includes('max-width:100%'));
+});
+
+test('new staff story catalogue and image routes remain gated by exact owner Access',async()=>{
+ const {handleAdmin}=await import('../admin-worker.mjs');const calls=[];
+ const env={ACCESS_AUD:'education-test-audience',ADMIN_EMAIL:'owner@example.test',EDUCATION_STAFF_TOKEN:'test-private-staff-credential',EDUCATION:{async fetch(req){calls.push(new URL(req.url).pathname);return new Response('safe illustration metadata');}}};
+ for(const path of ['/teachers/story-library.json','/assets/education/stories/sl01.webp','/assets/education/stories/sl40.webp']){
+  assert.equal((await handleAdmin(adminReq(path),env,{})).status,403);
+  assert.equal((await handleAdmin(adminReq(path),env,access('other@example.test'))).status,403);
+  assert.equal((await handleAdmin(adminReq(path),env,access())).status,200);
+ }
+ assert.deepEqual(calls,['/teachers/story-library.json','/assets/education/stories/sl01.webp','/assets/education/stories/sl40.webp']);
+});
+
 
 // Real SQLite, including constraints and transactional batches. No network or real people.
 class D1 {
@@ -90,7 +140,14 @@ test('learner removal clears observations and all copied group reports while pre
 
 test('retention purges closed expired group evidence only, then clears stale session/auth records',async t=>{const f=await fixture(t);await f.resource();const ga=await f.group(f.a),gb=await f.group(f.b),aa=await f.assignment(f.a,ga),ab=await f.assignment(f.b,gb),la=await f.learner(f.a,ga),lb=await f.learner(f.b,gb);await f.observation(f.a,ga,la,aa);await f.observation(f.b,gb,lb,ab);await f.post('/api/reports',{groupId:ga.id},f.a);await f.post('/api/reports',{groupId:gb.id},f.b);const old=new Date(Date.now()-100*86400000).toISOString();await f.db.prepare("UPDATE edu_groups SET status='closed',closed_at=? WHERE id=?").bind(old,ga.id).run();const result=await purgeEducation(f.env);assert.equal(result.closedGroupsProcessed,1);assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_learners WHERE group_id=?').bind(ga.id).first()).n,0);assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_reports WHERE group_id=?').bind(ga.id).first()).n,0);assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_assignments WHERE group_id=?').bind(ga.id).first()).n,1);assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_learners WHERE group_id=?').bind(gb.id).first()).n,1);});
 
-test('safe PDF upload is draft-only, rejects active content and published files are immutable',async t=>{const f=await fixture(t);await draft(f,'pdf-pack');const body=x=>({version:1,pdfBase64:Buffer.from(x).toString('base64')});await code(await f.staff('/resources/pdf-pack/pdf',body('%PDF-1.4\n/OpenAction 1 0 R\n%%EOF')),400,'pdf_requires_safe_static_copy');await code(await f.staff('/resources/pdf-pack/pdf',body('not pdf')),400,'pdf_requires_safe_static_copy');assert.equal((await f.staff('/resources/pdf-pack/pdf',body('%PDF-1.4\nstatic fabricated fixture\n%%EOF'))).status,200);assert.equal((await publish(f,'pdf-pack',1,1)).status,200);await code(await f.staff('/resources/pdf-pack/pdf',body('%PDF-1.4\nchanged\n%%EOF')),409,'published_file_immutable');const r=await f.req('/api/resources/pdf-pack/pdf',{actor:f.a});assert.equal(r.status,200);assert.match(await r.text(),/static fabricated fixture/);assert.equal(f.assetCalls.length,0);});
+test('safe PDF upload is draft-only, rejects active content and published files are immutable',async t=>{
+ const f=await fixture(t);await draft(f,'pdf-pack');const body=x=>({version:1,pdfBase64:Buffer.from(x).toString('base64')});
+ const active=await PDFDocument.create();active.addPage();active.catalog.set(PDFName.of('OpenAction'),active.context.obj({S:'JavaScript',JS:'test'}));
+ await code(await f.staff('/resources/pdf-pack/pdf',body(await active.save({useObjectStreams:false}))),400,'pdf_requires_safe_static_copy');await code(await f.staff('/resources/pdf-pack/pdf',body('not pdf')),400,'pdf_requires_safe_static_copy');
+ const staticDoc=await PDFDocument.create();staticDoc.addPage([200,200]);staticDoc.setTitle('Static fabricated fixture');const staticBytes=await staticDoc.save({useObjectStreams:false});
+ assert.equal((await f.staff('/resources/pdf-pack/pdf',body(staticBytes))).status,200);assert.equal((await publish(f,'pdf-pack',1,1)).status,200);await code(await f.staff('/resources/pdf-pack/pdf',body(staticBytes)),409,'published_file_immutable');
+ const r=await f.req('/api/resources/pdf-pack/pdf',{actor:f.a});assert.equal(r.status,200);assert.deepEqual(new Uint8Array(await r.arrayBuffer()),staticBytes);assert.equal(f.assetCalls.length,0);
+});
 
 const mailRequest=(body,secret='fabricated-relay-secret')=>new Request('https://internal/internal/education/sign-in',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+secret},body:JSON.stringify(body)});
 const relayEnv={EDUCATION_MAIL_SECRET:'fabricated-relay-secret',EDUCATION_ORIGIN:ORIGIN,BREVO_API_KEY:'fabricated-provider-key'};

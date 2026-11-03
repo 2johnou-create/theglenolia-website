@@ -155,7 +155,7 @@ def build_page(key, page, resource=None):
         if key=='en':
             body=body.removesuffix('</section>')+education_privacy()+'</section>'
     elif page=='teachers':
-        body=teachers_markup.landing(EDUCATION)
+        body=teachers_markup.landing(EDUCATION,story_library=json.loads((ROOT/'public/teachers/story-library.json').read_text()) if (ROOT/'public/teachers/story-library.json').is_file() else None)
         for sample in PUBLIC_SAMPLES:
             body=body.replace(teachers_markup.APP_URL+'/#resource/'+sample['id'], '/teachers/samples/'+sample['id']+'/')
     elif page=='teacher-sample':

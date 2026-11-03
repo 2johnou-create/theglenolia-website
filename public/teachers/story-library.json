@@ -1,0 +1,1168 @@
+{
+  "schemaVersion": 1,
+  "language": "en",
+  "edition": "Story Library and Classroom Kit V1",
+  "permission": "Free for teaching within learning groups, with The Glenolia attribution. No resale or implied NESA endorsement.",
+  "scenes": [
+    {
+      "id": "sl01",
+      "title": "The map unfolds",
+      "unit": "u1",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip and Milla unfold a paper model map while Dot holds down a curling corner with a smooth stone.",
+      "question": "Which detail helps us find our way?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Introduce a picture map; distinguish a model from a real site plan.",
+      "image": "sl01",
+      "theme": "Notice a place"
+    },
+    {
+      "id": "sl02",
+      "title": "A tiny detail",
+      "unit": "u1",
+      "cast": [
+        "Dot"
+      ],
+      "alt": "Dot examines a fallen leaf on a shallow tray with a magnifier beside an open blank notebook.",
+      "question": "What can I notice when I slow down?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Observe shape and texture without collecting wild material or naming a species.",
+      "image": "sl02",
+      "theme": "Notice a place"
+    },
+    {
+      "id": "sl03",
+      "title": "Everyone has a viewpoint",
+      "unit": "u1",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Milla and Dot join two learners at a low picture stand; a learner using a wheelchair and another wearing glasses point out different details.",
+      "question": "What did someone else notice?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Compare observations; provide pointing, speaking, drawing and AAC response routes.",
+      "image": "sl03",
+      "theme": "Notice a place"
+    },
+    {
+      "id": "sl04",
+      "title": "The missing piece",
+      "unit": "u1",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla pauses over an incomplete paper picture model while Dot offers a blank question card.",
+      "question": "What do we still need to find out?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Name gaps in a source rather than filling them with guesses.",
+      "image": "sl04",
+      "theme": "Notice a place"
+    },
+    {
+      "id": "sl05",
+      "title": "A quiet listening stop",
+      "unit": "u1",
+      "cast": [
+        "Pip",
+        "Dot"
+      ],
+      "alt": "Pip rests on a low sage cushion while Dot pauses beside a closed notebook and watches a drifting leaf.",
+      "question": "What can we notice without rushing?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Offer a sensory pause, with a quiet indoor alternative and no requirement to close eyes.",
+      "image": "sl05",
+      "theme": "Notice a place"
+    },
+    {
+      "id": "sl06",
+      "title": "The patient seed watch",
+      "unit": "u2",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip, Milla and Dot watch two model seeds and a separate seedling model in a shallow tray; Dot holds an unnumbered calendar card.",
+      "question": "What could we check again tomorrow?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Plan repeated observations; distinguish a model from actual germination evidence.",
+      "image": "sl06",
+      "theme": "Help a question grow"
+    },
+    {
+      "id": "sl07",
+      "title": "One thing at a time",
+      "unit": "u2",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla and Dot compare two separate faceless potted plant models beside matching tokens and an unlettered comparison card.",
+      "question": "What should stay the same?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Introduce fair comparison or, for older learners, controls and possible confounders.",
+      "image": "sl07",
+      "theme": "Help a question grow"
+    },
+    {
+      "id": "sl08",
+      "title": "A careful measure",
+      "unit": "u2",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip holds a blank measuring strip beside a separate potted plant; Dot points to the base and Milla records on a blank clipboard.",
+      "question": "Where does our measurement start?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Discuss a consistent baseline, method and units; accurate scales are typeset separately.",
+      "image": "sl08",
+      "theme": "Help a question grow"
+    },
+    {
+      "id": "sl09",
+      "title": "The surprise result",
+      "unit": "u2",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip and Milla reconsider two blank record cards beside an illustrative plant model with exposed roots.",
+      "question": "Does another check change our idea?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Welcome unexpected findings without inventing a growth result or forcing a prediction.",
+      "image": "sl09",
+      "theme": "Help a question grow"
+    },
+    {
+      "id": "sl10",
+      "title": "Shade and a water break",
+      "unit": "u2",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla and Dot rest beneath a small sage canopy beside a closed water bottle and two empty cups.",
+      "question": "Is it time for a pause?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Normalise rest and hydration; this is not a coffee tasting or advice about plant watering.",
+      "image": "sl10",
+      "theme": "Help a question grow"
+    },
+    {
+      "id": "sl11",
+      "title": "The sample station",
+      "unit": "u3",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip, Milla and Dot compare three closed sample containers on a low bench, with stones, bark-like pieces and a plant-texture model.",
+      "question": "How can we compare these carefully?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Introduce contained model materials and a repeatable observation routine.",
+      "image": "sl11",
+      "theme": "Look beneath the surface"
+    },
+    {
+      "id": "sl12",
+      "title": "Patterns in a pebble",
+      "unit": "u3",
+      "cast": [
+        "Dot"
+      ],
+      "alt": "Dot uses a magnifier to observe the bands on a large smooth stone in a tray, beside a blank sketch card.",
+      "question": "Which feature can I describe?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Use a safe supplied object for texture, pattern and descriptive vocabulary.",
+      "image": "sl12",
+      "theme": "Look beneath the surface"
+    },
+    {
+      "id": "sl13",
+      "title": "The sorting debate",
+      "unit": "u3",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip and Milla consider paper, wood and fabric samples arranged beside two shallow sorting trays.",
+      "question": "Could we sort it another way?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Compare justified classification rules; useful for soil models or the Stage 3 paper journey.",
+      "image": "sl13",
+      "theme": "Look beneath the surface"
+    },
+    {
+      "id": "sl14",
+      "title": "Keep the pieces",
+      "unit": "u3",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla arranges paper and fabric model pieces in a tray while Dot compares them with a matching picture card.",
+      "question": "Did we keep track of every part?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Discuss material recovery, method limitations and missing pieces without a numerical claim.",
+      "image": "sl14",
+      "theme": "Look beneath the surface"
+    },
+    {
+      "id": "sl15",
+      "title": "A small tidy-up",
+      "unit": "u3",
+      "cast": [
+        "Pip",
+        "Dot"
+      ],
+      "alt": "Pip returns large paper offcuts to a basket while Dot puts an unlettered notebook on a low classroom shelf.",
+      "question": "What can we use again?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Make resetting the workspace a shared responsibility without unsupported recycling claims.",
+      "image": "sl15",
+      "theme": "Look beneath the surface"
+    },
+    {
+      "id": "sl16",
+      "title": "Window weather watchers",
+      "unit": "u4",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip points toward a cloudy window view as Milla holds a blank observation card and Dot records in a notebook.",
+      "question": "What is happening now?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Separate observed weather, a forecast and a model; record time and source in native text.",
+      "image": "sl16",
+      "theme": "Read the day"
+    },
+    {
+      "id": "sl17",
+      "title": "The wind ribbon",
+      "unit": "u4",
+      "cast": [
+        "Milla"
+      ],
+      "alt": "Milla observes a short ribbon on a low stable stand, with a gentle bend suggesting a light breeze.",
+      "question": "What does this ribbon tell us, and what does it not?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Introduce a qualitative wind indicator; avoid calling it a calibrated anemometer.",
+      "image": "sl17",
+      "theme": "Read the day"
+    },
+    {
+      "id": "sl18",
+      "title": "A tiny water test",
+      "unit": "u4",
+      "cast": [
+        "Pip",
+        "Dot"
+      ],
+      "alt": "Pip transfers a small amount of water from a scoop into a shallow tray while Dot holds a cloth at its edge.",
+      "question": "Where does the water go?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Support a teacher-supervised absorption model and noticing where water is transferred.",
+      "image": "sl18",
+      "theme": "Read the day"
+    },
+    {
+      "id": "sl19",
+      "title": "A plan for a rainy day",
+      "unit": "u4",
+      "cast": [
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Milla, Dot and two miniature learners compare indoor-table and outdoor-path picture cards beside a closed umbrella on a rainy day.",
+      "question": "Which plan fits today?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Choose accessible indoor alternatives based on teacher checks and conditions.",
+      "image": "sl19",
+      "theme": "Read the day"
+    },
+    {
+      "id": "sl20",
+      "title": "After the rain",
+      "unit": "u4",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip and Milla observe reflections in a shallow puddle from its dry edge, with a closed umbrella in a stand.",
+      "question": "What changed, and what stayed the same?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Invite before-and-after comparison without claiming actual Glenoria weather or water quality.",
+      "image": "sl20",
+      "theme": "Read the day"
+    },
+    {
+      "id": "sl21",
+      "title": "The looking circle",
+      "unit": "u5",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip, Milla and Dot observe a separate miniature garden-patch model with insect picture cards and leaves.",
+      "question": "What connections might we investigate?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Introduce possible relationships as questions rather than a surveyed food web.",
+      "image": "sl21",
+      "theme": "A place for living things"
+    },
+    {
+      "id": "sl22",
+      "title": "Leave a little space",
+      "unit": "u5",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla and Dot observe a small insect model resting on a separate leaf, with a closed notebook nearby.",
+      "question": "How can we look without disturbing?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Discuss respectful observation and teacher-selected picture alternatives.",
+      "image": "sl22",
+      "theme": "A place for living things"
+    },
+    {
+      "id": "sl23",
+      "title": "The connection string",
+      "unit": "u5",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Milla, Dot and two learners connect blank cards with short pieces of string on a low board.",
+      "question": "What is our evidence for this connection?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Build and critique a relationship model; strings represent hypotheses until supported.",
+      "image": "sl23",
+      "theme": "A place for living things"
+    },
+    {
+      "id": "sl24",
+      "title": "Two possible stories",
+      "unit": "u5",
+      "cast": [
+        "Pip",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip and Dot compare two leaf-picture cards and a blank card while three learners watch.",
+      "question": "Could there be another explanation?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Separate observation from causal explanation; seek evidence for alternatives.",
+      "image": "sl24",
+      "theme": "A place for living things"
+    },
+    {
+      "id": "sl25",
+      "title": "The gentle observer",
+      "unit": "u5",
+      "cast": [
+        "Dot"
+      ],
+      "alt": "Dot sketches a leaf in a notebook resting on a cushion beside a leaf prop and a miniature garden-view frame.",
+      "question": "Can I watch a little longer?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Provide a calm solo noticing moment; no obligation to touch a living thing.",
+      "image": "sl25",
+      "theme": "A place for living things"
+    },
+    {
+      "id": "sl26",
+      "title": "The hand-to-hand story",
+      "unit": "u6",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Milla and Dot pass a plain parcel while four learners follow plant, making and basket picture cards.",
+      "question": "Whose work could be part of this story?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Map a fictional plant-product chain and distinguish verified provenance from a model.",
+      "image": "sl26",
+      "theme": "From materials to people"
+    },
+    {
+      "id": "sl27",
+      "title": "Ask the maker",
+      "unit": "u6",
+      "cast": [
+        "Milla",
+        "supporting learners"
+      ],
+      "alt": "Milla listens to two learners beside a low table of paper and fabric samples; one learner offers a blank question card.",
+      "question": "What would help us check where it came from?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Practise respectful evidence questions; useful for fictional maker interviews.",
+      "image": "sl27",
+      "theme": "From materials to people"
+    },
+    {
+      "id": "sl28",
+      "title": "The paper relay",
+      "unit": "u6",
+      "cast": [
+        "Pip",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Dot and a learner follow three separate trays containing dry paper strips, a plain sheet and a folded paper boat.",
+      "question": "Which step does our model show?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Support Stage 3 paper-process explanation and broader material-to-product sequencing.",
+      "image": "sl28",
+      "theme": "From materials to people"
+    },
+    {
+      "id": "sl29",
+      "title": "The claim check",
+      "unit": "u6",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip holds a blank product tag while Milla opens an evidence folder to blank ivory pages.",
+      "question": "What evidence would support that claim?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Distinguish a label/claim from evidence; no invented origin or environmental credential.",
+      "image": "sl29",
+      "theme": "From materials to people"
+    },
+    {
+      "id": "sl30",
+      "title": "A place at the table",
+      "unit": "u6",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Milla, Dot and three learners share idea cards around an accessible round table, including a learner using a wheelchair and a learner wearing a head covering.",
+      "question": "Has everyone had a way to contribute?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Model reciprocal community planning and multiple ways to take part.",
+      "image": "sl30",
+      "theme": "From materials to people"
+    },
+    {
+      "id": "sl31",
+      "title": "A big idea in a little model",
+      "unit": "u7",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip holds a wall piece, Milla steadies a base and Dot studies a blank plan beside a small open card model.",
+      "question": "What problem are we trying to solve?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Frame a classroom design problem; model is not a Glenolia building or approved plan.",
+      "image": "sl31",
+      "theme": "Try, test and improve"
+    },
+    {
+      "id": "sl32",
+      "title": "The reach test",
+      "unit": "u7",
+      "cast": [
+        "Milla",
+        "supporting learners"
+      ],
+      "alt": "Milla and two learners test a low adjustable picture stand, including a learner using a wheelchair.",
+      "question": "Can more people use it comfortably?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Invite access considerations without claiming standards compliance from an illustration.",
+      "image": "sl32",
+      "theme": "Try, test and improve"
+    },
+    {
+      "id": "sl33",
+      "title": "A balancing act",
+      "unit": "u7",
+      "cast": [
+        "Pip",
+        "Dot"
+      ],
+      "alt": "Pip and Dot test a small cardboard bridge with a single wooden token across two low blocks.",
+      "question": "What will we keep the same when we test?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Model a teacher-controlled test and consistent conditions; not a real load-rating exercise.",
+      "image": "sl33",
+      "theme": "Try, test and improve"
+    },
+    {
+      "id": "sl34",
+      "title": "Try a different shape",
+      "unit": "u7",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip and Milla exchange blank feedback cards beside two simple card prototypes.",
+      "question": "What would we change, and why?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Use specific feedback and criteria; change a design rather than judging a learner.",
+      "image": "sl34",
+      "theme": "Try, test and improve"
+    },
+    {
+      "id": "sl35",
+      "title": "Put the tools to bed",
+      "unit": "u7",
+      "cast": [
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Milla packs large card shapes into a shallow box while Dot puts a pencil in a holder beside a small card model.",
+      "question": "What is ready for next time?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Normalise stopping, resetting and planning the next manageable step.",
+      "image": "sl35",
+      "theme": "Try, test and improve"
+    },
+    {
+      "id": "sl36",
+      "title": "The evidence picnic",
+      "unit": "u8",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot"
+      ],
+      "alt": "Pip, Milla and Dot arrange botanical sketches, colour cards and an open notebook on a low mat.",
+      "question": "What can our records show?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Revisit a portfolio using dated/source-labelled native records; the scene is illustrative.",
+      "image": "sl36",
+      "theme": "Keep a year of evidence"
+    },
+    {
+      "id": "sl37",
+      "title": "A thought changes",
+      "unit": "u8",
+      "cast": [
+        "Pip"
+      ],
+      "alt": "Pip holds a fresh blank idea card and a pencil while an earlier card remains nearby.",
+      "question": "What do I think now, and what changed my mind?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Make revision visible and keep earlier thinking as useful evidence.",
+      "image": "sl37",
+      "theme": "Keep a year of evidence"
+    },
+    {
+      "id": "sl38",
+      "title": "Tell me how you know",
+      "unit": "u8",
+      "cast": [
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Milla and Dot listen as a learner points to a blank presentation board; Dot holds a question card.",
+      "question": "Which part supports your explanation?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Rehearse evidence-based explanation with pointing, oral or written response options.",
+      "image": "sl38",
+      "theme": "Keep a year of evidence"
+    },
+    {
+      "id": "sl39",
+      "title": "A kind second look",
+      "unit": "u8",
+      "cast": [
+        "Pip",
+        "Milla"
+      ],
+      "alt": "Pip and Milla offer each other blank feedback cards across a low table beside two simple botanical drawings.",
+      "question": "What is one useful next step?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Teach specific feedback and moderation without public rankings.",
+      "image": "sl39",
+      "theme": "Keep a year of evidence"
+    },
+    {
+      "id": "sl40",
+      "title": "See you next season",
+      "unit": "u8",
+      "cast": [
+        "Pip",
+        "Milla",
+        "Dot",
+        "supporting learners"
+      ],
+      "alt": "Pip, Milla, Dot and two learners share a friendly wave around a closed learning folder and a blank card.",
+      "question": "Which question shall we carry forward?",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "learningUse": "Close a unit or year with a next inquiry; no promise of a farm opening or event.",
+      "image": "sl40",
+      "theme": "Keep a year of evidence"
+    }
+  ],
+  "classroomTools": [
+    {
+      "id": "learning-habits",
+      "title": "Four ways to learn",
+      "description": "Observe, ask, try and reflect: four calm illustrated posters with useful learner questions.",
+      "file": "glenolia-learning-habits-posters.pdf",
+      "pages": 4,
+      "paper": "A3 portrait",
+      "printNote": "Print at A3 for a wall display or reduce to A4. These posters contain no measurement scale.",
+      "category": "Posters",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "use": "Classroom, indoor workshop, school grounds"
+    },
+    {
+      "id": "garden-care",
+      "title": "Care for the garden, care for each other",
+      "description": "Two posters about safe participation and gentle care for living things.",
+      "file": "glenolia-garden-care-posters.pdf",
+      "pages": 2,
+      "paper": "A3 portrait",
+      "printNote": "Print at A3 or reduce to A4. Use with the school's own safety procedures.",
+      "category": "Posters",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "use": "Classroom, indoor workshop, school grounds"
+    },
+    {
+      "id": "calendar-2027",
+      "title": "Our 2027 classroom calendar",
+      "description": "Twelve Monday-first monthly grids, with space for a class question and observation plans. No school dates or farm events are prefilled.",
+      "file": "glenolia-2027-classroom-calendar.pdf",
+      "pages": 12,
+      "paper": "A4 landscape",
+      "printNote": "A4 landscape, single-sided. Enlarge to A3 for more writing room.",
+      "category": "Planning",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "use": "Classroom planning"
+    },
+    {
+      "id": "weekly-planner",
+      "title": "A week of little discoveries",
+      "description": "An undated seven-day planner and a reusable inquiry planning sheet.",
+      "file": "glenolia-undated-weekly-planner.pdf",
+      "pages": 2,
+      "paper": "A4 landscape",
+      "printNote": "Print or laminate an unmarked copy for repeated teacher-led use.",
+      "category": "Planning",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "use": "Classroom, optional home learning"
+    },
+    {
+      "id": "height-banner",
+      "title": "Growing curiosity: full-size height banner",
+      "description": "A native 0-180 cm scale for voluntary classroom measurement activities, with an exact 100 mm calibration bar.",
+      "file": "glenolia-height-chart-full-size.pdf",
+      "pages": 1,
+      "paper": "180 × 1900 mm banner",
+      "printNote": "Specialist large-format print at actual size (100%). Never fit to page. Use the A4 tiled edition for a home or school printer.",
+      "category": "Measurement",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "use": "Teacher-supervised classroom measurement"
+    },
+    {
+      "id": "height-a4",
+      "title": "Growing curiosity: A4 height chart kit",
+      "description": "Assembly instructions and eight overlapping A4 tiles for the same accurate 0-180 cm banner.",
+      "file": "glenolia-height-chart-a4-tiles.pdf",
+      "pages": 9,
+      "paper": "A4 portrait: instructions + 8 tiles",
+      "printNote": "Actual size (100%), single-sided. Check the 100 mm bar with a ruler before assembly. Match the A-G crosses within the 20 mm overlaps and place the 0 cm line at floor level.",
+      "category": "Measurement",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "use": "Teacher-supervised classroom measurement"
+    },
+    {
+      "id": "cooperative-board",
+      "title": "Our shared learning quest",
+      "description": "A reusable group challenge board and a smaller group tracker. Celebrate evidence, helpful actions and next steps together.",
+      "file": "glenolia-cooperative-learning-board.pdf",
+      "pages": 2,
+      "paper": "A3 landscape + A4 landscape",
+      "printNote": "Choose the page size shown for each page. Use group codes and shared goals, not public individual rankings.",
+      "category": "Working together",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "use": "Classroom, indoor workshop"
+    },
+    {
+      "id": "role-cards",
+      "title": "Six ways to help a learning crew",
+      "description": "Cut-out cards for observer, recorder, questioner, materials keeper, encourager and checker. Roles can be shared, changed or adapted.",
+      "file": "glenolia-learning-crew-role-cards.pdf",
+      "pages": 2,
+      "paper": "A4 landscape",
+      "printNote": "Print single-sided. An adult cuts along the light guides. Swap roles without making a role a fixed label for a learner.",
+      "category": "Working together",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "use": "Classroom, indoor workshop, school grounds"
+    },
+    {
+      "id": "weather-journal",
+      "title": "Weather watchers",
+      "description": "A five-observation record and a page for noticing patterns, methods and unanswered questions.",
+      "file": "glenolia-weather-observation-journal.pdf",
+      "pages": 2,
+      "paper": "A4 portrait",
+      "printNote": "Blank records for teacher-approved observations. Keep instrument readings separate from app estimates.",
+      "category": "Observation journals",
+      "stages": [
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "use": "Classroom, sheltered school-ground observation"
+    },
+    {
+      "id": "plant-journal",
+      "title": "Pip's plant observation journal",
+      "description": "Repeatable plant observations, sketches and an evidence-based comparison. Record the same plant and method each time.",
+      "file": "glenolia-plant-observation-journal.pdf",
+      "pages": 2,
+      "paper": "A4 portrait",
+      "printNote": "Use a safe teacher-selected plant. Leave unobserved values blank; the artwork is not real plant data.",
+      "category": "Observation journals",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5"
+      ],
+      "use": "Classroom, school grounds, optional home observation"
+    },
+    {
+      "id": "reflection-cards",
+      "title": "Little reflections, useful next steps",
+      "description": "Eight reusable response cards for noticing, wondering, trying, evidence, teamwork and changing an idea.",
+      "file": "glenolia-reflection-exit-cards.pdf",
+      "pages": 2,
+      "paper": "A4 landscape",
+      "printNote": "Print single-sided and cut into four cards per page. Responses can be spoken, drawn, written or supported.",
+      "category": "Reflection",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6"
+      ],
+      "use": "Classroom, indoor workshop, optional home reflection"
+    },
+    {
+      "id": "classroom-agreements",
+      "title": "We make room for every learner",
+      "description": "A welcoming classroom agreement poster and a blank space for the learning crew's own extra agreement.",
+      "file": "glenolia-classroom-agreements-poster.pdf",
+      "pages": 1,
+      "paper": "A3 portrait",
+      "printNote": "Print at A3 or reduce to A4. Add a group code rather than personal learner details.",
+      "category": "Posters",
+      "stages": [
+        "ES1",
+        "S1",
+        "S2",
+        "S3"
+      ],
+      "use": "Classroom, indoor workshop"
+    }
+  ]
+}
