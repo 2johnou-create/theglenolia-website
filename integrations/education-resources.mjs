@@ -27,8 +27,9 @@ export async function pdfResponse(request,env,resource,actor){
   const value=row.pdf_blob;
   if(!Number.isSafeInteger(row.pdf_size)||row.pdf_size>2097152)fail(503,'file_temporarily_unavailable');
   if(Array.isArray(value)){
-   if(value.length!==row.pdf_size||!value.every(n=>Number.isInteger(n)&&n>=0&&n<=255))fail(503,'file_temporarily_unavailable');
-   body=Uint8Array.from(value);
+   if(value.length!==row.pdf_size)fail(503,'file_temporarily_unavailable');
+   body=new Uint8Array(value.length);
+   for(let i=0;i<value.length;i++){const n=value[i];if(!Number.isInteger(n)||n<0||n>255)fail(503,'file_temporarily_unavailable');body[i]=n;}
   }else if(value instanceof ArrayBuffer)body=new Uint8Array(value);
   else if(ArrayBuffer.isView(value))body=new Uint8Array(value.buffer,value.byteOffset,value.byteLength);
   else fail(503,'file_temporarily_unavailable');

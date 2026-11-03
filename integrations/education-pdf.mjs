@@ -1,4 +1,4 @@
-import {PDFDocument,PDFParser,PDFObjectStreamParser,PDFXRefStreamParser,PDFDict,PDFArray,PDFName,PDFRef,PDFNumber,PDFRawStream,PDFStream,PDFInvalidObject,PDFNull,PDFString,PDFHexString} from 'pdf-lib';
+import {PDFParser,PDFObjectStreamParser,PDFXRefStreamParser,PDFDict,PDFArray,PDFName,PDFRef,PDFNumber,PDFRawStream,PDFStream,PDFInvalidObject,PDFNull,PDFString,PDFHexString} from 'pdf-lib';
 import {Unzlib} from 'fflate/browser';
 
 // A narrow static resource-PDF gate, not a malware/accessibility certification.
@@ -108,7 +108,9 @@ export async function validateStaticPDF(bytes){
  if(!/^%PDF-\d\.\d(?:\s|$)/.test(header))reject('missing_pdf_header');const end=tail.match(/startxref\s+(\d+)\s+%%EOF\s*$/);if(!end||Number(end[1])>=bytes.length)reject('missing_pdf_trailer');
  const xrefAt=Number(end[1]),xrefHeader=new TextDecoder('latin1').decode(bytes.subarray(xrefAt,xrefAt+80));if(!/^(?:xref\s|\d+\s+\d+\s+obj\b)/.test(xrefHeader))reject('invalid_startxref');
  try{
-  const {context,state}=await preflight(bytes,xrefAt);const result=inspectContext(context,state);
-  const doc=await PDFDocument.load(bytes,{ignoreEncryption:false,throwOnInvalidObject:true,updateMetadata:false,parseSpeed:100,capNumbers:true});if(doc.isEncrypted)reject('encrypted_pdf');const loaded=inspectContext(doc.context,state);if(loaded.pages!==result.pages||doc.getPageCount()!==result.pages)reject('page_count_mismatch');tick(state);return {...result,decodedStructuralBytes:state.decoded,bytes:bytes.length};
+  // The guarded parser already produced the complete object context. Validate
+  // it once, including its genuine root, references and strict page tree.
+  // Re-running the same upstream parser adds CPU without an independent check.
+  const {context,state}=await preflight(bytes,xrefAt),result=inspectContext(context,state);tick(state);return {...result,decodedStructuralBytes:state.decoded,bytes:bytes.length};
  }catch(error){if(error instanceof StaticPDFError)throw error;reject('malformed_pdf');}
 }

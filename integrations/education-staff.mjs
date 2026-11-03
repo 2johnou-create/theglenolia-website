@@ -1,7 +1,6 @@
 import {json,fail,keys,text,emailValue,uuid,id,nowISO,all,resourceId,stageValue,revision,confirmUpdated,audit} from './education-common.mjs';
 import {listResources} from './education-resources.mjs';
 import {ownerHandoff} from './education-auth.mjs';
-import {validateStaticPDF} from './education-pdf.mjs';
 const availability=v=>{if(!['public','teacher','selected'].includes(v))fail(400,'invalid_availability');return v;};
 const bool=v=>{if(typeof v!=='boolean')fail(400,'invalid_boolean');return v?1:0;};
 async function ownerUser(db,email){let u=await db.prepare('SELECT * FROM edu_users WHERE email=?').bind(email).first();if(!u){const stamp=nowISO();await db.prepare("INSERT OR IGNORE INTO edu_users(id,email,name,requested_school,created_at,verified_at) VALUES(?,?,'John Ou','',?,?)").bind(id(),email,stamp,stamp).run();u=await db.prepare('SELECT * FROM edu_users WHERE email=?').bind(email).first();}return u;}
@@ -61,8 +60,8 @@ export async function staffRoutes(request,env,path,body){
  }
  const pdf=path.match(/^\/resources\/([a-z0-9-]+)\/pdf$/);
  if(pdf&&method==='POST'){
-  const b=keys(body,['version','pdfBase64']),rid=resourceId(pdf[1]),v=revision(b.version),r=await db.prepare('SELECT published_at FROM edu_resource_versions WHERE resource_id=? AND version=?').bind(rid,v).first();if(!r)fail(404,'resource_version_not_found');if(r.published_at)fail(409,'published_file_immutable');const encoded=text(b.pdfBase64,2900000).replace(/^data:application\/pdf;base64,/,'');let bytes;try{const raw=atob(encoded);if(raw.length>2097152)fail(413,'pdf_too_large');bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));}catch(e){if(e?.status)throw e;fail(400,'invalid_pdf');}
-  try{await validateStaticPDF(bytes);}catch{fail(400,'pdf_requires_safe_static_copy');}
+  const b=keys(body,['version','pdfBase64']),rid=resourceId(pdf[1]),v=revision(b.version),r=await db.prepare('SELECT published_at FROM edu_resource_versions WHERE resource_id=? AND version=?').bind(rid,v).first();if(!r)fail(404,'resource_version_not_found');if(r.published_at)fail(409,'published_file_immutable');const encoded=text(b.pdfBase64,2900000).replace(/^data:application\/pdf;base64,/,'');let bytes;try{const raw=atob(encoded);if(raw.length>2097152)fail(413,'pdf_too_large');bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);}catch(e){if(e?.status)throw e;fail(400,'invalid_pdf');}
+  try{const {validateStaticPDF}=await import('./education-pdf.mjs');await validateStaticPDF(bytes);}catch{fail(400,'pdf_requires_safe_static_copy');}
   await db.prepare('UPDATE edu_resource_versions SET pdf_blob=?,pdf_size=?,pdf_key=NULL WHERE resource_id=? AND version=? AND published_at IS NULL').bind(bytes.buffer,bytes.length,rid,v).run();await audit(db,actor,'resource_pdf_uploaded',rid);return json({uploaded:true,bytes:bytes.length,notice:'Static-file checks are not a malware or accessibility certification. Check rights, content and accessible alternatives before publishing.'});
  }
  const pub=path.match(/^\/resources\/([a-z0-9-]+)\/(publish|withdraw)$/);
