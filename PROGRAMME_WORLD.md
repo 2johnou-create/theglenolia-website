@@ -13,6 +13,16 @@ to recognise: a café counter and seating, a seed-starting garden, a hands-on
 classroom, and shelves of illustrative local gifts and products. These are
 playful programme settings, not a completed site layout or confirmed stock.
 
+The 7 November 2026 approved landscape diorama release adds layered terrain,
+individual foliage and detailed open café, nursery, classroom and product-shelf
+settings. `programme-detailed-props.js` composes these areas from the shared
+terrain/café modules; `diorama-renderer.js` handles responsive camera fitting,
+soft lighting and the lighter mobile rendering path. Existing actor routes,
+greetings, notes, growth stages and clock/weather controls remain in the
+programme runtime. The static fallback is `programme-diorama.webp`; the earlier
+poster remains archived. This visual release changes no project facts or
+backend publication rules.
+
 ## Public routes and content
 
 | Language | Programme page |
@@ -304,7 +314,7 @@ Keyboard arrows rotate the view; Home resets it. Touch scrolling remains enabled
 
 The static poster and factual updates remain readable without JavaScript or
 WebGL. The growth accordion has a static educational alternative. If the model
-changes, recapture `public/assets/progress/programme-poster.webp` from the
+changes, recapture `public/assets/progress/programme-diorama.webp` from the
 reviewed scene and inspect both day and night in the real page backgrounds.
 Keep the exact native A-v1 identity and established palette; do not redraw the
 logo as part of the scene.

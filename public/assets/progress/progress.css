@@ -102,6 +102,9 @@
 .drag-hint{font-size:9px;gap:5px}
 .drag-hint svg{width:14px}
 .pause-button{font-size:9px;padding:0 10px}
+.scene-bottom .icon-button{width:44px;height:44px;flex:none}
+.scene-bottom .pause-button{height:44px}
+.hotspot{min-height:44px;min-width:44px;justify-content:center}
 .scene-caption{display:block;font-size:9px}
 .scene-caption span{display:block;max-width:unset!important}
 .scene-caption span+span{margin-top:5px}
@@ -122,7 +125,7 @@
 .chapter-symbol{font-size:29px}
 .review-stage-controls{gap:13px}
 .stage-selectors{gap:6px}
-.stage-selectors button{padding:9px 11px;font-size:10px}
+.stage-selectors button{padding:9px 11px;font-size:10px;min-height:44px}
 .stage-preview-note{font-size:9px}
 .opening-strip{flex-wrap:wrap;gap:22px;padding-top:34px;padding-bottom:34px}
 .opening-strip>div{flex:1;min-width:180px}

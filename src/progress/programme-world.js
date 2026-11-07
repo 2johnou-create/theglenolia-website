@@ -1,8 +1,19 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {createDioramaTerrain} from './diorama-terrain.js';
+import {createCafeProps} from './diorama-cafe.js';
+import {createDetailedProgrammeProps} from './programme-detailed-props.js';
+import {createDioramaFinish,fitDioramaCamera} from './diorama-renderer.js';
 import {createProgrammeNightBehavior,departmentLightStations} from './programme-night.js';
 import {createCharacterTap,pickCharacter,wavePose,waveDuration} from './programme-hello.js';
+
+// Apply the camera pose and its framing together. A frustum fitted to the old
+// OrbitControls target cannot be reused after that target moves during focus.
+export function applyProgrammeCameraFrame(camera,controls,frame,bounds,width,height,options={}) {
+  if(frame){camera.position.lerpVectors(frame.from,frame.to,frame.amount);controls.target.lerpVectors(frame.fromTarget,frame.toTarget,frame.amount);}
+  return fitDioramaCamera(camera,controls,bounds,width,height,options);
+}
 
 // An original planning miniature. Its clock, characters and growth previews never
 // establish the real work, attendance, planting or programme status of the farm.
@@ -13,13 +24,19 @@ const up = new THREE.Vector3(0,1,0);
 const geometries = new Map();
 const materials = new Map();
 const unitBox = new THREE.BoxGeometry(1,1,1);
-const sphere = new THREE.SphereGeometry(1,10,7);
-const leafShape = new THREE.SphereGeometry(1,8,5);
-const unitCylinder = new THREE.CylinderGeometry(1,1,1,10);
-const capsule = new THREE.CapsuleGeometry(1,1,3,8);
+const sphere = new THREE.SphereGeometry(1,18,12);
+function curvedLeafGeometry(){
+  const p=[],uv=[],indices=[];
+  for(let i=0;i<=7;i++){const t=i/7,w=Math.sin(t*Math.PI)**.8;for(const side of[-1,0,1]){p.push(side*w,Math.sin(t*Math.PI)*(.18-Math.abs(side)*.14),t*2);uv.push((side+1)/2,t);}}
+  for(let i=0;i<7;i++)for(let j=0;j<2;j++){const a=i*3+j;indices.push(a,a+3,a+1,a+1,a+3,a+4);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
+}
+const leafShape=curvedLeafGeometry();
+const unitCylinder = new THREE.CylinderGeometry(1,1,1,16);
+const capsule = new THREE.CapsuleGeometry(1,1,4,12);
 function material(colour='green',opacity=1) {
   const key=colour+opacity;
-  if (!materials.has(key)) materials.set(key,new THREE.MeshStandardMaterial({color:palette[colour],roughness:.88,metalness:0,transparent:opacity<1,opacity}));
+  if (!materials.has(key)) materials.set(key,new THREE.MeshStandardMaterial({color:palette[colour],roughness:colour==='ivory'?.52:colour==='copper'?.70:.78,metalness:0,transparent:opacity<1,opacity}));
   return materials.get(key);
 }
 function group(parent,x=0,y=0,z=0) {const g=new THREE.Group();g.position.set(x,y,z);parent?.add(g);return g;}
@@ -36,7 +53,7 @@ function rounded(parent,w,d,depth,colour,y=0,r=.35) {
   if (!geometries.has(key)) {
     const s=new THREE.Shape(),x=-w/2,z=-d/2;
     s.moveTo(x+r,z);s.lineTo(x+w-r,z);s.quadraticCurveTo(x+w,z,x+w,z+r);s.lineTo(x+w,z+d-r);s.quadraticCurveTo(x+w,z+d,x+w-r,z+d);s.lineTo(x+r,z+d);s.quadraticCurveTo(x,z+d,x,z+d-r);s.lineTo(x,z+r);s.quadraticCurveTo(x,z,x+r,z);
-    geometries.set(key,new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSize:.06,bevelThickness:.04,bevelSegments:1,steps:1,curveSegments:5}));
+    geometries.set(key,new THREE.ExtrudeGeometry(s,{depth,bevelEnabled:true,bevelSize:.06,bevelThickness:.04,bevelSegments:2,steps:1,curveSegments:7}));
   }
   const m=mesh(parent,geometries.get(key),colour,0,y,0);m.rotation.x=-Math.PI/2;return m;
 }
@@ -55,7 +72,7 @@ function pot(parent,x,z,scale=.6,y=.43) {
   cylinder(g,.35*scale,.07*scale,'copper',0,.42*scale,0);cylinder(g,.29*scale,.025,'ink',0,.45*scale,0);return g;
 }
 function leaves(parent,height=1,count=14) {
-  const foliage=new THREE.InstancedMesh(leafShape,material('green'),count),temp=new THREE.Object3D();
+  const leafMaterial=material('green').clone();leafMaterial.side=THREE.DoubleSide;leafMaterial.roughness=.55;const foliage=new THREE.InstancedMesh(leafShape,leafMaterial,count),temp=new THREE.Object3D();
   for (let i=0;i<count;i++) {
     const level=Math.floor(i/2),angle=i%2*Math.PI+level*.8,spread=(.16+(count/2-level)*.018)*height;
     temp.position.set(Math.cos(angle)*spread,(.22+level/Math.max(1,Math.ceil(count/2)-1)*.70)*height,Math.sin(angle)*spread);
@@ -145,13 +162,21 @@ function actualPlants(data) {
   seed.position.x=-.46;trial.position.x=.46;pair.add(seed,trial);
   pair.userData.windPlants=[...seed.userData.windPlants,...trial.userData.windPlants];return pair;
 }
+function batchActorPart(part){
+  part.updateMatrixWorld(true);const inverse=part.matrixWorld.clone().invert(),byMaterial=new Map(),remove=[];
+  part.traverse(o=>{if(!o.isMesh)return;const key=o.material.uuid;if(!byMaterial.has(key))byMaterial.set(key,{material:o.material,geometries:[]});const g=o.geometry.index?o.geometry.toNonIndexed():o.geometry.clone();g.applyMatrix4(inverse.clone().multiply(o.matrixWorld));byMaterial.get(key).geometries.push(g);remove.push(o);});
+  for(const {material,geometries:items}of byMaterial.values()){const geometry=mergeGeometries(items,false);items.forEach(g=>g.dispose());if(geometry){const combined=new THREE.Mesh(geometry,material);combined.castShadow=combined.receiveShadow=true;part.add(combined);}}
+  remove.forEach(o=>o.removeFromParent());
+}
 function character(parent,{id,department,shirt='green',hat=false,route,offset=0,speed=.8}) {
   const root=group(parent,route[0].x,.43,route[0].z),body=group(root),head=group(body,0,1.63,0);
   mesh(body,capsule,shirt,0,1.06,0).scale.set(.20,.24,.19);
   box(body,.32,.40,.08,'sage',0,1.01,.18);
-  ball(head,.255,.28,.24,'ivory');
+  const skin=new THREE.MeshStandardMaterial({color:['coffee-grower','local-selector'].includes(id)?0xb88961:['workshop-maker','cafe-measurer'].includes(id)?0xe0b68d:0xc89d78,roughness:.82});
+  ball(head,.255,.28,.24,'ivory').material=skin;for(const side of[-1,1])ball(head,.043,.066,.044,'ivory',side*.245,-.015,0).material=skin;
+  const hair=new THREE.Mesh(new THREE.SphereGeometry(.26,18,10,0,Math.PI*2,0,Math.PI*.49),material('ink'));hair.position.set(0,.025,-.018);head.add(hair);
   for(const side of [-1,1]) ball(head,.018,.026,.015,'ink',side*.082,.02,.225);
-  ball(head,.035,.037,.03,'copper',0,-.025,.235);
+  ball(head,.035,.037,.03,'copper',0,-.025,.235).material=skin;
   const mouth=mesh(head,new THREE.TorusGeometry(.042,.008,4,10,Math.PI),'ink',0,-.082,.232);mouth.rotation.z=Math.PI;
   cylinder(head,hat?.35:.265,.045,'copper',0,.235,0);cylinder(head,hat?.20:.245,hat?.19:.09,'copper',0,hat?.33:.27,0);
   const arms=[],legs=[];
@@ -166,6 +191,7 @@ function character(parent,{id,department,shirt='green',hat=false,route,offset=0,
   const sample=group(arms[0],0,-.35,.1);cylinder(sample,.10,.20,'sage');cylinder(sample,.11,.035,'copper',0,.11,0);
   const ruler=group(arms[1],0,-.36,.03);box(ruler,.65,.04,.06,'ivory');for(let i=0;i<5;i++)box(ruler,.01,.045,.05,'ink',-.25+i*.1,0,.01);
   const lunch=group(body,0,1.01,.42);box(lunch,.30,.07,.25,'ivory');box(lunch,.27,.03,.23,'green',0,.045,0);box(lunch,.30,.06,.25,'ivory',0,.09,0);
+  batchActorPart(head);legs.forEach(leg=>batchActorPart(leg.knee));
   return {id,department,root,body,head,arms,legs,tools,clipboard,pencil,watering,sample,ruler,lunch,route,offset,speed,index:0,distance:0,wait:Math.max(0,route[0].hold-offset),activity:route[0].activity||'planning',anchor:new THREE.Vector3(),lastAngle:0};
 }
 function point(x,z,hold=0,activity='walking',face=0){return{x,z,hold,activity,face};}
@@ -206,72 +232,20 @@ function updateActor(actor,state,delta,time) {
 }
 function buildMiniature(scene,requestRender) {
   const root=new THREE.Group();scene.add(root);const windPlants=[],lamps=[],workLights=[],actors=[];
-  rounded(root,27.8,20.3,.5,'copper',-.48,1.2);rounded(root,27.8,20.3,.14,'sage',.08,1.2);rounded(root,27.4,19.9,.08,'ivory',.31,1.1);
-  // Furniture and walls stay inside the four islands. Travel follows the open lanes.
-  rounded(root,2.7,18.9,.035,'copper',.42,.4);rounded(root,25.8,2.3,.035,'copper',.425,.4);
-  for(const [id,[x,,z]] of Object.entries(departments)){const floor=rounded(root,8.2,6.7,.055,id==='coffee'?'sage':'ivory',.43,.7);floor.position.set(x,.43,z);}
-  for(const x of [-11.9,11.9])for(const z of [-8.5,8.5])windPlants.push(shadeTree(root,x,z,z<0?1.15:.92));
-  for(let i=0;i<15;i++){const x=-12.5+i*1.8;box(root,.075,.65,.075,'ivory',x,.79,-9.1);if(i<14)box(root,1.8,.065,.055,'copper',x+.9,.94,-9.1);}
-
-  // Roofless café: counter, coffee equipment and seating surround a planning table.
-  const cafe=group(root,-6.2,.43,-4.2);
-  box(cafe,6.9,2.95,.12,'ivory',0,1.48,-2.6);box(cafe,.12,2.1,5.2,'ivory',-3.45,1.06,0);
-  box(cafe,6.9,.62,.14,'sage',0,.32,-2.6);
-  const counter=group(root,-6.65,.43,-5.6);box(counter,4.9,1.04,1.0,'green',0,.52,0);box(counter,5.04,.12,1.12,'ivory',0,1.10,0);
-  for(let i=1;i<8;i++)box(counter,.018,.89,.018,'sage',-2.45+i*4.9/8,.51,.51);
-  for(const h of [.28,.56,.84])box(counter,4.8,.018,.018,'sage',0,h,.51);
-  const machine=group(counter,.20,1.17,0);box(machine,1.35,.52,.62,'sage',0,.26,0);box(machine,1.45,.10,.68,'green',0,.57,0);box(machine,1.35,.07,.68,'ink',0,.025,.04);
-  for(const x of [-.32,.32]){cylinder(machine,.06,.18,'copper',x,.23,.34);beam(machine,[x,.30,.28],[x,.15,.40],.025,'copper');mug(counter,x+.2,1.25,.39);}
-  cylinder(counter,.19,.51,'copper',1.65,1.43,0);cylinder(counter,.17,.26,'ink',1.65,1.82,0);box(counter,.43,.08,.45,'green',1.65,1.20,0);
-  for(const x of [-1.8,-1.35])mug(counter,x,1.25,.1);
-  const cafeTable=table(root,-6.5,-3.35,3.1,1.4);paper(cafeTable,0,1.055,0,1.55,.9);box(cafeTable,1.25,.018,.018,'sage',0,1.07,0);box(cafeTable,.018,.018,.7,'copper',-.25,1.07,0);mug(cafeTable,1.05,1.1,.25);
-  const cafeSeating=group(root,-8.95,.43,-2.55);cylinder(cafeSeating,.48,.09,'ivory',0,.76,0);cylinder(cafeSeating,.055,.72,'copper',0,.37,0);cylinder(cafeSeating,.30,.06,'green',0,.04,0);mug(cafeSeating,-.17,.88,0);mug(cafeSeating,.19,.88,.07);
-  chair(root,-8.95,-3.30);chair(root,-8.95,-1.80,Math.PI);
-  for(const x of [-7.9,-5.1])stool(root,x,-4.6);
-  box(cafe,.26,.09,1.55,'copper',-3.25,1.7,-1.6);for(const z of [-2.05,-1.60,-1.15])mug(cafe,-3.24,1.83,z);
-
-  // Gardening area: open soil beds and a potting bench, with young illustrative plants.
-  for(const [bx,width] of [[4.65,3.0],[8.1,2.7]]){
-    const bed=soilBed(root,bx,-6.1,width,1.4);
-    for(let i=0;i<6;i++){
-      const plant=group(bed,(i%3-1)*width*.25,.27,(Math.floor(i/3)-.5)*.55);
-      beam(plant,[0,0,0],[0,.22,0],.012);leaves(plant,.25,6);windPlants.push(plant);
-    }
-  }
-  for(let i=0;i<8;i++){const x=2.8+i*.95;box(root,.07,.60,.07,'ivory',x,.75,-7.25);if(i<7)box(root,.95,.055,.05,'copper',x+.475,.88,-7.25);}
-  const seedBench=table(root,7.6,-3.5,2.5,1.1,.92);tray(seedBench,-.45,1.02,0,.85,.65);paper(seedBench,.65,1.02,0,.6,.65);
-  const barrow=group(root,9.45,.43,-3.15);box(barrow,.66,.32,.80,'green',0,.59,0);for(const side of [-1,1]){beam(barrow,[side*.25,.36,-.10],[side*.25,.75,.95],.03);beam(barrow,[side*.25,0,.4],[side*.25,.42,.2],.027);}
-  cylinder(barrow,.19,.10,'ink',0,.20,-.49).rotation.z=Math.PI/2;cylinder(barrow,.075,.13,'copper',0,.20,-.49).rotation.z=Math.PI/2;
-  for(const x of [-.17,.17])pot(barrow,x,0,.40,.77);
-  beam(root,[9.55,.45,-4.9],[9.85,2.15,-5.05],.028);box(root,.26,.36,.07,'green',9.53,.62,-4.88);
-  beam(root,[9.15,.46,-4.9],[9.40,1.95,-5.03],.024);beam(root,[9.00,.48,-4.85],[9.32,.48,-4.85],.025,'green');for(let i=0;i<5;i++)beam(root,[9.00+i*.08,.48,-4.85],[9.00+i*.08,.48,-4.55],.012,'green');
-  const growthHolder=group(root,4.5,.57,-4.4);cylinder(root,1.05,.17,'ivory',4.5,.52,-4.4);
+  const pads=Object.values(departments).map(([x,,z])=>({x,z,w:8.2,d:6.8}));
+  // The established actor routes and light stations keep the same level ground.
+  pads.push({x:0,z:0,w:4.7,d:21},{x:0,z:0,w:27,d:3.1});
+  const terrain=createDioramaTerrain({width:30,depth:24,groundY:.43,pads});root.add(terrain.root);
+  const detailed=createCafeProps({heightAt:()=>.43,includeActors:false});
+  detailed.cafeRoot.position.set(-6.2,.45,-4.95);detailed.cafeRoot.scale.setScalar(1.35);
+  detailed.gardenRoot.position.set(7.3,.43,-4.9);detailed.gardenRoot.scale.setScalar(1.16);
+  root.add(detailed.root);
+  const learning=createDetailedProgrammeProps({groundY:.43});root.add(learning.root);
+  // Small, legible gravel lanes connect the roofless departmental study areas.
+  const gravel=new THREE.MeshStandardMaterial({color:0xbeb091,roughness:.98});rounded(root,2.6,20.5,.025,'copper',.425,.35).material=gravel;rounded(root,27.5,2.35,.025,'copper',.43,.35).material=gravel;
+  const growthHolder=group(root,4.1,.57,-4.4);cylinder(root,.90,.17,'ivory',4.1,.52,-4.4);
   const plantData={seedStage:'seed',trialStage:'seedling',heightCm:20},growthCache=new Map();
   let growth='actual',growthRoot=actualPlants(plantData);growthHolder.add(growthRoot);
-
-  // Open classroom: a generous teaching board, student desks and a hands-on table.
-  const classroom=group(root,-9.5,.43,6.0);classroom.rotation.y=Math.PI/2;
-  for(const side of [-1,1]){box(classroom,.09,2.55,.09,'ink',side*1.50,1.28,0);box(classroom,.56,.08,.68,'copper',side*1.5,.04,0);}
-  box(classroom,3.6,1.6,.09,'green',0,1.85,0);for(const side of [-1,1])box(classroom,3.35,1.36,.03,'ivory',0,1.85,side*.065);
-  for(const side of [-1,1]){const face=group(classroom,0,1.85,side*.07);face.rotation.y=side===1?0:Math.PI;beam(face,[-1.05,-.43,0],[-1.05,.40,0],.014,'green');for(let i=0;i<3;i++){const y=-.2+i*.2;for(const s of [-1,1])ball(face,.14,.035,.055,'sage',-1.05+s*.12,y,.025).rotation.z=s*.45;}for(let i=0;i<4;i++)box(face,1.20-i*.11,.035,.02,i===0?'copper':'green',.50,.40-i*.22,.025);}
-  const work=table(root,-6.2,4.25,3.6,1.35,1.02);paper(work,-.8,1.10,0,.95,.65);paper(work,.4,1.10,.12,.8,.55);cylinder(work,.12,.22,'sage',1.3,1.19,-.1);for(let i=0;i<3;i++)beam(work,[1.25+i*.05,1.22,-.1],[1.25+i*.05,1.53,-.1],.012);
-  for(const x of [-8.35,-4.15]){const desk=table(root,x,6.1,1.5,.90,.83);paper(desk,0,.902,0,.75,.53);box(desk,.40,.025,.025,'copper',.15,.93,.10).rotation.y=.30;chair(root,x,5.12);}
-  const resources=table(root,-8.8,3.4,1.05,1.5,.78);for(let i=0;i<3;i++)box(resources,.69,.075,.93,i%2?'sage':'green',0,.88+i*.085,0).rotation.y=.07*i;
-
-  // Gift and product samples: stocked display shelves and a wrapping/selection table.
-  for(const sx of [4.75,7.85]){
-    const shelf=productShelf(root,sx,7.05);
-    for(const h of [.25,1.05,1.85])for(let i=0;i<3;i++){
-      const x=(i-1)*.75;
-      if(i===0){cylinder(shelf,.15,.30,'sage',x,h+.15,.08);cylinder(shelf,.16,.055,'copper',x,h+.33,.08);box(shelf,.16,.11,.018,'ivory',x,h+.15,.235);}
-      else if(i===1)giftBox(shelf,x,h,.04,.55,.38,.45,h>1.5?'sage':'ivory');
-      else{box(shelf,.48,.52,.29,'ivory',x,h+.26,.04);const handle=mesh(shelf,new THREE.TorusGeometry(.12,.018,5,10,Math.PI),'copper',x,h+.55,.04);handle.rotation.z=0;}
-    }
-  }
-  const selection=table(root,6.3,4.25,4.2,1.6,1.02);paper(selection,-1.25,1.1,0,.9,.65);
-  for(let i=0;i<2;i++){const x=-.25+i*.60;cylinder(selection,.15,.28,'sage',x,1.25,.15);cylinder(selection,.165,.05,'copper',x,1.42,.15);box(selection,.17,.11,.02,'ivory',x,1.25,.30);}
-  giftBox(selection,1.2,1.09,.05,.70,.43,.60,'sage');
-  const swatches=table(root,3.9,6.1,1.25,1.0,.80);for(let i=0;i<3;i++)box(swatches,.6,.035,.5,['ivory','green','sage'][i],0,.89+i*.06,0).rotation.y=.12*i;
 
   // Break benches sit in the lanes; routes stop at their front, with room to pass.
   bench(root,-1.7,3.0,Math.PI/2);bench(root,2.25,-2.1,-Math.PI/2);bench(root,-3.2,.85);bench(root,3.2,.85);bench(root,1.2,7.7,-Math.PI/2);
@@ -310,9 +284,11 @@ function buildMiniature(scene,requestRender) {
 
   const base=document.querySelector('meta[name=site-base]')?.content||'';
   const texture=new THREE.TextureLoader().load(base+'/assets/email/logo-compact.png',requestRender,undefined,()=>{});texture.colorSpace=THREE.SRGBColorSpace;
-  box(root,2.08,1.10,.08,'ivory',-6.2,2.7,-6.78);
-  const logo=new THREE.Mesh(new THREE.PlaneGeometry(1.85,.94),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));logo.position.set(-6.2,2.7,-6.72);root.add(logo);
-  batchStatic(root,new Set([...windPlants,growthHolder,...actors.map(actor=>actor.root),...workLights.map(lamp=>lamp.dynamicRoot)]));
+  box(root,2.08,1.10,.08,'ivory',-6.2,1.9,-7.50);
+  const logo=new THREE.Mesh(new THREE.PlaneGeometry(1.85,.94),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));logo.position.set(-6.2,1.9,-7.45);root.add(logo);
+  batchStatic(root,new Set([terrain.root,detailed.root,learning.root,...windPlants,growthHolder,...actors.map(actor=>actor.root),...workLights.map(lamp=>lamp.dynamicRoot)]));
+  root.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(root);
+  root.traverse(o=>{if(o.isMesh&&!o.isInstancedMesh)o.geometry.computeBoundingBox();});
   function refreshGrowth(stage){
     if(stage===growth&&growthHolder.children.length)return;
     growth=stage;growthHolder.remove(growthRoot);
@@ -321,7 +297,7 @@ function buildMiniature(scene,requestRender) {
     growthHolder.add(growthRoot);
   }
   return {
-    root,actors,lamps,workLights,behavior,
+    root,actors,lamps,workLights,behavior,bounds,terrain,growthHolder,
     get windPlants(){return [...windPlants,...growthRoot.userData.windPlants];},
     setGrowth(stage){if(!growthStages.includes(stage)&&stage!=='actual')return;refreshGrowth(stage);},
     setPlantData(next={}){
@@ -336,27 +312,28 @@ function buildMiniature(scene,requestRender) {
 
 export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={}) {
   let renderer;
-  try {renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'low-power'});} catch(error) {onError?.(error);return null;}
+  try {renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});} catch(error) {onError?.(error);return null;}
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,window.innerWidth<600?1.25:1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.shadowMap.autoUpdate=false;
   const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-16,16,12,-12,.1,150),controls=new OrbitControls(camera,canvas);
-  controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.075;controls.enableZoom=false;controls.minPolarAngle=.48;controls.maxPolarAngle=1.25;controls.rotateSpeed=.5;canvas.style.touchAction='pan-y pinch-zoom';
-  const ambient=new THREE.HemisphereLight(palette.ivory,palette.sage,2.7),sun=new THREE.DirectionalLight(palette.ivory,3.2),fill=new THREE.DirectionalLight(palette.ivory,.9);scene.add(ambient,sun,fill);
-  sun.position.set(-15,25,18);fill.position.set(18,12,-16);sun.castShadow=true;sun.shadow.mapSize.set(window.innerWidth<600?1024:1536,window.innerWidth<600?1024:1536);Object.assign(sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,far:75});sun.shadow.normalBias=.06;sun.shadow.bias=-.00015;sun.shadow.radius=4;
+  controls.enablePan=false;controls.enableDamping=true;controls.dampingFactor=.075;controls.enableZoom=true;controls.minZoom=.65;controls.maxZoom=2.2;controls.minPolarAngle=.48;controls.maxPolarAngle=1.25;controls.rotateSpeed=.5;canvas.style.touchAction='pan-y pinch-zoom';
+  const finish=createDioramaFinish(renderer,scene,camera,{mobile:window.innerWidth<600});
+  const ambient=new THREE.HemisphereLight(0xe9f0e5,0x8e735b,.65),sun=new THREE.DirectionalLight(0xffedd9,3.5),fill=new THREE.DirectionalLight(0xe8edf0,.32);scene.add(ambient,sun,fill);
+  sun.position.set(-15,25,18);fill.position.set(18,12,-16);sun.castShadow=true;sun.shadow.mapSize.set(window.innerWidth<600?1536:2048,window.innerWidth<600?1536:2048);Object.assign(sun.shadow.camera,{left:-24,right:24,top:24,bottom:-24,far:75});sun.shadow.normalBias=.028;sun.shadow.bias=-.00015;sun.shadow.radius=4;
   sun.shadow.camera.updateProjectionMatrix();
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.ShadowMaterial({opacity:.11}));floor.rotation.x=-Math.PI/2;floor.position.y=-.54;floor.receiveShadow=true;scene.add(floor);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(100,100),new THREE.ShadowMaterial({opacity:.17}));floor.rotation.x=-Math.PI/2;floor.position.y=-2.2;floor.receiveShadow=true;scene.add(floor);
   let dirty=true,manualPaused=false,visible=true,disposed=false,ready=false,frame=0,time=0,last=0,lastRendered=0,lastShadow=0,focus=null;
   const osMotion=matchMedia('(prefers-reduced-motion: reduce)');
   const reduced=()=>document.documentElement.dataset.reduceMotion==='true'||osMotion.matches;
   const isPaused=()=>manualPaused||reduced();
   const environment={isDay:true,hour:12,weatherCode:0,rain:0,wind:6,cloud:.15};
   const model=buildMiniature(scene,()=>{dirty=true;});
-  const sky=group(scene),clouds=[];
-  for(let i=0;i<3;i++){const cloud=group(sky,-8+i*8,5.7+(i%2)*.4,-6.4-(i%2)*.6);for(let j=0;j<4;j++)ball(cloud,.85+j%2*.35,.40+j%2*.13,.45,'ivory',(j-1.5)*.9,Math.sin(j)*.2,Math.cos(j)*.16);clouds.push(cloud);}
-  const moon=ball(sky,.43,.43,.43,'ivory',-12.2,4.9,-4);moon.material=new THREE.MeshBasicMaterial({color:palette.ivory});moon.visible=false;
-  const sunDisc=ball(sky,.45,.45,.45,'copper',-12.2,4.9,-4);sunDisc.material=new THREE.MeshBasicMaterial({color:palette.copper});
+  // The live analogue HUD already provides the sun/moon and weather symbols.
+  // Keep the landscape clear of decorative solids that could intersect trees;
+  // cloud cover still changes the real-time lighting, with rain and night stars.
+  const sky=group(scene);
   const starsGeometry=new THREE.BufferGeometry(),starPositions=new Float32Array(21*3);
-  // A shallow band behind the miniature keeps the toy sky inside the wide overview.
+  // Restrained night stars sit behind the landscape and respect scene depth.
   for(let i=0;i<21;i++){const across=-8+(i*7.13)%16,rise=(i*1.79)%1.1;starPositions[i*3]=across*.764-rise*.367;starPositions[i*3+1]=6+rise*.823;starPositions[i*3+2]=-7-across*.645-rise*.435;}
   starsGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3));const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:palette.ivory,size:1.8,sizeAttenuation:false,transparent:true,opacity:.9}));stars.visible=false;sky.add(stars);
   const rainCount=180,rainPositions=new Float32Array(rainCount*6),rainSeeds=[];
@@ -382,14 +359,19 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     return {id:actor.id,department:actor.department};
   }
   function dimensions(){return{width:Math.max(1,canvas.parentElement.clientWidth),height:Math.max(1,canvas.parentElement.clientHeight)};}
+  function refitCamera(resetZoom=false,frame=null){
+    const {width,height}=dimensions(),centre=focus?new THREE.Vector3(...departments[focus]):null;
+    const bounds=centre?new THREE.Box3(new THREE.Vector3(centre.x-4.6,-.05,centre.z-3.8),new THREE.Vector3(centre.x+4.6,4.3,centre.z+3.8)):model.bounds;
+    if(focus==='coffee')bounds.expandByObject(model.growthHolder);
+    return applyProgrammeCameraFrame(camera,controls,frame,bounds,width,height,{padding:focus?1.12:1.08,resetZoom});
+  }
   function resize(){
-    if(disposed)return;const {width,height}=dimensions(),aspect=width/height,half=focus?Math.max(5.2,10.7/aspect/2):Math.max(11.3,36/aspect/2);
-    camera.left=-half*aspect;camera.right=half*aspect;camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();renderer.setSize(width,height,false);dirty=true;renderer.shadowMap.needsUpdate=true;
+    if(disposed)return;const {width,height}=dimensions();refitCamera(true);finish.resize(width,height);dirty=true;renderer.shadowMap.needsUpdate=true;
   }
   function moveCamera(next,animate=true){
     focus=departments[next]?next:null;const target=new THREE.Vector3(...(focus?departments[focus]:[0,1.05,0]));
     const nextPosition=target.clone().add(cameraOffset);
-    if(animate&&!reduced()){tween={from:camera.position.clone(),to:nextPosition,fromTarget:controls.target.clone(),toTarget:target,started:performance.now()};}
+    if(animate&&!isPaused()){tween={from:camera.position.clone(),to:nextPosition,fromTarget:controls.target.clone(),toTarget:target,started:performance.now()};}
     else {tween=null;camera.position.copy(nextPosition);controls.target.copy(target);controls.update();}
     canvas.dataset.department=focus||'all';resize();dirty=true;
   }
@@ -400,11 +382,11 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     if(typeof next.isDay==='boolean')environment.isDay=next.isDay;
     else if(next.hour!==undefined)environment.isDay=environment.hour>=6&&environment.hour<19;
     const darkness=environment.isDay?1:.25,cloud=environment.cloud,wet=environment.rain>0||environment.weatherCode>=51;
-    ambient.intensity=environment.isDay?2.7-cloud*.7:1.2;sun.intensity=environment.isDay?3.2-cloud*1.65:.42;fill.intensity=environment.isDay?.9:.45;
+    ambient.intensity=environment.isDay?.65+cloud*.10:.28;sun.intensity=environment.isDay?3.5-cloud*2.0:.48;fill.intensity=environment.isDay?.32:.20;scene.environmentIntensity=environment.isDay?.40:.10;
     sun.position.set(Math.sin((environment.hour-12)/12*Math.PI)*22,environment.isDay?20:14,18);
-    renderer.toneMappingExposure=environment.isDay?1.08:.88;floor.material.opacity=environment.isDay?.11:.13;
+    renderer.toneMappingExposure=environment.isDay?1.08:.88;floor.material.opacity=environment.isDay?.17:.15;
     model.lamps.forEach(m=>{m.emissiveIntensity=environment.isDay?.05:1.65;});
-    moon.visible=stars.visible=!environment.isDay;sunDisc.visible=environment.isDay&&cloud<.65;clouds.forEach((c,i)=>{c.visible=cloud>.16||i===0;c.scale.setScalar(.75+cloud*.6);});
+    stars.visible=!environment.isDay;
     rain.visible=wet;rain.material.opacity=Math.min(.6,.22+environment.rain*.08)*darkness;
     canvas.dataset.environment=environment.isDay?'day':'night';canvas.dataset.weather=wet?'rain':cloud>.65?'cloudy':'clear';renderer.shadowMap.needsUpdate=true;dirty=true;
   }
@@ -423,15 +405,16 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     onActors?.(actorPositions);
   }
   function animateWeather(){
+    model.terrain.update(time,{wind:environment.wind,rain:environment.rain>0||environment.weatherCode>=51?1:0});
     const breeze=Math.min(1,environment.wind/35),sway=.01+breeze*.035;
     model.windPlants.forEach((p,i)=>{p.rotation.z=Math.sin(time*.65+i*1.37)*sway;p.rotation.x=Math.cos(time*.5+i)*sway*.35;});
-    clouds.forEach((cloud,i)=>{cloud.position.x=-8+i*8+Math.sin(time*.035+i)*(.25+breeze*.6);});
     if(rain.visible){for(let i=0;i<rainCount;i++){const p=rainSeeds[i],y=10.8-((time*p.speed+p.y)%10.3),x=p.x+Math.sin(time*.15+i)*.2,drift=breeze*.15,j=i*6;rainPositions[j]=x;rainPositions[j+1]=y;rainPositions[j+2]=p.z;rainPositions[j+3]=x+drift;rainPositions[j+4]=y-.25;rainPositions[j+5]=p.z+.025;}rainGeometry.attributes.position.needsUpdate=true;}
   }
-  const onControl=()=>{dirty=true;};controls.addEventListener('change',onControl);
+  let cameraFitNeeded=false;
+  const onControl=()=>{cameraFitNeeded=true;dirty=true;};controls.addEventListener('change',onControl);
   const observer=new ResizeObserver(resize);observer.observe(canvas.parentElement);
   const visibilityObserver=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;last=0;if(visible)dirty=true;},{rootMargin:'120px'});visibilityObserver.observe(canvas.parentElement);
-  const onPreference=()=>{dirty=true;canvas.dataset.paused=String(isPaused());};osMotion.addEventListener('change',onPreference);
+  const onPreference=()=>{if(isPaused())tween=null;dirty=true;canvas.dataset.paused=String(isPaused());};osMotion.addEventListener('change',onPreference);
   const preferenceObserver=new MutationObserver(onPreference);preferenceObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-reduce-motion']});
   const onVisibility=()=>{last=0;tap.reset();if(!document.hidden)dirty=true;};document.addEventListener('visibilitychange',onVisibility);
   const onContextLost=event=>{event.preventDefault();manualPaused=true;onError?.(new Error('WebGL context lost'));};canvas.addEventListener('webglcontextlost',onContextLost);
@@ -459,8 +442,9 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   function loop(now){
     if(disposed)return;requestAnimationFrame(loop);if(!visible||document.hidden){last=0;return;}if(now-lastRendered<1000/30)return;
     const delta=last?Math.min((now-last)/1000,.1):0;last=now;lastRendered=now;const paused=isPaused();if(!paused)time+=delta;
-    if(tween){const p=Math.min(1,(now-tween.started)/650),ease=1-Math.pow(1-p,3);camera.position.lerpVectors(tween.from,tween.to,ease);controls.target.lerpVectors(tween.fromTarget,tween.toTarget,ease);dirty=true;if(p===1)tween=null;}
-    controls.update();
+    if(tween&&!paused){const p=Math.min(1,(now-tween.started)/650),ease=1-Math.pow(1-p,3);refitCamera(false,{...tween,amount:ease});dirty=true;if(p===1)tween=null;}
+    const controlsChanged=controls.update();
+    if(controlsChanged||cameraFitNeeded){cameraFitNeeded=false;refitCamera(false);dirty=true;}
     if(!paused||dirty){
       const routine=model.behavior.advance(delta,environment,{paused,reduced:reduced()});
       model.actors.forEach((actor,i)=>updateActor(actor,routine.actors[i],paused?0:delta,time));
@@ -478,7 +462,7 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
       model.workLights.forEach((lamp,i)=>{const level=routine.lights[i].level;lamp.light.intensity=14*level;lamp.bulbMaterial.emissiveIntensity=1.9*level;lamp.glowMaterial.opacity=.027*level;});
       animateWeather();
       if(now-lastShadow>750){renderer.shadowMap.needsUpdate=true;lastShadow=now;}
-      renderer.render(scene,camera);projectActors();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
+      finish.render();projectActors();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
       if(frame===0||frame%20===0||paused){canvas.dataset.litDepartments=routine.lights.filter(light=>light.level>.08).map(light=>light.id).join(',');canvas.dataset.actorActions=JSON.stringify(Object.fromEntries(model.actors.map(actor=>[actor.id,actor.activity])));}
       if(!ready){ready=true;canvas.dispatchEvent(new Event('worldready'));onReady?.();}
       if(++frame%20===0){canvas.dataset.frames=String(frame);canvas.dataset.drawCalls=String(renderer.info.render.calls);}
@@ -486,16 +470,16 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   }
   reset();setEnvironment({});canvas.dataset.growthStage='actual';requestAnimationFrame(loop);
   return {
-    pause(value){manualPaused=Boolean(value);canvas.dataset.paused=String(isPaused());dirty=true;},
+    pause(value){manualPaused=Boolean(value);if(isPaused())tween=null;canvas.dataset.paused=String(isPaused());dirty=true;},
     reset,
     greet,
     clearGreeting(){greeting=null;delete canvas.dataset.greetingActor;dirty=true;},
     focusDepartment(id){moveCamera(id,true);},
     setEnvironment,
-    setGrowthStage(stage){if(!growthStages.includes(stage)&&stage!=='actual')return false;model.setGrowth(stage);canvas.dataset.growthStage=stage;renderer.shadowMap.needsUpdate=true;dirty=true;return true;},
-    setPlantData(data){model.setPlantData(data);renderer.shadowMap.needsUpdate=true;dirty=true;},
+    setGrowthStage(stage){if(!growthStages.includes(stage)&&stage!=='actual')return false;model.setGrowth(stage);canvas.dataset.growthStage=stage;if(focus==='coffee')resize();renderer.shadowMap.needsUpdate=true;dirty=true;return true;},
+    setPlantData(data){model.setPlantData(data);if(focus==='coffee')resize();renderer.shadowMap.needsUpdate=true;dirty=true;},
     get paused(){return isPaused();},
     get scene(){return scene;},
-    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer,true);canvas.removeEventListener('pointermove',onPointerMove,true);canvas.removeEventListener('pointercancel',onPointerCancel,true);canvas.removeEventListener('pointerup',onPointerUp,true);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();renderer.dispose();},
+    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer,true);canvas.removeEventListener('pointermove',onPointerMove,true);canvas.removeEventListener('pointercancel',onPointerCancel,true);canvas.removeEventListener('pointerup',onPointerUp,true);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();finish.dispose();renderer.dispose();},
   };
 }

@@ -316,7 +316,7 @@ for key,(lang,prefix) in LOCALES.items():
         check(canvas.tag=='canvas' and canvas.attrs.get('tabindex')=='0' and bool(canvas.attrs.get('aria-label')) and canvas.attrs.get('aria-describedby')=='programme-world-caption', label+': canvas keyboard/text equivalent missing')
         check(len([n for n in root.walk() if n.tag=='canvas'])==1, label+': more than one animated model on the same page')
         poster = one(root.classes('programme-poster'), label+': static programme poster')
-        check(poster.tag=='img' and poster.attrs.get('src')==BASE+'/assets/progress/programme-poster.webp' and bool(poster.attrs.get('alt')) and 'hidden' not in poster.attrs, label+': model fallback is missing')
+        check(poster.tag=='img' and poster.attrs.get('src')==BASE+'/assets/progress/programme-diorama.webp' and bool(poster.attrs.get('alt')) and 'hidden' not in poster.attrs, label+': model fallback is missing')
         caption = one(root.find(id='programme-world-caption'), label+': scope caption')
         check(norm(c['worldCaption']) in norm(caption.text()) and norm(c['staffCaption']) in norm(caption.text()), label+': scene/staff illustrative scope missing')
         hello = c['sayHello']
