@@ -6,10 +6,11 @@ import re
 from datetime import date
 
 DATA=json.loads((Path(__file__).resolve().parents[1]/'programme-content.json').read_text())
+GAME_DATA=json.loads((Path(__file__).resolve().parents[1]/'weather-game-content.json').read_text())
 IDS=['cafe','coffee','workshops','local']
 
 def payload(key,api_origin,programme_url):
-    d={'copy':DATA['copy'][key],'initial':DATA['initial'],'language':key,'apiOrigin':api_origin,'programmeUrl':programme_url}
+    d={'copy':DATA['copy'][key],'initial':DATA['initial'],'language':key,'apiOrigin':api_origin,'programmeUrl':programme_url,'gameCopy':GAME_DATA['copy'][key]}
     return '<script type="application/json" id="programme-data">'+json.dumps(d,ensure_ascii=False).replace('<','\\u003c')+'</script>'
 
 def weather(c,compact=False):
@@ -20,6 +21,31 @@ def clock_hud(c):
     clock=c['clock']
     ticks=''.join(f'<line class="programme-clock-tick {"is-cardinal" if i%3==0 else ""}" x1="50" y1="10.5" x2="50" y2="{16 if i%3==0 else 14}" transform="rotate({i*30} 50 50)"/>' for i in range(12))
     return f'''<div class="programme-clock-hud"><time class="programme-clock" data-programme-clock role="img" aria-label="{e(clock['label'])}"><svg class="programme-clock-face" viewBox="0 0 100 100" aria-hidden="true" focusable="false"><circle class="programme-clock-rim" cx="50" cy="50" r="46"/><circle class="programme-clock-field" cx="50" cy="50" r="41.5"/>{ticks}<g class="programme-clock-numerals"><text x="50" y="23">12</text><text x="78" y="51">3</text><text x="50" y="80">6</text><text x="22" y="51">9</text></g><g class="programme-clock-hands"><g class="programme-clock-hour" data-clock-hour><line x1="50" y1="53" x2="50" y2="31"/></g><g class="programme-clock-minute" data-clock-minute><line x1="50" y1="55" x2="50" y2="20"/></g><g class="programme-clock-second" data-clock-second><line x1="50" y1="59" x2="50" y2="17"/><circle cx="50" cy="59" r="2.1"/></g><circle class="programme-clock-pin" cx="50" cy="50" r="3.4"/><circle class="programme-clock-pin-centre" cx="50" cy="50" r="1.35"/></g></svg></time><div class="programme-clock-aside" aria-hidden="true"><span class="programme-clock-label">{e(clock['label'])}</span><span class="programme-clock-place">{e(clock['place'])}</span><svg class="programme-sky" data-programme-sky viewBox="0 0 48 48" aria-hidden="true" focusable="false"><g data-sky-sun hidden><g class="programme-sun-rays"><path d="M24 5v5M24 38v5M5 24h5M38 24h5M10.6 10.6l3.5 3.5M33.9 33.9l3.5 3.5M10.6 37.4l3.5-3.5M33.9 14.1l3.5-3.5"/></g><circle class="programme-sun-disc" cx="24" cy="24" r="9.5"/><circle class="programme-sun-highlight" cx="21" cy="21" r="3"/></g><g data-sky-moon hidden><g class="programme-moon-stars"><circle cx="9" cy="11" r="1.1"/><circle cx="39" cy="13" r=".9"/><path d="M38 34v5M35.5 36.5h5M10 32v3M8.5 33.5h3"/></g><g class="programme-moon-orb"><circle class="programme-moon-disc" cx="24" cy="24" r="12"/><path class="programme-moon-lit" data-sky-moon-lit d=""/><circle class="programme-moon-outline" cx="24" cy="24" r="12"/></g></g></svg><span class="programme-sky-label" data-sky-label></span></div></div>'''
+
+def weather_icon(name):
+    paths={
+        'bucket':'<path d="m10 16 3 18h14l3-18zM10 16h20M13 16v-3a7 7 0 0 1 14 0v3M17 21v8M23 21v8"/><path d="M33 24s-3 4-3 6a3 3 0 0 0 6 0c0-2-3-6-3-6Z"/>',
+        'cloud':'<path d="M10 26a7 7 0 1 1 2-13 9 9 0 0 1 17-1 7 7 0 1 1 2 14H10Z"/><path d="m13 31-2 4m10-4-2 4m10-4-2 4"/>',
+        'wind':'<path d="M5 15h21a5 5 0 1 0-5-5M3 21h29a4 4 0 1 1-4 4M9 28h10a4 4 0 1 1-4 4"/>',
+        'storm':'<path d="M10 25a7 7 0 1 1 2-13 9 9 0 0 1 17-1 7 7 0 1 1 2 14h-4M16 25h-6"/><path d="m21 21-7 10h7l-2 7 10-13h-8l2-4M9 30l-2 4M32 30l-2 4"/>',
+        'blizzard':'<path d="M20 5v30M7 12.5l26 15M7 27.5l26-15M15 8l5 5 5-5M15 32l5-5 5 5M7 18l7-2-1-7M27 31l-1-7 7-2M7 22l7 2-1 7M27 9l-1 7 7 2"/>',
+        'reset':'<path d="M9 14a13 13 0 1 1-2 12M9 6v9H1"/>',
+        'underground':'<path d="M5 13h30M8 8l2 5m9-7 1 7m10-5-1 5M5 19v16h30V19M11 21h8v8h10M25 21h7M8 29c2-3 4 3 6 0"/>'
+    }
+    return '<svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">'+paths[name]+'</svg>'
+
+def weather_game_copy(c):
+    return GAME_DATA['copy'][{'en-AU':'en','zh-Hant':'zh','ja':'ja'}[c['lang']]]
+
+def weather_game_badge(c):
+    g=weather_game_copy(c)
+    tools=''.join(f'''<button type="button" class="weather-play-quick-tool" data-weather-tool="{tool}" aria-label="{e(label)}" title="{e(label)}" aria-pressed="false" disabled>{weather_icon(tool)}</button>''' for tool,label in g['tools'].items())
+    return f'''<div class="weather-play-mode" data-weather-game-mode hidden><span><strong data-weather-game-badge>{e(g['badge'])}</strong><small>{e(g['badgeNote'])}</small></span><button type="button" data-weather-game-quick-reset aria-label="{e(g['reset'])}" title="{e(g['reset'])}">{weather_icon('reset')}</button></div><div class="weather-play-quick-tools" data-weather-game-quick-tools role="group" aria-label="{e(g['toolGroup'])}" hidden>{tools}</div>'''
+
+def weather_game_controls(c):
+    g=weather_game_copy(c)
+    tools=''.join(f'''<button type="button" class="weather-play-tool" data-weather-tool="{tool}" aria-pressed="false" disabled>{weather_icon(tool)}<span>{e(label)}</span></button>''' for tool,label in g['tools'].items())
+    return f'''<section class="weather-play" id="weather-play" data-weather-game aria-labelledby="weather-play-title"><details data-weather-game-details><summary><span class="weather-play-summary-icon">{weather_icon('cloud')}</span><span><strong>{e(g['summary'])}</strong><small>{e(g['teaser'])}</small></span><span class="weather-play-disclosure" aria-hidden="true">+</span></summary><div class="weather-play-body"><h3 id="weather-play-title">{e(g['title'])}</h3><p>{e(g['intro'])}</p><p class="weather-play-hint">{e(g['hint'])}</p><div class="weather-play-tools" role="group" aria-label="{e(g['toolGroup'])}">{tools}</div><p class="weather-play-status" data-weather-game-status role="status" aria-live="polite" aria-atomic="true">{e(g['ready'])}</p><p class="weather-play-aim" data-weather-game-aim hidden>{e(g['aim'])}</p><div class="weather-play-actions"><button type="button" class="weather-play-reset" data-weather-game-reset disabled>{weather_icon('reset')}<span>{e(g['reset'])}</span></button><button type="button" class="weather-play-underground" data-weather-game-underground aria-pressed="false" disabled>{weather_icon('underground')}<span data-weather-game-underground-label>{e(g['underground'])}</span></button></div><p class="weather-play-underground-note" data-weather-game-underground-note hidden>{e(g['undergroundNote'])}</p><p class="weather-play-separation" id="weather-play-separation">{e(g['separation'])}</p></div></details></section>'''
 
 def hello_overlay(c):
     h=c['sayHello']
@@ -57,7 +83,7 @@ def hello_controls(c):
 def world(c,compact=False):
     options=''.join(f'<button type="button" data-programme-department="{id}" aria-pressed="false">{e(c["departments"][id]["title"])}</button>' for id in IDS)
     quick='' if compact else f'''<div class="programme-growth-quick" data-growth-previewbar hidden><p><span data-preview-label>{e(c['growth']['actualLabel'])}</span><strong data-preview-stage></strong></p><div><button type="button" data-growth-previous aria-label="{e(c['growth']['previousStage'])}">←</button><button type="button" data-growth-next aria-label="{e(c['growth']['nextStage'])}">→</button><button type="button" data-growth-stage="actual">{e(c['growth']['resetActual'])}</button></div></div>'''
-    return f'''<div class="programme-world-root {'programme-home-world' if compact else ''}" data-programme-world><div class="programme-world-toolbar"><span class="eyebrow">{e(c['homeEntryKicker'] if compact else c['kicker'])}</span><div class="programme-world-actions"><button type="button" class="programme-reset" data-programme-reset aria-label="{e(c['reset'])}" title="{e(c['reset'])}">↺</button><button type="button" data-programme-pause aria-pressed="true">{e(c['resume'])}</button></div></div><div class="programme-canvas-wrap"><canvas id="programme-world-canvas" tabindex="0" aria-label="{e(c['title'])}" aria-describedby="programme-world-caption"></canvas><img class="programme-poster" src="/assets/progress/programme-diorama.webp" alt="{e(c['worldCaption'])}" width="1200" height="800" decoding="async" {'loading="eager"' if compact else ''}>{clock_hud(c)+hello_overlay(c) if not compact else ''}<p class="programme-loading" data-programme-loading hidden>{e(c['loading'])}</p><p class="programme-fallback" data-programme-fallback hidden>{e(c['fallback'])}</p><div class="programme-thought" data-programme-thought aria-hidden="true" hidden><span></span><i></i></div><span class="programme-world-drag">{e(c['drag'])}</span></div>{hello_controls(c) if not compact else ''}<div class="programme-department-tabs" role="group" aria-label="{e(c['viewDepartment'])}"><button type="button" data-programme-department="all" aria-pressed="true">{e(c['overview'])}</button>{options}</div>{quick}<p class="programme-world-caption" id="programme-world-caption">{e(c['worldCaption'])} <span>{e(c['staffCaption'])}</span></p></div>'''
+    return f'''<div class="programme-world-root {'programme-home-world' if compact else ''}" data-programme-world><div class="programme-world-toolbar"><span class="eyebrow">{e(c['homeEntryKicker'] if compact else c['kicker'])}</span><div class="programme-world-actions"><button type="button" class="programme-reset" data-programme-reset aria-label="{e(c['reset'])}" title="{e(c['reset'])}">↺</button><button type="button" data-programme-pause aria-pressed="true">{e(c['resume'])}</button></div></div><div class="programme-canvas-wrap"><canvas id="programme-world-canvas" tabindex="0" aria-label="{e(c['title'])}" aria-describedby="programme-world-caption"></canvas><img class="programme-poster" src="/assets/progress/programme-diorama.webp" alt="{e(c['worldCaption'])}" width="1200" height="800" decoding="async" {'loading="eager"' if compact else ''}>{clock_hud(c)+hello_overlay(c)+weather_game_badge(c) if not compact else ''}<p class="programme-loading" data-programme-loading hidden>{e(c['loading'])}</p><p class="programme-fallback" data-programme-fallback hidden>{e(c['fallback'])}</p><div class="programme-thought" data-programme-thought aria-hidden="true" hidden><span></span><i></i></div><span class="programme-world-drag">{e(c['drag'])}</span></div>{weather_game_controls(c)+hello_controls(c) if not compact else ''}<div class="programme-department-tabs" role="group" aria-label="{e(c['viewDepartment'])}"><button type="button" data-programme-department="all" aria-pressed="true">{e(c['overview'])}</button>{options}</div>{quick}<p class="programme-world-caption" id="programme-world-caption">{e(c['worldCaption'])} <span>{e(c['staffCaption'])}</span></p></div>'''
 
 def cards(key):
     c=DATA['copy'][key]
@@ -74,7 +100,7 @@ def home(key,api_origin,programme_url):
 
 def entry(key,programme_url):
     c=DATA['copy'][key]
-    return f'''<section class="programme-entry section"><div><p class="eyebrow">{e(c['homeEntryKicker'])}</p><h2>{e(c['progressLink'])}</h2></div><div><p>{e(c['progressLinkBody'])}</p><a class="text-link" href="{programme_url}">{e(c['homeEntryButton'])}<span aria-hidden="true">↗</span></a></div></section>'''
+    return f'''<section class="programme-entry section"><div><p class="eyebrow">{e(c['homeEntryKicker'])}</p><h2>{e(c['progressLink'])}</h2></div><div><p>{e(c['progressLinkBody'])}</p><div class="programme-entry-links"><a class="text-link" href="{programme_url}">{e(c['homeEntryButton'])}<span aria-hidden="true">↗</span></a><a class="text-link" href="{programme_url}#weather-play">{e(weather_game_copy(c)['summary'])}<span aria-hidden="true">↗</span></a></div></div></section>'''
 
 def page(key,api_origin,home_url,progress_url,programme_url,register_url):
     c=DATA['copy'][key];g=c['growth'];w=c['weather'];p=DATA['initial']['coffee']

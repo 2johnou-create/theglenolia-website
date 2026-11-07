@@ -93,12 +93,17 @@ export function createDioramaTerrain({width=30,depth=24,groundY=.43,pads=[],seed
   const barkMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.96,bumpMap:soilBump,bumpScale:.055});
   const leafMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.83,side:THREE.DoubleSide});
   const flowerMat=new THREE.MeshStandardMaterial({color:0xf5f1e8,roughness:.75});
-  const windUniform={value:.45},timeUniform={value:0};
+  const windUniform={value:.45},timeUniform={value:0},playUniform={value:0};
   function windMaterial(mat,amount) {
     mat.onBeforeCompile=shader=>{
-      shader.uniforms.uLandscapeTime=timeUniform;shader.uniforms.uLandscapeWind=windUniform;
-      shader.vertexShader='uniform float uLandscapeTime;\nuniform float uLandscapeWind;\n'+shader.vertexShader;
+      shader.uniforms.uLandscapeTime=timeUniform;shader.uniforms.uLandscapeWind=windUniform;shader.uniforms.uLandscapePlay=playUniform;
+      shader.vertexShader='uniform float uLandscapeTime;\nuniform float uLandscapeWind;\nuniform float uLandscapePlay;\n'+shader.vertexShader;
       shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>\n#ifdef USE_INSTANCING\nfloat phase = instanceMatrix[3].x * .83 + instanceMatrix[3].z * .71;\ntransformed.x += sin(uLandscapeTime * 1.8 + phase + position.y) * uLandscapeWind * ${amount.toFixed(3)} * max(position.y,position.z*.6);\ntransformed.z += cos(uLandscapeTime * 1.3 + phase) * uLandscapeWind * ${(amount*.55).toFixed(3)} * max(position.y,position.z*.6);\n#endif`);
+    };
+    const compile=mat.onBeforeCompile;
+    mat.onBeforeCompile=shader=>{
+      compile(shader);
+      shader.vertexShader=shader.vertexShader.replace('#include <project_vertex>',`#ifdef USE_INSTANCING\nfloat playHeight=clamp((instanceMatrix[3].y-${groundY.toFixed(3)})/3.0,0.0,1.0);\nfloat playPhase=uLandscapeTime*1.9+instanceMatrix[3].x*.11+instanceMatrix[3].z*.09;\nvec3 playDelta=vec3(sin(playPhase)*.20,0.0,cos(playPhase*.7)*.08)*uLandscapePlay*min(1.0,uLandscapeWind/1.8)*playHeight*playHeight;\nvec3 playA=instanceMatrix[0].xyz,playB=instanceMatrix[1].xyz,playC=instanceMatrix[2].xyz;\ntransformed+=vec3(dot(playDelta,playA)/max(dot(playA,playA),.0001),dot(playDelta,playB)/max(dot(playB,playB),.0001),dot(playDelta,playC)/max(dot(playC,playC),.0001));\n#endif\n#include <project_vertex>`);
     };
     mat.customProgramCacheKey=()=>`glenolia-landscape-wind-${amount}`;
   }
@@ -263,6 +268,7 @@ export function createDioramaTerrain({width=30,depth=24,groundY=.43,pads=[],seed
     update(seconds,weather={}) {
       timeUniform.value=Number.isFinite(seconds)?seconds:0;
       const value=Number(weather.wind??.45);windUniform.value=clamp(Number.isFinite(value)?(value>2?value/35:value):.45,0,1.8);
+      playUniform.value=weather.play===true?1:0;
       const wet=Number(weather.rain??0)>0;
       groundMat.roughness=wet?.74:.98;groundMat.color.setScalar(wet?.82:1);
       pathMat.roughness=wet?.58:1;pathMat.color.setScalar(wet?.82:1);

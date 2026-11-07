@@ -7,6 +7,9 @@ import {createDetailedProgrammeProps} from './programme-detailed-props.js';
 import {createDioramaFinish,fitDioramaCamera} from './diorama-renderer.js';
 import {createProgrammeNightBehavior,departmentLightStations} from './programme-night.js';
 import {createCharacterTap,pickCharacter,wavePose,waveDuration} from './programme-hello.js';
+import {createWeatherGame} from './weather-game.js';
+import {createFarmLife} from './farm-life.js';
+import {effectiveProgrammeWeather,createWeatherEvacuation} from './programme-weather-response.js';
 
 // Apply the camera pose and its framing together. A frustum fitted to the old
 // OrbitControls target cannot be reused after that target moves during focus.
@@ -213,9 +216,10 @@ function batchStatic(root,dynamicRoots) {
   remove.forEach(object=>object.removeFromParent());
 }
 function updateActor(actor,state,delta,time) {
-  actor.root.position.set(state.x,.43,state.z);actor.index=state.index;actor.wait=state.wait;actor.activity=state.activity;actor.lightAction=state.lightAction;
+  actor.root.position.set(state.x,state.y??.43,state.z);actor.index=state.index;actor.wait=state.wait;actor.activity=state.activity;actor.lightAction=state.lightAction;
   actor.root.rotation.y=angleTowards(actor.root.rotation.y,state.face,actor.poseReady?delta*9:1);actor.poseReady=true;
-  const moving=state.moving,resting=['resting','lunch'].includes(actor.activity),seated=state.seated,phase=time*6*actor.speed;
+  const moving=state.moving,resting=['resting','lunch'].includes(actor.activity),seated=state.seated,phase=time*6*actor.speed*(state.emergency?2.8:1);
+  actor.body.rotation.x=state.emergency?.16:0;
   actor.body.position.y=moving?Math.abs(Math.sin(phase))*.035:Math.sin(time*1.4+actor.offset)*.008;
   actor.body.rotation.z=moving?Math.sin(phase)*.018:0;
   actor.head.rotation.y=resting?Math.sin(time*.5+actor.offset)*.08:Math.sin(time*.7+actor.offset)*.035;
@@ -229,6 +233,7 @@ function updateActor(actor,state,delta,time) {
   if(selecting){actor.arms[0].rotation.x=-1.2+Math.sin(time*.8)*.10;actor.arms[1].rotation.x=-.5;}
   if(actor.activity==='switching'){actor.arms[1].rotation.x=-1.72+Math.sin(time*4)*.05;actor.arms[0].rotation.x=-.18;actor.head.rotation.x=-.04;}
   else actor.head.rotation.x=actor.activity==='checking'?.11:0;
+  if(state.emergency){actor.arms[0].rotation.x=-1.7+Math.sin(phase)*.35;actor.arms[1].rotation.x=-1.7-Math.sin(phase)*.35;actor.arms[0].rotation.z=.3;actor.arms[1].rotation.z=-.3;}
 }
 function buildMiniature(scene,requestRender) {
   const root=new THREE.Group();scene.add(root);const windPlants=[],lamps=[],workLights=[],actors=[];
@@ -328,6 +333,9 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   const isPaused=()=>manualPaused||reduced();
   const environment={isDay:true,hour:12,weatherCode:0,rain:0,wind:6,cloud:.15};
   const model=buildMiniature(scene,()=>{dirty=true;});
+  const farmLife=createFarmLife({width:30,depth:24,groundY:.43,heightAt:model.terrain.heightAt});scene.add(farmLife.root);
+  const weatherGame=createWeatherGame(),evacuation=createWeatherEvacuation(model.actors);scene.add(weatherGame.root);
+  let gameState=weatherGame.getState(),underground=false,lastGameNotice='',lastGameNoticeAt=-Infinity;
   // The live analogue HUD already provides the sun/moon and weather symbols.
   // Keep the landscape clear of decorative solids that could intersect trees;
   // cloud cover still changes the real-time lighting, with rain and night stars.
@@ -353,24 +361,28 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   }
   function greet(id){
     const actor=model.actors.find(actor=>actor.id===id)||model.actors.find(actor=>actor.department===id);
-    if(!actor)return null;
+    if(!actor||gameState.active||underground)return null;
     greeting=isPaused()?null:{id:actor.id,started:time};
     if(greeting)canvas.dataset.greetingActor=actor.id;else delete canvas.dataset.greetingActor;dirty=true;
     return {id:actor.id,department:actor.department};
   }
   function dimensions(){return{width:Math.max(1,canvas.parentElement.clientWidth),height:Math.max(1,canvas.parentElement.clientHeight)};}
   function refitCamera(resetZoom=false,frame=null){
-    const {width,height}=dimensions(),centre=focus?new THREE.Vector3(...departments[focus]):null;
-    const bounds=centre?new THREE.Box3(new THREE.Vector3(centre.x-4.6,-.05,centre.z-3.8),new THREE.Vector3(centre.x+4.6,4.3,centre.z+3.8)):model.bounds;
+    const {width,height}=dimensions(),centre=departments[focus]?new THREE.Vector3(...departments[focus]):null;
+    const bounds=focus==='underground'?new THREE.Box3(new THREE.Vector3(-8.6,-2.8,10.7),new THREE.Vector3(8.6,.7,13.3)):centre?new THREE.Box3(new THREE.Vector3(centre.x-4.6,-.05,centre.z-3.8),new THREE.Vector3(centre.x+4.6,4.3,centre.z+3.8)):model.bounds.clone();
     if(focus==='coffee')bounds.expandByObject(model.growthHolder);
+    if(!focus){
+      bounds.union(farmLife.bounds||new THREE.Box3().setFromObject(farmLife.root));
+      if(gameState.active)bounds.expandByPoint(new THREE.Vector3(0,8.2,0));
+    }
     return applyProgrammeCameraFrame(camera,controls,frame,bounds,width,height,{padding:focus?1.12:1.08,resetZoom});
   }
   function resize(){
     if(disposed)return;const {width,height}=dimensions();refitCamera(true);finish.resize(width,height);dirty=true;renderer.shadowMap.needsUpdate=true;
   }
   function moveCamera(next,animate=true){
-    focus=departments[next]?next:null;const target=new THREE.Vector3(...(focus?departments[focus]:[0,1.05,0]));
-    const nextPosition=target.clone().add(cameraOffset);
+    focus=next==='underground'?'underground':departments[next]?next:null;const target=new THREE.Vector3(...(focus==='underground'?[0,-.8,12]:focus?departments[focus]:[0,1.05,0]));
+    const nextPosition=target.clone().add(focus==='underground'?new THREE.Vector3(6,11,31):cameraOffset);
     if(animate&&!isPaused()){tween={from:camera.position.clone(),to:nextPosition,fromTarget:controls.target.clone(),toTarget:target,started:performance.now()};}
     else {tween=null;camera.position.copy(nextPosition);controls.target.copy(target);controls.update();}
     canvas.dataset.department=focus||'all';resize();dirty=true;
@@ -381,14 +393,45 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     environment.hour=Math.max(0,Math.min(24,environment.hour));environment.rain=Math.max(0,environment.rain);environment.wind=Math.max(0,Math.min(120,environment.wind));environment.cloud=Math.max(0,Math.min(1,environment.cloud>1?environment.cloud/100:environment.cloud));
     if(typeof next.isDay==='boolean')environment.isDay=next.isDay;
     else if(next.hour!==undefined)environment.isDay=environment.hour>=6&&environment.hour<19;
-    const darkness=environment.isDay?1:.25,cloud=environment.cloud,wet=environment.rain>0||environment.weatherCode>=51;
+    applyEnvironment();
+    const wet=environment.rain>0||environment.weatherCode>=51;
+    canvas.dataset.environment=environment.isDay?'day':'night';canvas.dataset.weather=wet?'rain':environment.cloud>.65?'cloudy':'clear';renderer.shadowMap.needsUpdate=true;dirty=true;
+  }
+  function applyEnvironment(){
+    const effective=effectiveProgrammeWeather(environment,gameState),darkness=environment.isDay?1:.25,cloud=effective.cloud,wet=environment.rain>0||environment.weatherCode>=51;
     ambient.intensity=environment.isDay?.65+cloud*.10:.28;sun.intensity=environment.isDay?3.5-cloud*2.0:.48;fill.intensity=environment.isDay?.32:.20;scene.environmentIntensity=environment.isDay?.40:.10;
     sun.position.set(Math.sin((environment.hour-12)/12*Math.PI)*22,environment.isDay?20:14,18);
     renderer.toneMappingExposure=environment.isDay?1.08:.88;floor.material.opacity=environment.isDay?.17:.15;
     model.lamps.forEach(m=>{m.emissiveIntensity=environment.isDay?.05:1.65;});
     stars.visible=!environment.isDay;
-    rain.visible=wet;rain.material.opacity=Math.min(.6,.22+environment.rain*.08)*darkness;
-    canvas.dataset.environment=environment.isDay?'day':'night';canvas.dataset.weather=wet?'rain':cloud>.65?'cloudy':'clear';renderer.shadowMap.needsUpdate=true;dirty=true;
+    rain.visible=wet&&!gameState.active;rain.material.opacity=Math.min(.6,.22+environment.rain*.08)*darkness;
+  }
+  function notifyGame(force=false){
+    const stamp=[gameState.active,gameState.tool,underground,Math.round(gameState.flood*10)].join(':');
+    if(!force&&(stamp===lastGameNotice||time-lastGameNoticeAt<.8))return;
+    lastGameNotice=stamp;lastGameNoticeAt=time;
+    canvas.dataset.weatherPlay=gameState.active?'active':'normal';canvas.dataset.playTool=gameState.tool||'';
+    canvas.dataset.playFlood=gameState.flood.toFixed(2);canvas.dataset.underground=String(underground);
+    canvas.dataset.playWind=gameState.wind.toFixed(1);canvas.dataset.playRain=gameState.rain.toFixed(1);canvas.dataset.playSnow=gameState.snow.toFixed(2);
+    canvas.dataset.playTargetX=gameState.target.x.toFixed(2);canvas.dataset.playTargetZ=gameState.target.z.toFixed(2);
+    canvas.dispatchEvent(new CustomEvent('weathergamechange',{bubbles:true,detail:{...gameState,underground}}));
+  }
+  function weatherGameAction(tool,point={}){
+    let target={x:0,z:0};
+    if(Number.isFinite(point.u)&&Number.isFinite(point.v)){
+      raycaster.setFromCamera({x:THREE.MathUtils.clamp(point.u,0,1)*2-1,y:1-THREE.MathUtils.clamp(point.v,0,1)*2},camera);
+      const hit=raycaster.ray.intersectPlane(new THREE.Plane(up,-.43),new THREE.Vector3());
+      if(hit)target={x:hit.x,z:hit.z};
+    }
+    if(!weatherGame.trigger(tool,target))return false;
+    gameState=weatherGame.update(0,{paused:isPaused(),reducedMotion:reduced()});
+    greeting=null;delete canvas.dataset.greetingActor;tap.reset();
+    moveCamera(null,false);applyEnvironment();notifyGame(true);dirty=true;return {...gameState,underground};
+  }
+  function resetWeatherGame(){
+    weatherGame.reset();gameState=weatherGame.getState();evacuation.reset();underground=false;farmLife.setUnderground(false);
+    applyEnvironment();moveCamera(null,false);notifyGame(true);dirty=true;
+    return {...gameState,underground};
   }
   function projectActors(){
     const {width,height}=dimensions();
@@ -405,10 +448,12 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     onActors?.(actorPositions);
   }
   function animateWeather(){
-    model.terrain.update(time,{wind:environment.wind,rain:environment.rain>0||environment.weatherCode>=51?1:0});
-    const breeze=Math.min(1,environment.wind/35),sway=.01+breeze*.035;
+    const effective=effectiveProgrammeWeather(environment,gameState);
+    model.terrain.update(time,{wind:effective.wind,rain:effective.rain>0||environment.weatherCode>=51?1:0,play:gameState.active});
+    const breeze=Math.min(1,effective.wind/35),sway=.01+breeze*(gameState.active?.19:.035);
     model.windPlants.forEach((p,i)=>{p.rotation.z=Math.sin(time*.65+i*1.37)*sway;p.rotation.x=Math.cos(time*.5+i)*sway*.35;});
     if(rain.visible){for(let i=0;i<rainCount;i++){const p=rainSeeds[i],y=10.8-((time*p.speed+p.y)%10.3),x=p.x+Math.sin(time*.15+i)*.2,drift=breeze*.15,j=i*6;rainPositions[j]=x;rainPositions[j+1]=y;rainPositions[j+2]=p.z;rainPositions[j+3]=x+drift;rainPositions[j+4]=y-.25;rainPositions[j+5]=p.z+.025;}rainGeometry.attributes.position.needsUpdate=true;}
+    farmLife.update(time,{wind:effective.wind,rain:effective.rain,flood:gameState.flood,panic:gameState.panic,active:gameState.active,reducedMotion:reduced()});
   }
   let cameraFitNeeded=false;
   const onControl=()=>{cameraFitNeeded=true;dirty=true;};controls.addEventListener('change',onControl);
@@ -428,7 +473,7 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   const onPointerMove=event=>tap.move(event);
   const onPointerCancel=event=>tap.cancel(event);
   const onPointerUp=event=>{
-    const point=tap.up(event);if(!point)return;
+    const point=tap.up(event);if(!point||gameState.active||underground)return;
     const hud=canvas.parentElement.querySelector('.programme-clock-hud')?.getBoundingClientRect();
     if(hud&&point.x>=hud.left&&point.x<=hud.right&&point.y>=hud.top&&point.y<=hud.bottom)return;
     const bounds=canvas.getBoundingClientRect(),actor=pickCharacter(actorPositions,point.x-bounds.left,point.y-bounds.top);
@@ -446,8 +491,13 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     const controlsChanged=controls.update();
     if(controlsChanged||cameraFitNeeded){cameraFitNeeded=false;refitCamera(false);dirty=true;}
     if(!paused||dirty){
-      const routine=model.behavior.advance(delta,environment,{paused,reduced:reduced()});
-      model.actors.forEach((actor,i)=>updateActor(actor,routine.actors[i],paused?0:delta,time));
+      const wasActive=gameState.active;gameState=weatherGame.update(delta,{paused,reducedMotion:reduced()});
+      if(gameState.active||wasActive)applyEnvironment();
+      if(wasActive&&!gameState.active){evacuation.reset();refitCamera(false);}
+      notifyGame();
+      const routine=model.behavior.advance(delta,environment,{paused:paused||gameState.active,reduced:reduced()});
+      const actors=evacuation.update(routine.actors,gameState,delta,{paused});
+      model.actors.forEach((actor,i)=>updateActor(actor,actors[i],paused?0:delta,time));
       if(greeting){
         const actor=model.actors.find(actor=>actor.id===greeting.id),elapsed=time-greeting.started;
         const pose=wavePose(elapsed,{paused,reduced:reduced(),activity:actor.activity});
@@ -462,7 +512,8 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
       model.workLights.forEach((lamp,i)=>{const level=routine.lights[i].level;lamp.light.intensity=14*level;lamp.bulbMaterial.emissiveIntensity=1.9*level;lamp.glowMaterial.opacity=.027*level;});
       animateWeather();
       if(now-lastShadow>750){renderer.shadowMap.needsUpdate=true;lastShadow=now;}
-      finish.render();projectActors();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
+      finish.render();if(!gameState.active&&!underground)projectActors();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
+      canvas.dataset.renderedPlay=gameState.active?'active':'normal';canvas.dataset.renderedPlayTool=gameState.tool||'';
       if(frame===0||frame%20===0||paused){canvas.dataset.litDepartments=routine.lights.filter(light=>light.level>.08).map(light=>light.id).join(',');canvas.dataset.actorActions=JSON.stringify(Object.fromEntries(model.actors.map(actor=>[actor.id,actor.activity])));}
       if(!ready){ready=true;canvas.dispatchEvent(new Event('worldready'));onReady?.();}
       if(++frame%20===0){canvas.dataset.frames=String(frame);canvas.dataset.drawCalls=String(renderer.info.render.calls);}
@@ -472,6 +523,9 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
   return {
     pause(value){manualPaused=Boolean(value);if(isPaused())tween=null;canvas.dataset.paused=String(isPaused());dirty=true;},
     reset,
+    weatherGameAction,resetWeatherGame,
+    getWeatherGameState(){return {...gameState,target:{...gameState.target},underground};},
+    setUnderground(value){underground=Boolean(value);farmLife.setUnderground(underground);moveCamera(underground?'underground':null,false);notifyGame(true);dirty=true;},
     greet,
     clearGreeting(){greeting=null;delete canvas.dataset.greetingActor;dirty=true;},
     focusDepartment(id){moveCamera(id,true);},
@@ -480,6 +534,6 @@ export function createProgrammeWorld(canvas,{onError,onReady,onActors,onHello}={
     setPlantData(data){model.setPlantData(data);if(focus==='coffee')resize();renderer.shadowMap.needsUpdate=true;dirty=true;},
     get paused(){return isPaused();},
     get scene(){return scene;},
-    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer,true);canvas.removeEventListener('pointermove',onPointerMove,true);canvas.removeEventListener('pointercancel',onPointerCancel,true);canvas.removeEventListener('pointerup',onPointerUp,true);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});controls.dispose();finish.dispose();renderer.dispose();},
+    dispose(){disposed=true;observer.disconnect();visibilityObserver.disconnect();preferenceObserver.disconnect();osMotion.removeEventListener('change',onPreference);document.removeEventListener('visibilitychange',onVisibility);canvas.removeEventListener('keydown',onKey);canvas.removeEventListener('pointerdown',onPointer,true);canvas.removeEventListener('pointermove',onPointerMove,true);canvas.removeEventListener('pointercancel',onPointerCancel,true);canvas.removeEventListener('pointerup',onPointerUp,true);canvas.removeEventListener('webglcontextlost',onContextLost);model.workLights.forEach(lamp=>{lamp.bulbMaterial.dispose();lamp.glowMaterial.dispose();});weatherGame.dispose();farmLife.dispose();controls.dispose();finish.dispose();renderer.dispose();},
   };
 }

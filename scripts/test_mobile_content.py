@@ -519,6 +519,7 @@ class MobileContentTests(unittest.TestCase):
         # separate full teaching pack sources provisioned to the Worker.
         shutil.copyfile(ROOT / "education-catalogue.json", self.website / "education-catalogue.json")
         shutil.copyfile(ROOT / "progress-content.json", self.website / "progress-content.json")
+        shutil.copyfile(ROOT / "weather-game-content.json", self.website / "weather-game-content.json")
         public = self.website / "public"
         (public / "assets/progress").mkdir(parents=True)
         for name in ("progress.css", "programme.css"):

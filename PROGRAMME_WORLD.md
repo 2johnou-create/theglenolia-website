@@ -381,3 +381,32 @@ updated static/no-JS/search baseline, reconcile confirmed public facts into
 `programme-content.json`, rebuild and review before publishing the static site.
 Changing that baseline does not replace an existing D1 publication; keep the two
 sources deliberately aligned.
+
+
+## Weather play and farm life — 7 November 2026
+
+The programme page offers an opt-in, local weather sandbox. The parent Progress
+page links directly to `#weather-play`; the panel opens after 3D is ready. Nothing
+starts a storm automatically. Five tools (bucket, heavy cloud, wind, thunderstorm
+and blizzard) work by tap/Enter, with pointer dragging as an optional way to aim.
+An in-scene tool strip supports smaller screens. Back to normal clears weather,
+water, snow, temporary staff reactions and the underground view; normal live
+weather/routines resume. Ordinary department/greeting navigation also exits play.
+
+`weather-game.js` owns bounded, deterministic effects and natural recovery.
+`programme-weather-response.js` overlays game conditions without mutating the
+actual environment or routine. Staff run along existing paths during play and
+keep reacting until water drains. `weather-game-ui.js`, separate localized
+`weather-game-content.json` and server markup handle accessible controls. Game
+state is per page visit, with no storage, tracking, account or server write.
+The analogue clock, forecast, dated plant records and published notes stay real.
+The visible play badge distinguishes the imagined conditions. Pause/reduced
+motion are respected; lightning is a slow illustrated bolt without a screen flash.
+
+`farm-life.js` supplies the tractor/trailer, utility cart, burrowing animals,
+birds, passing aircraft and optional front soil window. The window shows worms,
+tunnels, pipes, flowing water and rising groundwater; it is a toy cutaway, not
+an actual utilities/site map. Fixed conservative bounds contain every animation.
+The physical farm uses the same surface props with a route offset that clears
+its café, plan board and coffee rows. These illustrations do not confirm owned
+vehicles, wildlife, facilities or operations. No game is placed on the homepage.

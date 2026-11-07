@@ -59,3 +59,11 @@ Review all three languages, farm/interior, mobile menus, keyboard rotation,
 hotspots, motion settings, fallbacks, signup validation and the live published
 assets. The GitHub Pages workflow builds and audits before deployment. Detailed
 approval and review evidence is kept outside the public repository.
+
+
+The later Weather Play V1 release adds shared illustrative farm life to all four
+farm stages: a tractor/trailer, handcart, birds, passing aircraft and burrowing
+animals. `farm-life.js` is added after static batching. Its physical fleet route
+uses `vehicleOffsetX: -1.9` to clear the existing café/plan board/coffee rows.
+The parent page links to the opt-in weather game on the programme subpage; the
+farm/interior milestone selectors remain independent of that local game.

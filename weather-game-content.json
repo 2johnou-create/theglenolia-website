@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "copy": {
+    "en": {
+      "summary": "Weather play",
+      "teaser": "Borrow the sky for a moment.",
+      "title": "Make a little weather.",
+      "intro": "Tip a bucket, pull in a cloud, or stir up a snowy squall. Watch the little world find its feet again.",
+      "hint": "Tap a tool to try it. Drag a tool into the world to choose where it lands. Drag the scenery itself to look around.",
+      "separation": "An imaginary weather game for your scene only. The clock, Glenorie forecast and project updates still show their real information.",
+      "tools": {
+        "bucket": "Water bucket",
+        "cloud": "Heavy cloud",
+        "wind": "Gust of wind",
+        "storm": "Thunderstorm",
+        "blizzard": "Blizzard"
+      },
+      "toolGroup": "Choose a weather tool",
+      "reset": "Back to normal",
+      "underground": "Look underground",
+      "aboveground": "Close underground view",
+      "undergroundNote": "Pipes, water and tiny diggers: a playful look beneath the farm, not a map of the site.",
+      "badge": "Weather play",
+      "badgeNote": "Your scene only",
+      "undergroundBadge": "Beneath the farm",
+      "ready": "Choose a tool. Nothing changes until you play.",
+      "loading": "The little world is getting ready.",
+      "unavailable": "Weather play needs the 3D world. You can still explore the project notes below.",
+      "cancelled": "No weather dropped. Try a tool again, or drag it into the world.",
+      "aim": "Tap the world to use this tool again, or try another.",
+      "returned": "The little world is back to normal.",
+      "states": {
+        "bucket": "A bucketful of mischief. Watch the team dodge the splash.",
+        "cloud": "A heavy cloud has wandered in. Here comes the rain.",
+        "wind": "Hold on to your hats. The little world is feeling breezy.",
+        "storm": "A pretend storm is passing through. The team is finding shelter.",
+        "blizzard": "A make-believe blizzard. Time for the little team to tuck in.",
+        "flood": "Water is rising in the game. The little team is heading for higher ground.",
+        "active": "Your weather is moving through the little world."
+      }
+    },
+    "zh": {
+      "summary": "天氣遊樂場",
+      "teaser": "借一點天氣，玩一下。",
+      "title": "來玩一場小天氣。",
+      "intro": "倒下一桶水、拉來一朵厚雲，或讓小小農場飄起風雪。看看小夥伴們如何應變，再一起恢復平靜。",
+      "hint": "點選工具即可開始，也能把工具拖進小世界，指定落點。拖曳場景本身可切換視角。",
+      "separation": "這是只在你的畫面中發生的想像遊戲。時鐘、Glenorie 天氣與項目進度仍顯示原本的真實資訊。",
+      "tools": {
+        "bucket": "一桶水",
+        "cloud": "厚雲",
+        "wind": "強風",
+        "storm": "雷雨",
+        "blizzard": "暴風雪"
+      },
+      "toolGroup": "選擇天氣工具",
+      "reset": "恢復平靜",
+      "underground": "看看地底",
+      "aboveground": "收起地底",
+      "undergroundNote": "水管、水流與忙碌的小小挖土工：這是有趣的地底想像，並非農場實際管線圖。",
+      "badge": "天氣遊戲中",
+      "badgeNote": "只影響你的畫面",
+      "undergroundBadge": "農場的地底世界",
+      "ready": "選一個工具吧。開始玩之前，天氣不會改變。",
+      "loading": "小世界正在準備中。",
+      "unavailable": "天氣遊戲需要啟用 3D 小世界。你仍可閱讀下方的項目近況。",
+      "cancelled": "工具還沒落進小世界。再點一次，或把它拖進場景吧。",
+      "aim": "點一下小世界，可再次使用這個工具；也可以換個工具。",
+      "returned": "小世界恢復平靜了。",
+      "states": {
+        "bucket": "倒下一桶小淘氣。看看小夥伴們如何躲開水花。",
+        "cloud": "一朵厚雲飄來了，雨也跟著落下。",
+        "wind": "帽子要戴好！小世界開始起風了。",
+        "storm": "想像中的雷雨來了，小夥伴們正找地方避雨。",
+        "blizzard": "一場想像中的暴風雪，讓小夥伴們先躲進暖和的地方。",
+        "flood": "遊戲中的水位正在升高，小夥伴們往高處跑去。",
+        "active": "你帶來的天氣，正在小世界裡變化。"
+      }
+    },
+    "ja": {
+      "summary": "天気であそぶ",
+      "teaser": "小さな空を、少しだけ借りて。",
+      "title": "小さな空で、天気あそび。",
+      "intro": "バケツの水をこぼしたり、厚い雲を連れてきたり。風や雪を呼んで、小さな仲間たちの動きを見てみましょう。",
+      "hint": "道具をタップすると始まります。世界へドラッグすれば、落とす場所も選べます。景色をドラッグすると視点が変わります。",
+      "separation": "これは、あなたの画面だけで楽しむ架空の天気あそびです。時計、Glenorie の天気予報と計画の進捗は、引き続き実際の情報を表示します。",
+      "tools": {
+        "bucket": "水のバケツ",
+        "cloud": "厚い雲",
+        "wind": "強い風",
+        "storm": "雷雨",
+        "blizzard": "吹雪"
+      },
+      "toolGroup": "天気の道具を選ぶ",
+      "reset": "いつもの世界に戻す",
+      "underground": "地面の下をのぞく",
+      "aboveground": "地下の表示を閉じる",
+      "undergroundNote": "水の流れ、パイプ、小さな穴掘りたち。地面の下を楽しく描いたもので、実際の配管図ではありません。",
+      "badge": "天気あそび中",
+      "badgeNote": "この画面だけ",
+      "undergroundBadge": "農場の地面の下",
+      "ready": "道具をひとつ選んでみましょう。遊び始めるまでは、天気は変わりません。",
+      "loading": "小さな世界を準備しています。",
+      "unavailable": "天気あそびには 3D の表示が必要です。下の計画メモはそのままご覧いただけます。",
+      "cancelled": "道具はまだ世界に届いていません。もう一度タップするか、景色の中へドラッグしてください。",
+      "aim": "世界をタップすると、同じ道具をもう一度使えます。別の道具も試してみましょう。",
+      "returned": "いつもの穏やかな世界に戻りました。",
+      "states": {
+        "bucket": "バケツ一杯のいたずら。水しぶきをよける仲間たちに注目です。",
+        "cloud": "厚い雲がやってきました。雨が降り始めます。",
+        "wind": "帽子を押さえて。小さな世界に風が吹いています。",
+        "storm": "空想の雷雨が通り過ぎます。仲間たちは雨宿りへ。",
+        "blizzard": "空想の吹雪がやってきました。仲間たちは暖かい場所へ。",
+        "flood": "遊びの世界で水が増えています。仲間たちは高い場所へ向かいます。",
+        "active": "あなたが呼んだ天気が、小さな世界を通り過ぎます。"
+      }
+    }
+  }
+}

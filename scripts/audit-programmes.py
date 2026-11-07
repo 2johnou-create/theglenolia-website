@@ -22,6 +22,7 @@ parser.add_argument('--base-path', default=os.environ.get('SITE_BASE_PATH', ''))
 args = parser.parse_args()
 DIST, BASE = args.dist.resolve(), args.base_path.rstrip('/')
 DATA = json.loads((ROOT/'programme-content.json').read_text())
+GAME = json.loads((ROOT/'weather-game-content.json').read_text())['copy']
 SITE = json.loads((ROOT/'config.json').read_text())
 LOCALES = {'en':('en-AU',''), 'zh':('zh-Hant','zh-hant/'), 'ja':('ja','ja/')}
 IDS = ['cafe','coffee','workshops','local']
@@ -306,7 +307,8 @@ for key,(lang,prefix) in LOCALES.items():
         except ValueError:
             check(False, label+': invalid programme JSON')
             value = {}
-        check(set(value) == {'copy','initial','language','apiOrigin','programmeUrl'}, label+': unexpected/public-private payload fields')
+        check(set(value) == {'copy','initial','language','apiOrigin','programmeUrl','gameCopy'}, label+': unexpected/public-private payload fields')
+        check(value.get('gameCopy') == GAME[key], label+': weather play copy differs from reviewed locale')
         check(value.get('copy') == c and value.get('language') == key, label+': payload locale differs')
         check(value.get('initial') == initial, label+': payload must match the reviewed public baseline')
         check(value.get('programmeUrl') == '/'+prefix+'progress/programmes/', label+': wrong locale programme route in payload')
