@@ -1,0 +1,3 @@
+
+# Frozen generated modules retain their original shader bytes; manifests verify them.
+compat/progress/*.js -whitespace linguist-generated=true

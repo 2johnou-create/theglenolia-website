@@ -49,8 +49,8 @@ class WeatherPlayMarkupTests(unittest.TestCase):
                 for attrs in quick_buttons:
                     self.assertEqual(attrs['aria-label'], markup.GAME_DATA['copy'][language]['tools'][attrs['data-weather-tool']])
                     self.assertEqual(attrs['title'], attrs['aria-label'])
-                under = page.marked('data-weather-game-underground')[0][1]
-                self.assertEqual(under['aria-pressed'], 'false')
+                self.assertFalse(any('underground' in attribute for _, attrs in page.nodes for attribute in attrs))
+                self.assertNotIn('underground', markup.GAME_DATA['copy'][language])
                 self.assertEqual(page.marked('data-weather-game-status')[0][1]['role'], 'status')
 
     def test_game_is_not_added_to_the_compact_home_world(self):

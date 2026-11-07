@@ -1,15 +1,17 @@
-// Share the website motion preference; a scene pause never changes other media.
+import {createScenePlayback} from './scene-playback.js';
+// Share the website preference; explicit scene playback never changes other media.
 export function sceneMotion(world, onChange) {
-  let manual = false;
   const os = matchMedia('(prefers-reduced-motion: reduce)');
+  const playback=createScenePlayback(()=>document.documentElement.dataset.reduceMotion==='true'||os.matches);
   const apply = () => {
-    world.pause(manual || document.documentElement.dataset.reduceMotion === 'true' || os.matches);
+    world.pause(playback.paused);
     onChange(world.paused);
   };
-  new MutationObserver(apply).observe(document.documentElement, {attributes:true, attributeFilter:['data-reduce-motion']});
-  os.addEventListener('change',apply);
+  const preference=()=>{playback.preferenceChanged();apply();};
+  new MutationObserver(preference).observe(document.documentElement, {attributes:true, attributeFilter:['data-reduce-motion']});
+  os.addEventListener('change',preference);
   apply();
-  return () => {manual = !manual; apply();};
+  return () => {playback.pause(!playback.paused);apply();};
 }
 
 export function nearby(element, start) {

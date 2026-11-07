@@ -17,12 +17,8 @@
       },
       "toolGroup": "Choose a weather tool",
       "reset": "Back to normal",
-      "underground": "Look underground",
-      "aboveground": "Close underground view",
-      "undergroundNote": "Pipes, water and tiny diggers: a playful look beneath the farm, not a map of the site.",
       "badge": "Weather play",
       "badgeNote": "Your scene only",
-      "undergroundBadge": "Beneath the farm",
       "ready": "Choose a tool. Nothing changes until you play.",
       "loading": "The little world is getting ready.",
       "unavailable": "Weather play needs the 3D world. You can still explore the project notes below.",
@@ -37,7 +33,10 @@
         "blizzard": "A make-believe blizzard. Time for the little team to tuck in.",
         "flood": "Water is rising in the game. The little team is heading for higher ground.",
         "active": "Your weather is moving through the little world."
-      }
+      },
+      "playAnimation": "Play animation",
+      "motionPaused": "The scene is paused. Choose Play animation to set it moving.",
+      "motionReduced": "Reduced motion is on. Choose Play animation to animate just this scene."
     },
     "zh": {
       "summary": "天氣遊樂場",
@@ -55,12 +54,8 @@
       },
       "toolGroup": "選擇天氣工具",
       "reset": "恢復平靜",
-      "underground": "看看地底",
-      "aboveground": "收起地底",
-      "undergroundNote": "水管、水流與忙碌的小小挖土工：這是有趣的地底想像，並非農場實際管線圖。",
       "badge": "天氣遊戲中",
       "badgeNote": "只影響你的畫面",
-      "undergroundBadge": "農場的地底世界",
       "ready": "選一個工具吧。開始玩之前，天氣不會改變。",
       "loading": "小世界正在準備中。",
       "unavailable": "天氣遊戲需要啟用 3D 小世界。你仍可閱讀下方的項目近況。",
@@ -75,7 +70,10 @@
         "blizzard": "一場想像中的暴風雪，讓小夥伴們先躲進暖和的地方。",
         "flood": "遊戲中的水位正在升高，小夥伴們往高處跑去。",
         "active": "你帶來的天氣，正在小世界裡變化。"
-      }
+      },
+      "playAnimation": "播放動畫",
+      "motionPaused": "場景已暫停。點選「播放動畫」，讓小世界繼續動起來。",
+      "motionReduced": "目前已啟用減少動態效果。點選「播放動畫」，僅讓這個場景恢復動態。"
     },
     "ja": {
       "summary": "天気であそぶ",
@@ -93,12 +91,8 @@
       },
       "toolGroup": "天気の道具を選ぶ",
       "reset": "いつもの世界に戻す",
-      "underground": "地面の下をのぞく",
-      "aboveground": "地下の表示を閉じる",
-      "undergroundNote": "水の流れ、パイプ、小さな穴掘りたち。地面の下を楽しく描いたもので、実際の配管図ではありません。",
       "badge": "天気あそび中",
       "badgeNote": "この画面だけ",
-      "undergroundBadge": "農場の地面の下",
       "ready": "道具をひとつ選んでみましょう。遊び始めるまでは、天気は変わりません。",
       "loading": "小さな世界を準備しています。",
       "unavailable": "天気あそびには 3D の表示が必要です。下の計画メモはそのままご覧いただけます。",
@@ -113,7 +107,10 @@
         "blizzard": "空想の吹雪がやってきました。仲間たちは暖かい場所へ。",
         "flood": "遊びの世界で水が増えています。仲間たちは高い場所へ向かいます。",
         "active": "あなたが呼んだ天気が、小さな世界を通り過ぎます。"
-      }
+      },
+      "playAnimation": "アニメーションを再生",
+      "motionPaused": "場面は一時停止中です。「アニメーションを再生」で動き出します。",
+      "motionReduced": "動きを抑える設定になっています。「アニメーションを再生」で、この場面だけ動かせます。"
     }
   }
 }

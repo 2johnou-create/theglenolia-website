@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-// Original, illustrative toy wildlife, vehicles and an optional soil window.
+// Original, illustrative toy surface wildlife and farm vehicles.
 // These props make no claim about equipment, species or utilities at the farm.
 const clamp=(value,min=0,max=1)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):min;
 const finiteTime=value=>Number.isFinite(value)?Math.max(0,value)%86400:0;
@@ -13,11 +13,11 @@ export function createFarmLife({width=30,depth=24,groundY=.43,seed=38119,heightA
   if(!Number.isFinite(vehicleOffsetX)||Math.abs(vehicleOffsetX)>width*.30)throw new TypeError('Vehicle route offset must stay inside the landscape');
   const root=new THREE.Group();root.name='Illustrative farm life';
   const sx=width/30,sz=depth/24,scale=Math.min(sx,sz),geometries=new Set(),materials=new Set();
-  let disposed=false,undergroundVisible=false,random=seed>>>0;
+  let disposed=false,random=seed>>>0;
   const rand=()=>{random=(Math.imul(random,1664525)+1013904223)>>>0;return random/4294967296;};
   const geometry=g=>{geometries.add(g);return g;};
   const material=(color,roughness=.75,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness,...extra});materials.add(m);return m;};
-  const M={green:material(0x2f4a3c,.57),ivory:material(0xf5f1e8,.65),sage:material(0xd9dfd0),copper:material(0xb57b5a,.64),ink:material(0x3b332d,.77),rubber:material(0x292b27,.94),metal:material(0x7d8780,.38,{metalness:.46}),glass:material(0xa7beb2,.17,{transparent:true,opacity:.56,depthWrite:false}),skin:material(0xad8062),animal:material(0x877d6c,.96),earth:material(0x796448,.98),sand:material(0xb0a284,.95),deep:material(0x4a4035,1),void:material(0x302d27,1),water:material(0xa6c3b8,.19,{transparent:true,opacity:.70,depthWrite:false}),waterLight:material(0xd6e6da,.25,{transparent:true,opacity:.87,depthWrite:false}),bird:material(0x4b5148,.85)};
+  const M={green:material(0x2f4a3c,.57),ivory:material(0xf5f1e8,.65),sage:material(0xd9dfd0),copper:material(0xb57b5a,.64),ink:material(0x3b332d,.77),rubber:material(0x292b27,.94),metal:material(0x7d8780,.38,{metalness:.46}),glass:material(0xa7beb2,.17,{transparent:true,opacity:.56,depthWrite:false}),skin:material(0xad8062),animal:material(0x877d6c,.96),earth:material(0x796448,.98),sand:material(0xb0a284,.95),deep:material(0x4a4035,1),bird:material(0x4b5148,.85)};
   const boxGeo=geometry(new THREE.BoxGeometry(1,1,1)),ballGeo=geometry(new THREE.SphereGeometry(1,12,8)),cylGeo=geometry(new THREE.CylinderGeometry(1,1,1,12));
   function group(parent,x=0,y=0,z=0,name=''){const g=new THREE.Group();g.position.set(x,y,z);g.name=name;parent.add(g);return g;}
   function mesh(parent,g,m,x=0,y=0,z=0){const o=new THREE.Mesh(g,m);o.position.set(x,y,z);o.castShadow=o.receiveShadow=true;parent.add(o);return o;}
@@ -96,36 +96,12 @@ export function createFarmLife({width=30,depth=24,groundY=.43,seed=38119,heightA
   ball(aircraft,.155,.13,.30,M.glass,0,.18,.17);cyl(aircraft,.12,.09,M.copper,0,0,.85).rotation.x=Math.PI/2;batch(aircraft);
   const propeller=group(aircraft,0,0,.93,'Small plane propeller');box(propeller,.82,.035,.025,M.ink);box(propeller,.035,.82,.025,M.ink);batch(propeller);
 
-  // The front soil window is optional and deliberately separate from terrain.
-  // It exposes a toy open pipe and aquifer, never a real utility drawing.
-  const underground=group(root,0,0,depth/2+.18*scale,'Optional underground activity window');underground.visible=false;
-  const stripWidth=width*.48,stripDepth=.74*scale,bottom=groundY-2.52*scale;
-  box(underground,stripWidth,.63*scale,stripDepth,M.sand,0,groundY-.32*scale,0);
-  box(underground,stripWidth,.89*scale,stripDepth,M.earth,0,groundY-1.08*scale,0);
-  box(underground,stripWidth,.90*scale,stripDepth,M.deep,0,groundY-1.98*scale,0);
-  for(let i=0;i<13;i++){const x=(rand()-.5)*stripWidth,y=groundY-(.4+rand()*1.7)*scale;ball(underground,(.06+rand()*.09)*scale,.045*scale,.04*scale,M.sand,x,y,stripDepth/2+.012);}
-  for(const [x,y,r]of[[-.29,-.78,.65],[.27,-1.35,.76]])ball(underground,stripWidth*r*.28,.30*scale,.07*scale,M.void,stripWidth*x,groundY+y*scale,stripDepth/2+.032);
-  // Fine roots are visible in the top exposed layer.
-  for(let i=0;i<9;i++){const x=(i/8-.5)*stripWidth*.9;beam(underground,[x,groundY-.03,stripDepth/2+.025],[x+.20*scale,groundY-(.33+rand()*.17)*scale,stripDepth/2+.025],.013*scale,M.copper);}
-  const pipeY=groundY-1.15*scale,pipeLength=stripWidth*.90,front=stripDepth/2+.08*scale;
-  const halfPipe=geometry(new THREE.CylinderGeometry(.15*scale,.15*scale,pipeLength,12,1,true,Math.PI,Math.PI));halfPipe.rotateZ(Math.PI/2);mesh(underground,halfPipe,M.green,0,pipeY,front);
-  for(const x of[-pipeLength/2,pipeLength/2]){const ring=mesh(underground,geometry(new THREE.TorusGeometry(.16*scale,.025*scale,5,12)),M.copper,x,pipeY,front);ring.rotation.y=Math.PI/2;beam(underground,[x,pipeY,front],[x,groundY-.26*scale,front],.10*scale,M.green);}
-  const pipeWater=cyl(underground,.095*scale,pipeLength,M.water,0,pipeY+.005*scale,front);pipeWater.rotation.z=Math.PI/2;
-  batch(underground);
-  const aquifer=box(underground,stripWidth*.96,.15*scale,stripDepth+.05,M.water,0,bottom+.16*scale,.02*scale);aquifer.name='Illustrative rising groundwater';aquifer.castShadow=false;
-  // Keep flow animated separately from the static cutaway batches.
-  const waterBeads=new THREE.InstancedMesh(ballGeo,M.waterLight,12);waterBeads.name='Flowing underground water';underground.add(waterBeads);
-  const worms=[];
-  for(let i=0;i<3;i++){
-    const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.22,0,0),new THREE.Vector3(-.07,.045,0),new THREE.Vector3(.08,-.02,0),new THREE.Vector3(.23,.035,0)]);
-    const worm=mesh(underground,geometry(new THREE.TubeGeometry(curve,16,.035,6,false)),M.copper);worm.name='Small soil worm '+(i+1);worms.push(worm);
-  }
   const temp=new THREE.Object3D(),position=new THREE.Vector3(),quaternion=new THREE.Quaternion(),rotation=new THREE.Euler();
-  const state={underground:false,wind:0,rain:0,flood:0,panic:0,active:false};
+  const state={wind:0,rain:0,flood:0,panic:0,active:false};
   function update(t,{wind=0,rain=0,flood=0,panic=0,active=false,reducedMotion=false}={}){
     if(disposed)return;
     const time=reducedMotion?0:finiteTime(t),w=clamp(wind,0,120),r=clamp(rain,0,20),f=clamp(flood),p=clamp(panic),chaos=Boolean(active);
-    Object.assign(state,{underground:undergroundVisible,wind:w,rain:r,flood:f,panic:p,active:chaos});
+    Object.assign(state,{wind:w,rain:r,flood:f,panic:p,active:chaos});
     const phase=time*(.075+p*.10),x=.55*sx*Math.cos(phase),z=7.6*sz*Math.sin(phase),heading=Math.atan2(-.55*sx*Math.sin(phase),7.6*sz*Math.cos(phase));
     const vehicleX=vehicleOffsetX+x*(1-p),vehicleZ=z*(1-p)+depth*.37*p;
     tractor.position.set(vehicleX,ground(vehicleX,vehicleZ)+f*.04,vehicleZ);tractor.rotation.set(0,heading*(1-p)+Math.PI*p,Math.sin(time*3.1)*p*.025);
@@ -147,16 +123,11 @@ export function createFarmLife({width=30,depth=24,groundY=.43,seed=38119,heightA
       for(const side of[-1,1]){const flap=Math.sin(time*(8+p*6)+i)*.60;temp.position.set(side*.22*scale,0,0).applyQuaternion(quaternion).add(position);temp.quaternion.copy(quaternion);temp.rotateZ(side*flap);temp.scale.set(.30*scale,.025*scale,.16*scale);temp.updateMatrix();birdWings.setMatrixAt(i*2+(side===1?1:0),temp.matrix);}
     }birds.instanceMatrix.needsUpdate=birdWings.instanceMatrix.needsUpdate=true;
     const planePhase=time*.040+1.4;aircraft.position.set(Math.cos(planePhase)*width*.32,groundY+(5.6+Math.sin(planePhase)*.3)*scale,Math.sin(planePhase)*depth*.30);aircraft.rotation.set(0,Math.atan2(-Math.sin(planePhase)*width*.32,Math.cos(planePhase)*depth*.30),Math.sin(planePhase)*(.12+p*.20));propeller.rotation.z=time*25;
-    // The cutaway shows water flowing faster and rising in a downpour.
-    for(let i=0;i<12;i++){const flow=((i/12+time*(.08+r*.006+f*.08))%1);temp.position.set(-pipeLength/2+flow*pipeLength,pipeY+.025*scale,front+.03*scale);temp.rotation.set(0,0,0);temp.scale.set(.075*scale,.022*scale,.035*scale);temp.updateMatrix();waterBeads.setMatrixAt(i,temp.matrix);}waterBeads.instanceMatrix.needsUpdate=true;
-    for(let i=0;i<worms.length;i++){const a=time*.26+i*1.7;worms[i].position.set((-.29+i*.28)*stripWidth+Math.sin(a)*.28*scale,groundY-(.71+i*.33)*scale+Math.cos(a*1.6)*.045*scale,stripDepth/2+.13*scale);worms[i].rotation.z=Math.sin(a)*.13;worms[i].scale.setScalar(scale);}
-    aquifer.scale.y=(.15+f*.40)*scale;aquifer.position.y=bottom+(.16+f*.20)*scale;
-    underground.userData.waterLevel=f;root.updateMatrixWorld(true);
+    root.updateMatrixWorld(true);
   }
-  function setUnderground(value){undergroundVisible=Boolean(value);underground.visible=undergroundVisible;state.underground=undergroundVisible;}
   update(0);
-  const stats={meshes:0,drawCalls:0,triangles:0,tractors:1,trailers:1,utilityCarts:1,animals:3,birds:7,aircraft:1,worms:3,illustrative:true};
+  const stats={meshes:0,drawCalls:0,triangles:0,tractors:1,trailers:1,utilityCarts:1,animals:3,birds:7,aircraft:1,illustrative:true};
   root.traverse(o=>{if(!o.isMesh)return;stats.meshes++;stats.drawCalls+=Array.isArray(o.material)?o.material.length:1;stats.triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);});
-  const bounds=new THREE.Box3(new THREE.Vector3(-width/2,groundY-2.6*scale,-depth/2),new THREE.Vector3(width/2,groundY+6.8*scale,depth/2+.95*scale));
-  return {root,update,setUnderground,stats,bounds,getState:()=>({...state}),dispose(){if(disposed)return;disposed=true;geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());root.removeFromParent();}};
+  const bounds=new THREE.Box3(new THREE.Vector3(-width/2,groundY-.5*scale,-depth/2),new THREE.Vector3(width/2,groundY+6.8*scale,depth/2));
+  return {root,update,stats,bounds,getState:()=>({...state}),dispose(){if(disposed)return;disposed=true;geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());root.removeFromParent();}};
 }

@@ -12,7 +12,7 @@ nearby(container,async()=>{
     const button=document.getElementById('home-pause');
     button.onclick=sceneMotion(world,paused=>{
       button.textContent=paused?c.play:c.pause;button.setAttribute('aria-pressed',String(paused));
-      button.disabled=document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;
+      button.disabled=false;
     });
   } catch {fallback();}
 });

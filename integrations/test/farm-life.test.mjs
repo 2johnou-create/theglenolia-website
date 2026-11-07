@@ -13,30 +13,30 @@ function assertFinite(root){
 }
 function transforms(root){const values=[];root.traverse(o=>{values.push(...o.matrixWorld.elements);if(o.isInstancedMesh)values.push(...o.instanceMatrix.array);});return values;}
 
-test('farm life adds two farm-vehicle types, wildlife and underground activity within a modest real geometry budget',t=>{
+test('farm life adds two farm-vehicle types, surface wildlife within a modest real geometry budget',t=>{
   const life=createFarmLife();t.after(()=>life.dispose());
   assert.equal(life.stats.tractors,1);assert.equal(life.stats.trailers,1);assert.equal(life.stats.utilityCarts,1);
-  assert.equal(life.stats.animals,3);assert.equal(life.stats.birds,7);assert.equal(life.stats.aircraft,1);assert.equal(life.stats.worms,3);
+  assert.equal(life.stats.animals,3);assert.equal(life.stats.birds,7);assert.equal(life.stats.aircraft,1);
   let draws=0,triangles=0;life.root.traverse(o=>{if(o.isMesh){draws++;triangles+=(o.geometry.index?o.geometry.index.count:o.geometry.attributes.position.count)/3*(o.isInstancedMesh?o.count:1);}});
-  assert.equal(life.stats.drawCalls,draws);assert.ok(draws<=45,`Added draw allowance: ${draws}`);assert.ok(triangles<35000);
-  assert.ok(life.root.getObjectByName('Flowing underground water'));assertFinite(life.root);
+  assert.equal(life.stats.drawCalls,draws);assert.ok(draws<=35,`Added draw allowance: ${draws}`);assert.ok(triangles<30000);
+  assertFinite(life.root);
 });
 
-test('soil window is optional and toggles independently without moving vehicles or rewriting terrain',t=>{
-  const life=createFarmLife();t.after(()=>life.dispose());const window=life.root.getObjectByName('Optional underground activity window'),tractor=life.root.getObjectByName('Tractor and crop trailer');
-  assert.equal(window.visible,false);const before=tractor.matrixWorld.clone();
-  life.setUnderground(true);assert.equal(window.visible,true);assert.equal(life.getState().underground,true);
-  life.setUnderground(false);assert.equal(window.visible,false);assert.deepEqual(tractor.matrixWorld.elements,before.elements);
+test('surface life has no cutaway geometry, pipework, worms or underground API',t=>{
+  const life=createFarmLife();t.after(()=>life.dispose());
+  assert.equal(life.setUnderground,undefined);assert.equal(Object.hasOwn(life.getState(),'underground'),false);assert.equal(Object.hasOwn(life.stats,'worms'),false);
+  const names=[];life.root.traverse(o=>names.push(o.name));assert.equal(names.some(n=>/underground|aquifer|pipe|worm|soil window|cutaway|groundwater/i.test(n)),false);
+  assert.ok(life.root.getObjectByName('Small illustrative burrow entrances'));
 });
 
-test('normal animation returns exactly after weather chaos and groundwater responds visibly',t=>{
-  const life=createFarmLife();t.after(()=>life.dispose());life.setUnderground(true);life.update(32);const normal=transforms(life.root),tractor=life.root.getObjectByName('Tractor and crop trailer'),before=tractor.position.clone(),water=life.root.getObjectByName('Illustrative rising groundwater'),waterHeight=water.scale.y;
-  life.update(32,{active:true,wind:110,rain:15,flood:1,panic:1});assert.ok(tractor.position.distanceTo(before)>1);assert.ok(water.scale.y>waterHeight*2);assert.ok(life.getState().active);assertFinite(life.root);
-  life.update(32);assert.deepEqual(transforms(life.root),normal,'Returning to normal has no accumulated storm offset');assert.deepEqual(life.getState(),{underground:true,wind:0,rain:0,flood:0,panic:0,active:false});
+test('surface vehicles and wildlife react to weather and return exactly to normal',t=>{
+  const life=createFarmLife();t.after(()=>life.dispose());life.update(32);const normal=transforms(life.root),tractor=life.root.getObjectByName('Tractor and crop trailer'),before=tractor.position.clone();
+  life.update(32,{active:true,wind:110,rain:15,flood:1,panic:1});assert.ok(tractor.position.distanceTo(before)>1);assert.ok(life.getState().active);assertFinite(life.root);
+  life.update(32);assert.deepEqual(transforms(life.root),normal,'Returning to normal has no accumulated storm offset');assert.deepEqual(life.getState(),{wind:0,rain:0,flood:0,panic:0,active:false});
 });
 
 test('all animation and exposed flight bounds remain finite across time and malformed weather',t=>{
-  const life=createFarmLife();t.after(()=>life.dispose());life.setUnderground(true);
+  const life=createFarmLife();t.after(()=>life.dispose());
   for(const time of[0,10,100,86400,1e30,NaN,Infinity,-100])for(const env of[{}, {active:true,wind:150,rain:30,flood:1,panic:1},{wind:NaN,rain:Infinity,flood:'bad',panic:-Infinity}]){
     life.update(time,env);assertFinite(life.root);const bounds=new THREE.Box3().setFromObject(life.root);
     assert.ok(life.bounds.containsBox(bounds),`Declared framing bounds contain all animated geometry at ${time}`);
@@ -50,7 +50,7 @@ test('same seed/time creates identical props and reduced-motion poses remain sti
 });
 
 test('dimension scaling and height callback work for the physical farm footprint too',t=>{
-  const life=createFarmLife({width:25.4,depth:18,groundY:.43,heightAt:()=>.75});t.after(()=>life.dispose());life.setUnderground(true);
+  const life=createFarmLife({width:25.4,depth:18,groundY:.43,heightAt:()=>.75});t.after(()=>life.dispose());
   for(const time of[0,20,100]){life.update(time);assertFinite(life.root);const b=new THREE.Box3().setFromObject(life.root);assert.ok(b.min.x>=-25.4/2-.4&&b.max.x<=25.4/2+.4);assert.ok(b.min.z>=-18/2-.4&&b.max.z<=18/2+.95);}
   assert.equal(life.root.getObjectByName('Tractor and crop trailer').position.y,.75);
 });

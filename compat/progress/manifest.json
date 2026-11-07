@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Keep the previous two public 3D import graphs loadable for cached HTML/ES module entries. These frozen bundles are compatibility-only; current pages use the fresh build.",
+  "releases": [
+    {
+      "commit": "035dc6180ca0c93fc981b8e12a2e66615808af34",
+      "files": [
+        {
+          "name": "chunk-3JSTSOLM.js",
+          "sha256": "a8face81f3fbc07c98b7448dcc5a3cac18891340d6bf440e3f14ec7fe4909fc8",
+          "bytes": 643270
+        },
+        {
+          "name": "chunk-3JSTSOLM.js.LEGAL.txt",
+          "sha256": "373b12aaa205aa5bc749aef71f9d69280e4b405d39570ffcd66a385349d76587",
+          "bytes": 188
+        },
+        {
+          "name": "chunk-EK7ODJWE.js",
+          "sha256": "06b1bf39b7cee1b3c77db45b5dcd007b5b5af2cc32b2a9638637ba7a9006436c",
+          "bytes": 544
+        },
+        {
+          "name": "chunk-MIHVJNYD.js",
+          "sha256": "324b656cfc5a954eaa8aa0f38e3fdc0816deec6fecd908a8bbceda79342c92d6",
+          "bytes": 552
+        },
+        {
+          "name": "chunk-QW3UO22X.js",
+          "sha256": "f3dbda8eced81bf18c7fbe168a1cd7f1f1939da636e57ae639f83a86ec7848d7",
+          "bytes": 1697
+        },
+        {
+          "name": "programme-world-G3GQSV43.js",
+          "sha256": "542ad374f844449f1b59e839df4560d1d588fa31a1ff65e895cb1134e0d2a432",
+          "bytes": 36184
+        },
+        {
+          "name": "world-LW2733AX.js",
+          "sha256": "cb13db113386035cfb1d660a8017bfa1369b7f5febe0f05a4e15beded34cde3b",
+          "bytes": 26518
+        }
+      ]
+    },
+    {
+      "commit": "ade3691a17b927807af12377838aaa5594df8738",
+      "files": [
+        {
+          "name": "chunk-EK7ODJWE.js",
+          "sha256": "06b1bf39b7cee1b3c77db45b5dcd007b5b5af2cc32b2a9638637ba7a9006436c",
+          "bytes": 544
+        },
+        {
+          "name": "chunk-MIHVJNYD.js",
+          "sha256": "324b656cfc5a954eaa8aa0f38e3fdc0816deec6fecd908a8bbceda79342c92d6",
+          "bytes": 552
+        },
+        {
+          "name": "chunk-QW3UO22X.js",
+          "sha256": "f3dbda8eced81bf18c7fbe168a1cd7f1f1939da636e57ae639f83a86ec7848d7",
+          "bytes": 1697
+        },
+        {
+          "name": "chunk-SKUOID7F.js",
+          "sha256": "f782b4dd04e5c5d7f013be41a7fe8f87878886d4bd46a222eec32ab965992f44",
+          "bytes": 656629
+        },
+        {
+          "name": "chunk-SKUOID7F.js.LEGAL.txt",
+          "sha256": "373b12aaa205aa5bc749aef71f9d69280e4b405d39570ffcd66a385349d76587",
+          "bytes": 188
+        },
+        {
+          "name": "programme-world-NXA6FNAG.js",
+          "sha256": "af5934bc36cc7ef38b29a3b9fa2f2ccfd35662a277d5d7c01df516fd9018fa8a",
+          "bytes": 48383
+        },
+        {
+          "name": "world-SRIUL2U4.js",
+          "sha256": "07391aae0df120fff65af2f437f0e91ab59355618b0d209b7d5aa87b65dc7ab7",
+          "bytes": 26661
+        }
+      ]
+    }
+  ]
+}

@@ -390,7 +390,7 @@ page links directly to `#weather-play`; the panel opens after 3D is ready. Nothi
 starts a storm automatically. Five tools (bucket, heavy cloud, wind, thunderstorm
 and blizzard) work by tap/Enter, with pointer dragging as an optional way to aim.
 An in-scene tool strip supports smaller screens. Back to normal clears weather,
-water, snow, temporary staff reactions and the underground view; normal live
+water, snow, temporary staff reactions; normal live
 weather/routines resume. Ordinary department/greeting navigation also exits play.
 
 `weather-game.js` owns bounded, deterministic effects and natural recovery.
@@ -404,9 +404,18 @@ The visible play badge distinguishes the imagined conditions. Pause/reduced
 motion are respected; lightning is a slow illustrated bolt without a screen flash.
 
 `farm-life.js` supplies the tractor/trailer, utility cart, burrowing animals,
-birds, passing aircraft and optional front soil window. The window shows worms,
-tunnels, pipes, flowing water and rising groundwater; it is a toy cutaway, not
-an actual utilities/site map. Fixed conservative bounds contain every animation.
+birds, passing aircraft .  Fixed conservative bounds contain every animation.
 The physical farm uses the same surface props with a route offset that clears
 its café, plan board and coffee rows. These illustrations do not confirm owned
 vehicles, wildlife, facilities or operations. No game is placed on the homepage.
+
+
+## Animation repair and underground removal — 7 November 2026
+
+The underground feature, model, controls and active copy have been removed at
+John’s request. Surface wildlife, vehicles and the weather game remain.
+Selecting weather now resumes a manual scene pause. Reduced motion remains the
+initial setting where requested; enabled scene Play controls allow an explicit
+local opt-in without changing the website/OS preference. Scene playback has one
+state shared by its controls, with a visible play action when weather is paused.
+Normal/game animation clocks are sampled during sustained native review.

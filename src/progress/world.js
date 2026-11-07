@@ -91,7 +91,7 @@ export function createWorld(canvas,{onHotspots,onError}={}) {
       if(!paused&&now-shadowAt>(innerWidth<600?500:250)){renderer.shadowMap.needsUpdate=true;shadowAt=now;}
       finish.render();project();dirty=false;canvas.dataset.rendered='true';canvas.dataset.paused=String(paused);
       if(!ready){ready=true;canvas.dispatchEvent(new Event('worldready'));}
-      frames++;if(frames%20===0){canvas.dataset.frames=String(frames);canvas.dataset.drawCalls=String(renderer.info.render.calls);}canvas.dataset.renderedView=view;canvas.dataset.renderedStage=String(stage);
+      frames++;if(frames%20===0){canvas.dataset.frames=String(frames);canvas.dataset.animationTime=t.toFixed(3);canvas.dataset.drawCalls=String(renderer.info.render.calls);}canvas.dataset.renderedView=view;canvas.dataset.renderedStage=String(stage);
     }
   }
   set('farm',0);requestAnimationFrame(loop);

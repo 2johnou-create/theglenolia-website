@@ -376,8 +376,6 @@ html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!importan
 .weather-play-actions button svg{width:22px;height:22px}
 .weather-play-actions .weather-play-reset{background:var(--green);color:var(--ivory)}
 .weather-play-actions .weather-play-reset:hover{background:var(--ink);border-color:var(--ink)}
-.weather-play-actions .weather-play-underground:hover,.weather-play-actions .weather-play-underground[aria-pressed=true]{background:var(--sage)}
-.weather-play-body .weather-play-underground-note{max-width:76ch;margin:13px 0 0;font-size:11px;line-height:1.8}
 .weather-play-body .weather-play-separation{max-width:76ch;padding-top:15px;margin:18px 0 0;border-top:1px solid rgba(47,74,60,.13);font-size:10px;line-height:1.8}
 .weather-play-mode{position:absolute;top:18px;right:18px;z-index:7;display:flex;align-items:center;gap:8px;max-width:calc(100% - 190px);min-height:54px;padding:5px 6px 5px 13px;border:1px solid rgba(47,74,60,.25);border-radius:9px;background:var(--ivory);color:var(--green);pointer-events:auto;box-shadow:0 2px 9px rgba(59,51,45,.06)}
 .weather-play-mode strong,.weather-play-mode small{display:block;font-family:var(--sans);font-weight:400;line-height:1.5}
@@ -389,7 +387,6 @@ html[data-reduce-motion=true] .programme-clock-second{visibility:hidden!importan
 .weather-play-mode[hidden],.weather-play [hidden]{display:none!important}
 .weather-play summary:focus-visible,.weather-play button:focus-visible,.weather-play-mode button:focus-visible{outline:2px solid var(--green);outline-offset:4px}
 .is-weather-playing .programme-thought,.is-weather-playing .programme-hello-targets,.is-weather-playing .programme-hello-bubble{visibility:hidden!important;pointer-events:none!important}
-.is-underground-view .programme-thought,.is-underground-view .programme-hello-targets,.is-underground-view .programme-hello-bubble{visibility:hidden!important;pointer-events:none!important}
 .is-weather-drop-target{outline:3px solid var(--green);outline-offset:-5px}
 .weather-play-ghost{position:fixed;left:0;top:0;z-index:1000;display:flex;align-items:center;gap:8px;max-width:220px;padding:10px 13px;border:1px solid var(--green);border-radius:9px;background:var(--ivory);color:var(--green);font:12px/1.5 var(--sans);pointer-events:none;box-shadow:0 5px 20px rgba(59,51,45,.14);will-change:transform}
 .weather-play-ghost svg{display:block;width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
@@ -428,9 +425,11 @@ html[data-reduce-motion=true] .weather-play *,html[data-reduce-motion=true] .wea
 .weather-play-quick-tool:active{cursor:grabbing}
 .weather-play-quick-tool:focus-visible{outline:2px solid var(--green);outline-offset:1px}
 .weather-play-quick-tool:disabled{opacity:.5;cursor:default}
-.is-weather-playing .programme-world-drag,.is-underground-view .programme-world-drag{visibility:hidden}
+.is-weather-playing .programme-world-drag{visibility:hidden}
 @media(max-width:600px){
  .weather-play-quick-tools{gap:3px;padding:5px;bottom:12px}
  .weather-play-quick-tool{width:44px;height:44px;min-width:44px;padding:8px}
  .weather-play-quick-tool svg{width:27px;height:27px}
 }
+
+.weather-play-mode button[hidden]{display:none!important}

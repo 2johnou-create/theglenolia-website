@@ -67,3 +67,21 @@ animals. `farm-life.js` is added after static batching. Its physical fleet route
 uses `vehicleOffsetX: -1.9` to clear the existing café/plan board/coffee rows.
 The parent page links to the opt-in weather game on the programme subpage; the
 farm/interior milestone selectors remain independent of that local game.
+
+
+## Playback and deployment compatibility — 7 November 2026
+
+`scene-playback.js` centralises the scene motion state. Reduced motion is honoured
+initially; an explicit scene Play is allowed without changing the website/OS
+preference. A later preference change reapplies its default. Weather actions
+resume an ordinary manual pause, while a reduced-motion scene offers a visible
+Play action. The physical farm/interior use the same policy through `motion.js`.
+
+`compat/progress/manifest.json` freezes the previous two verified 3D import graphs.
+`progress-compat.mjs` checks byte hashes, closure and bounded filenames, then
+restores their original hashed URLs after a fresh bundle without overwriting
+new output. This lets cached HTML/entry modules finish loading across a deploy.
+Before a later release, update retention from the verified prior artifacts;
+keep only the latest two needed legacy graphs. Current pages always use the new
+build; frozen legacy code is compatibility-only. Verify restored URLs after
+publishing. Private historical source/reproduction evidence is not distributed.

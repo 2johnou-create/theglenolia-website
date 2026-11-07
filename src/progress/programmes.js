@@ -7,10 +7,11 @@ const source=document.getElementById('programme-data');
 const {copy:c,initial,language,apiOrigin,gameCopy}=JSON.parse(source.textContent);
 const root=document.querySelector('[data-programme-world]'),canvas=document.getElementById('programme-world-canvas');
 const $=selector=>document.querySelector(selector),all=selector=>document.querySelectorAll(selector);
-const state={programme:initial,weather:null,world:null,department:'all',growth:'actual',manualPaused:false,lastProgramme:0,lastWeather:0,clock:null,hello:null,programmeMessage:c.updatesLoading};
+const state={programme:initial,weather:null,world:null,department:'all',growth:'actual',lastProgramme:0,lastWeather:0,clock:null,hello:null,programmeMessage:c.updatesLoading};
 const weatherPlay=mountWeatherGame(root,{getWorld:()=>state.world,copy:gameCopy,onActiveChange(active){if(active&&state.hello)closeHello(false);}});
 canvas.addEventListener('weathergamechange',event=>{
- if(!event.detail?.active&&!event.detail?.underground)return;
+ pauseLabel();
+ if(!event.detail?.active)return;
  if(state.hello)closeHello(false);
  state.department='all';
  if(state.growth!=='actual')growth('actual',false,false);
@@ -102,9 +103,9 @@ async function refreshWeather(){
 }
 function pauseLabel(){
  const reduced=document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;
- root.classList.toggle('is-motion-paused',Boolean(state.manualPaused||reduced||state.world?.paused));
+ root.classList.toggle('is-motion-paused',state.world?state.world.paused:reduced);
  if(!state.world)return;const paused=state.world.paused;
- all('[data-programme-pause]').forEach(button=>{button.textContent=paused?c.resume:c.pause;button.setAttribute('aria-pressed',String(paused));button.disabled=reduced;});
+ all('[data-programme-pause]').forEach(button=>{button.textContent=paused?c.resume:c.pause;button.setAttribute('aria-pressed',String(paused));button.disabled=false;});
  if(paused)$('[data-programme-thought]').hidden=true;
 }
 let bubbleKey='',bubbleBucket=-1,bubbleActor=null;
@@ -163,7 +164,7 @@ function markHello(){
 function showHello(selection,trigger=null,wave=true){
  const requested=typeof selection==='string'?selection:selection?.id,department=typeof selection==='string'?selection:selection?.department;
  if(!helloDepartments.includes(department))return;
- if(state.world?.getWeatherGameState().active||state.world?.getWeatherGameState().underground)state.world.resetWeatherGame();
+ if(state.world?.getWeatherGameState().active)state.world.resetWeatherGame();
  const actor=(wave?state.world?.greet(requested):selection)||{id:requested,department};
  state.hello={id:actor.id,department,trigger};
  helloPanel.hidden=true;helloMore.setAttribute('aria-expanded','false');
@@ -216,7 +217,7 @@ root.addEventListener('keydown',event=>{if(event.key==='Escape'&&state.hello){ev
 if(helloBubble)new ResizeObserver(()=>{helloSize={width:helloBubble.offsetWidth,height:helloBubble.offsetHeight};positionHello();}).observe(helloBubble);
 function fail(){document.body.classList.remove('programme-has-world');root.classList.remove('is-interactive','is-loading');$('[data-programme-loading]').hidden=true;$('[data-programme-fallback]').hidden=false;if(helloTargets)helloTargets.hidden=true;}
 function focus(id){
- if(state.world?.getWeatherGameState().active||state.world?.getWeatherGameState().underground)state.world.resetWeatherGame();
+ if(state.world?.getWeatherGameState().active)state.world.resetWeatherGame();
  if(state.hello)closeHello(false);
  if(id!=='coffee'&&state.growth!=='actual')growth('actual',false,false);
  if($('[data-growth-previewbar]'))$('[data-growth-previewbar]').hidden=id!=='coffee';
@@ -238,10 +239,10 @@ nearby(root,async()=>{
  root.classList.add('is-loading');$('[data-programme-loading]').hidden=false;
  try{
   const {createProgrammeWorld}=await import('./programme-world.js');
-  state.world=createProgrammeWorld(canvas,{onError:fail,onReady(){document.body.classList.add('programme-has-world');root.classList.add('is-interactive');root.classList.remove('is-loading');$('[data-programme-loading]').hidden=true;if(location.hash==='#weather-play'){const panel=$('[data-weather-game-details]');panel.open=true;panel.scrollIntoView({block:'start',behavior:'auto'});}},onActors:actorUpdates,onHello:selection=>showHello(selection,canvas,false)});
+  state.world=createProgrammeWorld(canvas,{onError:fail,onReady(){document.body.classList.add('programme-has-world');root.classList.add('is-interactive');root.classList.remove('is-loading');$('[data-programme-loading]').hidden=true;if(location.hash==='#weather-play'){const panel=$('[data-weather-game-details]');if(panel){panel.open=true;panel.scrollIntoView({block:'start',behavior:'auto'});}}},onActors:actorUpdates,onHello:selection=>showHello(selection,canvas,false)});
   if(!state.world){fail();return;}
   environment();plantSummary();pauseLabel();weatherPlay.refresh();
-  all('[data-programme-pause]').forEach(b=>b.onclick=()=>{state.manualPaused=!state.manualPaused;state.world.pause(state.manualPaused);pauseLabel();});
+  all('[data-programme-pause]').forEach(b=>b.onclick=()=>{state.world.pause(!state.world.paused);pauseLabel();weatherPlay.refresh();});
   all('[data-programme-reset]').forEach(b=>b.onclick=()=>{state.world.reset();focus('all');});
   all('button[data-programme-department]').forEach(b=>b.onclick=()=>focus(b.dataset.programmeDepartment));
   if($('[data-growth-next]'))$('[data-growth-next]').onclick=()=>{const ids=Object.keys(c.growth.stages),i=ids.indexOf(state.growth);growth(ids[(i+1)%ids.length]);};

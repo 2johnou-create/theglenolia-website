@@ -15,8 +15,6 @@ export function mountWeatherGame(root,{getWorld=()=>null,onActiveChange=()=>{},c
   const query=s=>root.querySelector(s),tools=[...root.querySelectorAll('[data-weather-tool]')];
   const status=query('[data-weather-game-status]'),aim=query('[data-weather-game-aim]');
   const mode=query('[data-weather-game-mode]'),details=query('[data-weather-game-details]'),quickTools=query('[data-weather-game-quick-tools]');
-  const underground=query('[data-weather-game-underground]'),underLabel=query('[data-weather-game-underground-label]');
-  const underNote=query('[data-weather-game-underground-note]');
   let selected=null,lastActive=false,lastState={},notice=null,drag=null,ghost=null,canvasTap=null,suppressClickUntil=0,disposed=false;
   function listen(target,type,handler,options={}){target?.addEventListener(type,handler,{...options,signal});}
   function world(){try{return getWorld();}catch{return null;}}
@@ -25,24 +23,22 @@ export function mountWeatherGame(root,{getWorld=()=>null,onActiveChange=()=>{},c
     if(disposed)return;
     const w=world(),ready=Boolean(w&&typeof w.weatherGameAction==='function');
     const value=snapshot&&typeof snapshot==='object'?snapshot:(w?.getWeatherGameState?.()||{});
-    const active=value.active===true,under=value.underground===true;
+    const active=value.active===true;
     if(lastActive&&!active){notice='returned';selected=null;}
     lastState=value;
     panel.querySelectorAll('button').forEach(button=>button.disabled=!ready);
     for(const button of tools)button.disabled=!ready;
     const quick=query('[data-weather-game-quick-reset]');if(quick)quick.disabled=!ready;
+    const play=query('[data-weather-game-play]');if(play){play.hidden=!active||!value.paused;play.disabled=!ready;}
     root.classList.toggle('is-weather-playing',active);
-    root.classList.toggle('is-underground-view',under);
     root.dataset.weatherPlay=active?'active':'normal';
     for(const button of tools)button.setAttribute('aria-pressed',String(button.dataset.weatherTool===selected));
-    if(underground)underground.setAttribute('aria-pressed',String(under));
-    if(underLabel)underLabel.textContent=under?g.aboveground:g.underground;
-    if(underNote)underNote.hidden=!under;
-    if(mode){mode.hidden=!active&&!under;query('[data-weather-game-badge]').textContent=active?g.badge:g.undergroundBadge;}
-    if(quickTools)quickTools.hidden=!ready||(!active&&!under);
-    if(!active&&!under&&(quickTools?.contains(doc.activeElement)||doc.activeElement===quick))query('[data-programme-reset]')?.focus({preventScroll:true});
+    if(mode){mode.hidden=!active;query('[data-weather-game-badge]').textContent=g.badge;}
+    if(quickTools)quickTools.hidden=!ready||!active;
+    if(!active&&(quickTools?.contains(doc.activeElement)||doc.activeElement===quick))query('[data-programme-reset]')?.focus({preventScroll:true});
     if(aim)aim.hidden=!selected;
     if(!ready)tell(w?g.unavailable:g.loading);
+    else if(active&&value.paused)tell(value.motionReason==='reduced'?g.motionReduced:g.motionPaused);
     else if(active)tell((Number(value.flood)>.22?g.states.flood:g.states[value.tool]||g.states.active));
     else tell(notice==='cancelled'?g.cancelled:notice==='returned'?g.returned:g.ready);
     if(active!==lastActive)onActiveChange(active,value);
@@ -114,7 +110,7 @@ export function mountWeatherGame(root,{getWorld=()=>null,onActiveChange=()=>{},c
   // reapplies the selected tool, and pointer events are never stopped mid-orbit.
   listen(canvas,'pointerdown',event=>{
     if(event.isPrimary===false){canvasTap=null;return;}
-    if(event.button===0&&selected&&(details?.open||lastState.active===true||lastState.underground===true))canvasTap={id:event.pointerId,x:event.clientX,y:event.clientY};
+    if(event.button===0&&selected&&(details?.open||lastState.active===true))canvasTap={id:event.pointerId,x:event.clientX,y:event.clientY};
   },{capture:true});
   listen(canvas,'pointerup',event=>{
     if(!canvasTap||canvasTap.id!==event.pointerId)return;
@@ -126,12 +122,9 @@ export function mountWeatherGame(root,{getWorld=()=>null,onActiveChange=()=>{},c
   listen(canvas,'pointercancel',()=>canvasTap=null);
   listen(query('[data-weather-game-reset]'),'click',reset);
   listen(query('[data-weather-game-quick-reset]'),'click',reset);
-  listen(underground,'click',()=>{
-    const w=world();if(typeof w?.setUnderground!=='function')return;
-    notice=null;try{w.setUnderground(lastState.underground!==true);refresh();revealScene();}catch{tell(g.unavailable);}
-  });
+  listen(query('[data-weather-game-play]'),'click',()=>{world()?.pause(false);refresh();query('[data-programme-pause]')?.focus({preventScroll:true});});
   listen(canvas,'weathergamechange',event=>refresh(event.detail));
   listen(details,'toggle',()=>refresh());
   refresh();
-  return{refresh,dispose(){if(disposed)return;clearDrag();disposed=true;abort.abort();root.classList.remove('is-weather-playing','is-underground-view');}};
+  return{refresh,dispose(){if(disposed)return;clearDrag();disposed=true;abort.abort();root.classList.remove('is-weather-playing');}};
 }

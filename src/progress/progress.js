@@ -74,7 +74,7 @@ nearby(section,async()=>{
       $('pause-label').textContent=paused?c.play:c.pause;
       $('pause-icon').textContent=paused?'▷':'Ⅱ';
       $('pause').setAttribute('aria-pressed',String(paused));
-      $('pause').disabled=document.documentElement.dataset.reduceMotion==='true'||matchMedia('(prefers-reduced-motion: reduce)').matches;
+      $('pause').disabled=false;
     });
     $('reset').onclick=()=>world.reset();
     document.querySelectorAll('button[data-view]').forEach(button=>button.onclick=()=>setView(button.dataset.view));
