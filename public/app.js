@@ -50,8 +50,12 @@
   const menu = document.querySelector('.menu-toggle');
   if (header && menu) {
     header.classList.add('js-nav');
-    menu.addEventListener('click', () => { const open = !header.classList.contains('is-open'); header.classList.toggle('is-open', open); menu.setAttribute('aria-expanded', String(open)); menu.firstChild.textContent = open ? menu.dataset.close : menu.dataset.open; });
-    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && header.classList.contains('is-open')) { header.classList.remove('is-open'); menu.setAttribute('aria-expanded','false'); menu.firstChild.textContent = menu.dataset.open; menu.focus(); } });
+    const setMenu = open => {
+      header.classList.toggle('is-open', open); menu.setAttribute('aria-expanded', String(open)); menu.firstChild.textContent = open ? menu.dataset.close : menu.dataset.open;
+      document.dispatchEvent(new CustomEvent('glenolia:menu', {detail:{open}}));
+    };
+    menu.addEventListener('click', () => setMenu(!header.classList.contains('is-open')));
+    document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && header.classList.contains('is-open')) { setMenu(false); menu.focus(); } });
   }
   if (matchMedia('(hover: hover) and (pointer: fine) and (min-width: 651px)').matches) {
     document.querySelectorAll('.hero-art[data-depth]').forEach(el => {

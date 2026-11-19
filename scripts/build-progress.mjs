@@ -1,6 +1,8 @@
 import {build} from 'esbuild';
 import {copyFile,readdir,unlink} from 'node:fs/promises';
 import {restoreProgressCompatibility} from './progress-compat.mjs';
+// A small self-hosted interface layer, independent of the lazy 3D module graph.
+await build({entryPoints:['src/ui-motion.js'],outfile:'dist/ui-motion.js',bundle:true,format:'iife',minify:true,target:['safari16','chrome110','firefox110'],legalComments:'none'});
 // Avoid publishing stale chunks after a local rebuild.
 for (const name of await readdir('dist/assets/progress')) {
   if (name.endsWith('.js') || name.endsWith('.js.LEGAL.txt')) await unlink('dist/assets/progress/'+name);

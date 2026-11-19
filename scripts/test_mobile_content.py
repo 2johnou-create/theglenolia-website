@@ -527,6 +527,9 @@ class MobileContentTests(unittest.TestCase):
         (public / "style.css").write_text("body{color:#2F4A3C}")
         (self.website / "src/progress").mkdir(parents=True)
         (self.website / "src/progress/fixture.js").write_text("// Lightweight build fixture\n")
+        shutil.copyfile(ROOT / "src/ui-motion.js", self.website / "src/ui-motion.js")
+        for name in ("ui-motion.css", "app.js"):
+            shutil.copyfile(ROOT / "public" / name, public / name)
         dist = self.website / "dist"
         (dist / "api/v1").mkdir(parents=True)
         (dist / "stale-private-marker.txt").write_text(PRIVATE_MARKER)

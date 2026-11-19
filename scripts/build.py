@@ -41,6 +41,8 @@ if BASE_PATH and (not BASE_PATH.startswith('/') or '..' in BASE_PATH):
     raise ValueError('SITE_BASE_PATH must be a safe absolute URL path')
 WORLD_REVISION = hashlib.sha256(b''.join(p.read_bytes() for p in sorted((ROOT/'src/progress').glob('*.js'))) + (ROOT/'public/assets/progress/progress.css').read_bytes() + (ROOT/'public/assets/progress/programme.css').read_bytes()).hexdigest()[:12]
 STYLE_REVISION = hashlib.sha256((ROOT/'public/style.css').read_bytes()).hexdigest()[:12]
+UI_REVISION = hashlib.sha256((ROOT/'src/ui-motion.js').read_bytes()+(ROOT/'public/ui-motion.css').read_bytes()).hexdigest()[:12]
+APP_REVISION = hashlib.sha256((ROOT/'public/app.js').read_bytes()).hexdigest()[:12]
 ROUTES = {'home':'', 'about':'about/', 'making':'in-the-making/', 'coffee':'coffee-trial/', 'progress':'progress/', 'programmes':'progress/programmes/', 'register':'register/', 'privacy':'privacy/', 'confirmed':'confirmed/', 'admin':'admin/'}
 
 def url(c, page):
@@ -171,6 +173,8 @@ def build_page(key, page, resource=None):
     result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page in ['confirmed','admin'] else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
     if page=='coffee':
         result=result.replace('href="/style.css"',f'href="/style.css?v={STYLE_REVISION}"')
+    result=result.replace('src="/app.js"',f'src="/app.js?v={APP_REVISION}"')
+    result=result.replace('</head>',f'<link rel="stylesheet" href="/ui-motion.css?v={UI_REVISION}"><script defer src="/ui-motion.js?v={UI_REVISION}"></script></head>')
     if page in ['home','progress']:
         result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/progress.css?v={WORLD_REVISION}"></head>')
         if page=='progress':
