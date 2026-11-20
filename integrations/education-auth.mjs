@@ -1,5 +1,24 @@
 import {json,fail,readBody,keys,text,emailValue,token,digest,cookie,browserCookie,sessionCookie,sameOrigin,rate,id,nowISO,publicActor,loadActor,requireCSRF,secureEqual,all} from './education-common.mjs';
-const generic='Check your inbox for a sign-in link. Open it in this browser within 15 minutes. Registration does not subscribe you to marketing.';
+const generic='Check your inbox for a six-digit sign-in code. Enter it here within 15 minutes. Signing in does not subscribe you to email updates.';
+function loginCode(){
+ const value=new Uint32Array(1),limit=Math.floor(0x100000000/1000000)*1000000;
+ do { crypto.getRandomValues(value); } while(value[0]>=limit);
+ return String(value[0]%1000000).padStart(6,'0');
+}
+async function codeVerifier(hash,code,sessionKey){
+ const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(sessionKey),{name:'HMAC',hash:'SHA-256'},false,['sign']);
+ return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC',key,new TextEncoder().encode('teacher-login:'+hash+':'+code))),v=>v.toString(16).padStart(2,'0')).join('');
+}
+async function consumeCode(request,env,body,now){
+ const email=emailValue(body.email),browser=cookie(request,'__Host-glenolia-login');
+ if(!browser||typeof body.code!=='string'||!/^\d{6}$/.test(body.code))fail(400,'invalid_or_expired_code');
+ const challenge=await env.EDU_DB.prepare(`UPDATE edu_auth_codes SET attempts=attempts+1
+  WHERE attempts<5 AND token_hash=(SELECT hash FROM edu_auth_tokens WHERE email=? AND browser_hash=? AND mail_state='accepted'
+   ORDER BY created_at DESC,rowid DESC LIMIT 1) AND EXISTS(SELECT 1 FROM edu_auth_tokens t WHERE t.hash=token_hash AND t.used_at IS NULL AND t.expires_at>?)
+  RETURNING token_hash,verifier`).bind(email,await digest(browser),now).first();
+ if(!challenge||!secureEqual(challenge.verifier,await codeVerifier(challenge.token_hash,body.code,env.SESSION_KEY)))fail(400,'invalid_or_expired_code');
+ return challenge.token_hash;
+}
 export async function authRoutes(request,env,path){
  if(path==='/api/session'&&request.method==='GET')return json(publicActor(await loadActor(request,env,{required:false})));
  if(path==='/api/auth/request'&&request.method==='POST'){
@@ -12,15 +31,22 @@ export async function authRoutes(request,env,path){
   if(!env.MAILER||!env.MAIL_SECRET||!env.SESSION_KEY)fail(503,'sign_in_temporarily_unavailable');
   const max=Number(env.MAX_AUTH_EMAILS_DAILY||20);if(!Number.isInteger(max)||max<1||max>25||!await rate(env.EDU_DB,'daily-auth',max,86400000,now))fail(429,'daily_sign_in_allowance');
   const secret=token(),browser=cookie(request,'__Host-glenolia-login')||token(),hash=await digest(secret);
-  await env.EDU_DB.prepare('INSERT INTO edu_auth_tokens(hash,browser_hash,email,name,school_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)').bind(hash,await digest(browser),email,name,schoolName,now,now+900000).run();
-  let response;try{response=await env.MAILER.fetch(new Request('https://internal/internal/education/sign-in',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.MAIL_SECRET},body:JSON.stringify({email,name,token:secret,origin:env.APP_ORIGIN}),signal:AbortSignal.timeout(15000)}));}catch{await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='needs_review' WHERE hash=?").bind(hash).run();fail(503,'sign_in_temporarily_unavailable');}
+  const code=loginCode();
+  await env.EDU_DB.batch([
+   env.EDU_DB.prepare('INSERT INTO edu_auth_tokens(hash,browser_hash,email,name,school_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)').bind(hash,await digest(browser),email,name,schoolName,now,now+900000),
+   env.EDU_DB.prepare('INSERT INTO edu_auth_codes(token_hash,verifier) VALUES(?,?)').bind(hash,await codeVerifier(hash,code,env.SESSION_KEY))
+  ]);
+  let response;try{response=await env.MAILER.fetch(new Request('https://internal/internal/education/sign-in',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.MAIL_SECRET},body:JSON.stringify({email,name,token:secret,code,origin:env.APP_ORIGIN}),signal:AbortSignal.timeout(15000)}));}catch{await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='needs_review' WHERE hash=?").bind(hash).run();fail(503,'sign_in_temporarily_unavailable');}
   if(!response.ok){await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='rejected' WHERE hash=?").bind(hash).run();fail(503,'sign_in_temporarily_unavailable');}
   await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='accepted' WHERE hash=?").bind(hash).run();
   return json({message:generic},202,{'Set-Cookie':browserCookie(browser)});
  }
  if(path==='/api/auth/verify'&&request.method==='POST'){
-  sameOrigin(request);const b=keys(await readBody(request,2048),['token']);if(!/^[a-f0-9]{64}$/.test(b.token||''))fail(400,'invalid_link');
-  const hash=await digest(b.token),now=Date.now(),row=await env.EDU_DB.prepare("SELECT * FROM edu_auth_tokens WHERE hash=? AND used_at IS NULL AND expires_at>? AND mail_state IN('accepted','owner_handoff')").bind(hash,now).first();
+  sameOrigin(request);const b=keys(await readBody(request,2048),['token','email','code']),now=Date.now();
+  const byCode='code' in b || 'email' in b;
+  if(byCode && 'token' in b)fail(400,'invalid_fields');
+  if(!byCode&&!/^[a-f0-9]{64}$/.test(b.token||''))fail(400,'invalid_link');
+  const hash=byCode?await consumeCode(request,env,b,now):await digest(b.token),row=await env.EDU_DB.prepare("SELECT * FROM edu_auth_tokens WHERE hash=? AND used_at IS NULL AND expires_at>? AND mail_state IN('accepted','owner_handoff')").bind(hash,now).first();
   const browser=cookie(request,'__Host-glenolia-login');
   if(!row||row.mail_state!=='owner_handoff'&&(!browser||!secureEqual(await digest(browser),row.browser_hash)))fail(400,'expired_or_different_browser');
   const used=await env.EDU_DB.prepare('UPDATE edu_auth_tokens SET used_at=? WHERE hash=? AND used_at IS NULL AND expires_at>?').bind(now,hash,now).run();if(!used.meta?.changes)fail(400,'link_already_used');

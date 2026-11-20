@@ -108,11 +108,13 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(request.method==='GET'&&(path==='/education'||path==='/education/'))return new Response(educationHtml,{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au','font-src \'self\'')}});
  if(request.method==='GET'&&['/education-assets/teacher-ui.js','/education-assets/teacher-ui.css'].includes(path))return new Response(path.endsWith('.js')?educationJs:educationCss,{headers:{...headers,'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au',"font-src 'self'")}});
  if(path.startsWith('/api/education/')){
+  if(path.startsWith('/api/education/plants/organisation-logo/') &&
+     (request.method!=='GET' || !/^\/api\/education\/plants\/organisation-logo\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i.test(path)))return json(404,{error:'not_found'});
   if(!env.EDUCATION||!env.EDUCATION_STAFF_TOKEN)return json(503,{error:'education_unavailable'});
   if(path==='/api/education/session'&&request.method==='GET')return json(200,{user:{email:identity.email,name:'John Ou'},owner:true});
   const target=new URL('https://education/internal/admin/'+path.slice('/api/education/'.length));
   target.search=url.search;
-  const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN,...(path.startsWith('/api/education/plants/')?{'X-Glenolia-Plant-Role':owner?'owner':'farmer'}:{})},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
+  const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN,...(path.startsWith('/api/education/plants/')?{'X-Glenolia-Plant-Role':owner?'owner':'farmer','X-Glenolia-Staff-Email':identityEmail}:{})},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
   try{const response=await env.EDUCATION.fetch(upstream);return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':response.headers.get('Content-Type')||'application/json'}});}catch{return json(503,{error:'education_unavailable'});}
  }
  if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/education\/stories\/sl(?:0[1-9]|[12][0-9]|3[0-9]|40)\.(?:webp|jpg)$/.test(path)||path==='/teachers/story-library.json'||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){

@@ -1,5 +1,8 @@
+import {publicPlantWeather} from './plant-weather.mjs';
 import {EducationError,json,fail,readBody,loadActor,requireCSRF,secureEqual,SECURITY,all,nowISO} from './education-common.mjs';
 import {authRoutes} from './education-auth.mjs';
+import {preferencesRoute, requireTeacherConsent, processPlantMail, unsubscribeRoute} from './plant-notifications.mjs';
+import {releaseDueAdoptions} from './plant-organisation.mjs';
 import {listResources,getResource,pdfResponse,printablePage,printableResource} from './education-resources.mjs';
 import {workspaceRoutes} from './education-workspace.mjs';
 import {staffRoutes} from './education-staff.mjs';
@@ -11,6 +14,7 @@ export async function handleEducation(request,env,ctx={}){
  // letting the asset service decode a private path after our policy check.
  if(/[%\\]/.test(path)||path.includes('//'))return json({error:'not_found'},404);
  try{
+  if(path.startsWith('/email/stop/'))return await unsubscribeRoute(request,env,path);
   if(path.startsWith('/private/')||path==='/private')return json({error:'not_found'},404);
   if(path.startsWith('/internal/admin/')){
    if(!env.STAFF_TOKEN||!secureEqual(request.headers.get('Authorization'),'Bearer '+env.STAFF_TOKEN))return json({error:'not_found'},404);
@@ -26,6 +30,7 @@ export async function handleEducation(request,env,ctx={}){
   if(path.startsWith('/api/')){
    if(!env.EDU_DB||!env.SESSION_KEY||!env.APP_ORIGIN)fail(503,'portal_unavailable');
    if(!['GET','POST','HEAD'].includes(request.method))fail(405,'method');
+   if(path==='/api/plants/weather'&&request.method==='GET')return await publicPlantWeather(request,env);
    if(path==='/api/plants/map'&&request.method==='GET')return await publicPlantMap(request,env);
    const auth=await authRoutes(request,env,path);if(auth)return auth;
    if(path==='/api/resources'&&request.method==='GET'){
@@ -38,8 +43,12 @@ export async function handleEducation(request,env,ctx={}){
     if(resource[2]==='print')return new Response(printablePage(p.title,printableResource(p)),{headers:{...SECURITY,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; frame-ancestors 'none'"}});
     return json({resource:p});
    }
-   const actor=await loadActor(request,env);if(request.method==='POST')requireCSRF(request,actor);const body=request.method==='POST'?await readBody(request):null;
-   if(path.startsWith('/api/plants/'))return await teacherPlantRoutes(request,env,path,actor,body);
+   const actor=await loadActor(request,env);if(request.method==='POST')requireCSRF(request,actor);const body=request.method==='POST'?await readBody(request,path==='/api/plants/organisation/logo'?420000:131072):null;
+   if(path==='/api/teacher/preferences')return await preferencesRoute(request,env,actor,body);
+   if(path.startsWith('/api/plants/')){
+    await requireTeacherConsent(env.EDU_DB,actor.id);
+    return await teacherPlantRoutes(request,env,path,actor,body);
+   }
    return await workspaceRoutes(request,env,path,actor,body)||json({error:'not_found'},404);
   }
   if(!['GET','HEAD'].includes(request.method))return json({error:'method'},405);
@@ -67,4 +76,10 @@ export async function purgeEducation(env,now=Date.now()){
  await db.batch([db.prepare('DELETE FROM edu_sessions WHERE expires_at<? OR last_seen<?').bind(now,now-1800000),db.prepare('DELETE FROM edu_auth_tokens WHERE expires_at<?').bind(now-86400000),db.prepare("DELETE FROM edu_audit WHERE julianday(?) - julianday(created_at)>365").bind(stamp),db.prepare('DELETE FROM edu_rate_limits WHERE period<? AND key LIKE ?').bind(Math.floor(now/86400000)-7,'daily%')]);
  return {closedGroupsProcessed:expired.length};
 }
-export default {fetch:handleEducation,scheduled(controller,env,ctx){ctx.waitUntil(purgeEducation(env).then(r=>console.log('Education retention check',r.closedGroupsProcessed)).catch(()=>console.warn('Education retention check needs attention')));}};
+export default {fetch:handleEducation,scheduled(controller,env,ctx){
+ if(controller.cron==='15 14 * * *')ctx.waitUntil(purgeEducation(env));
+ else ctx.waitUntil((async()=>{
+  await releaseDueAdoptions(env.EDU_DB);
+  await processPlantMail(env,controller.scheduledTime||Date.now());
+ })());
+}};

@@ -17,7 +17,8 @@ export function normaliseForecast(data,now=Date.now()) {
   const condition=/thunder/.test(symbol)?'thunderstorm':/snow|sleet/.test(symbol)?'snow':/rain/.test(symbol)?'rain':/fog/.test(symbol)?'fog':/cloud/.test(symbol)?'cloudy':/clear|fair/.test(symbol)?'clear':'unknown';
   const updated=Date.parse(data.properties.meta?.updated_at);
   if(!Number.isFinite(updated)||now-updated>modelAge||updated>now+300000)throw Error('weather_old');
-  return {location,source:'MET Norway',sourceUrl:'https://api.met.no/',licence:'https://creativecommons.org/licenses/by/4.0/',modelUpdatedAt:new Date(updated).toISOString(),validAt:row.time,temperatureC:Math.round(details.air_temperature*10)/10,windKmh:Math.round(details.wind_speed*3.6),windDirection:details.wind_from_direction??null,rainNextHourMm:Math.max(0,next.details.precipitation_amount),cloud:Math.max(0,Math.min(100,details.cloud_area_fraction??50)),condition,symbol,estimated:true};
+  const humidityPct=units.relative_humidity==='%' && Number.isFinite(details.relative_humidity) && details.relative_humidity>=0 && details.relative_humidity<=100 ? Math.round(details.relative_humidity*10)/10 : null;
+  return {location,humidityPct,source:'MET Norway',sourceUrl:'https://api.met.no/',licence:'https://creativecommons.org/licenses/by/4.0/',modelUpdatedAt:new Date(updated).toISOString(),validAt:row.time,temperatureC:Math.round(details.air_temperature*10)/10,windKmh:Math.round(details.wind_speed*3.6),windDirection:details.wind_from_direction??null,rainNextHourMm:Math.max(0,next.details.precipitation_amount),cloud:Math.max(0,Math.min(100,details.cloud_area_fraction??50)),condition,symbol,estimated:true};
 }
 
 function served(row,now,stale=false) {
@@ -29,7 +30,7 @@ function served(row,now,stale=false) {
   }catch{return null;}
 }
 
-export async function getWeather(db,fetcher=fetch,now=Date.now()) {
+export async function getWeather(db,fetcher=fetch,now=Date.now(),timeoutMs=8000) {
   await db.prepare('INSERT OR IGNORE INTO programme_weather (id) VALUES (1)').run();
   let row=await db.prepare('SELECT * FROM programme_weather WHERE id=1').first();
   if(row.expires_at>now)return served(row,now,false);
@@ -38,7 +39,7 @@ export async function getWeather(db,fetcher=fetch,now=Date.now()) {
   try {
     const headers={'User-Agent':'TheGlenolia/1.0 (https://theglenolia.com.au; info@theglenolia.com.au)','Accept':'application/json'};
     if(row.modified)headers['If-Modified-Since']=row.modified;
-    const response=await fetcher(source,{headers,signal:AbortSignal.timeout(8000)});
+    const response=await fetcher(source,{headers,signal:AbortSignal.timeout(timeoutMs)});
     const expires=Date.parse(response.headers.get('Expires'));
     // Never re-query before the provider's expiry; fall back to a 15-minute cache.
     const next=Number.isFinite(expires)&&expires>now?expires:now+15*60000;

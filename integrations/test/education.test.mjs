@@ -60,7 +60,10 @@ test('new staff story catalogue and image routes remain gated by exact owner Acc
 const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.meta.url),'utf8');
 function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
- constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);}
+ constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
+  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql'])
+   this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
+ }
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
  async batch(statements){this.sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of statements)out.push(await s.run());this.sql.exec('COMMIT');return out;}catch(e){this.sql.exec('ROLLBACK');throw e;}}
  close(){this.sql.close();}
@@ -72,8 +75,8 @@ const stamp=()=>new Date().toISOString();
 const pack=(id='test-pack',version=1)=>({id,title:`Test learning pack v${version}`,stage:'S2',years:'Years 3–4',term:1,question:'What can this fabricated record show?',summary:'A fabricated classroom resource for security tests.',outcomes:[{code:'ST2-DAT-01',source:'https://curriculum.nsw.edu.au/learning-areas/science/science-and-technology-k-6-2024/outcomes',partialLimit:'Selected contribution only.'}],learningIntentions:['Interpret a supplied record.'],successCriteria:['I label a record.'],equipment:['Paper'],safety:['Teacher supervised.'],adjustments:'Oral response accepted.',lessons:[{id:'lesson-one',title:'Lesson one',duration:'40 minutes',model:'Teacher modelling.',guided:'Student task: inspect the supplied table.',independent:'Record a labelled explanation.',checks:['Check the source.'],answers:['SECRET_LESSON_ANSWER']}],fieldAlternative:'Optional school grounds.',classroomAlternative:'Paper task.',homeAlternative:'Optional paper task.',studentSheets:[{id:'sheet-one',title:'Student sheet',prompt:'Write a supported observation.',tableColumns:['Source','Observation'],lines:4,answerGuidance:['SECRET_SHEET_ANSWER']},{id:'sheet-two',title:'Second student sheet',prompt:'Explain a limitation.',lines:4,answerGuidance:['SECRET_SECOND_ANSWER']}],rubric:[{criterion:'Evidence',descriptors:{starting:'Prompted.',developing:'Supported.',secure:'Accurate.',extending:'Qualified.'}}],teacherMisconceptions:['A record is not a guarantee.'],characterPrompts:{Pip:['What do you notice?'],Milla:['Where is the source?'],Dot:['What is missing?']},sources:[{title:'Official curriculum',url:'https://curriculum.nsw.edu.au',accessedOn:'2026-11-02'}]});
 async function fixture(t){
  const db=new D1();t.after(()=>db.close());const assetCalls=[],mailCalls=[];
- const env={EDU_DB:db,SESSION_KEY:'fabricated-session-secret',STAFF_TOKEN:'fabricated-staff-secret',ADMIN_EMAIL:'owner@example.test',APP_ORIGIN:ORIGIN,MAIL_SECRET:'fabricated-mail-secret',MAX_AUTH_EMAILS_DAILY:'20',ASSETS:{async fetch(req){assetCalls.push(new URL(req.url).pathname);return new Response(new URL(req.url).pathname.startsWith('/private/')?'%PDF-1.4\nTEST\n%%EOF':'<html>fabricated shell</html>',{headers:{'Content-Type':'text/html'}});}},MAILER:{async fetch(req){mailCalls.push(await req.json());return new Response('{}',{status:202});}}};
- async function user(name='Teacher A'){const uid=uuid(),email=uid+'@example.test';await db.prepare('INSERT INTO edu_users(id,email,name,created_at,verified_at) VALUES(?,?,?,?,?)').bind(uid,email,name,stamp(),stamp()).run();return {id:uid,email,name};}
+ const env={EDU_DB:db,WEATHER_FETCH:async()=>new Response(null,{status:503}),SESSION_KEY:'fabricated-session-secret',STAFF_TOKEN:'fabricated-staff-secret',ADMIN_EMAIL:'owner@example.test',APP_ORIGIN:ORIGIN,MAIL_SECRET:'fabricated-mail-secret',MAX_AUTH_EMAILS_DAILY:'20',ASSETS:{async fetch(req){assetCalls.push(new URL(req.url).pathname);return new Response(new URL(req.url).pathname.startsWith('/private/')?'%PDF-1.4\nTEST\n%%EOF':'<html>fabricated shell</html>',{headers:{'Content-Type':'text/html'}});}},MAILER:{async fetch(req){mailCalls.push(await req.json());return new Response('{}',{status:202});}}};
+ async function user(name='Teacher A'){const uid=uuid(),email=uid+'@example.test';await db.prepare('INSERT INTO edu_users(id,email,name,created_at,verified_at) VALUES(?,?,?,?,?)').bind(uid,email,name,stamp(),stamp()).run();await db.prepare("INSERT INTO edu_teacher_preferences(user_id,privacy_version,education_version,immediate,monthly,updated_at,source) VALUES(?,'plant-privacy-2026-11-21','educational-use-2026-11-21',0,0,?,'fixture')").bind(uid,stamp()).run();return {id:uid,email,name};}
  async function school(owner,{name='Fabricated School',kind='school',status='approved',enabled=1,agreement='TEST-AGREEMENT',assess=1,retention=90}={}){const sid=uuid();await db.prepare('INSERT INTO edu_schools(id,name,kind,owner_id,status,evidence_enabled,agreement_reference,retention_days,created_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(sid,name,kind,owner.id,status,enabled,agreement,retention,stamp()).run();await db.prepare('INSERT INTO edu_memberships(school_id,user_id,role,can_assess) VALUES(?,?,?,?)').bind(sid,owner.id,'teacher',assess).run();return sid;}
  async function session(u,sid,{lastSeen=Date.now(),expires=Date.now()+3600000}={}){const raw=token();await db.prepare('INSERT INTO edu_sessions(hash,user_id,school_id,created_at,last_seen,expires_at) VALUES(?,?,?,?,?,?)').bind(await digest(raw),u.id,sid,Date.now(),lastSeen,expires).run();return {raw,cookie:'__Host-glenolia-edu='+raw,csrf:await digest('csrf:'+raw+':'+env.SESSION_KEY),user:u,schoolId:sid};}
  async function resource({id='test-pack',availability='teacher',version=1,status='published',payload=pack(id,version),pdf=true}={}){await db.prepare('INSERT INTO edu_resources(id,title,stage,term,availability,published_version,status,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(id,payload.title,payload.stage,payload.term,availability,status==='published'?version:0,status,stamp()).run();await db.prepare('INSERT INTO edu_resource_versions(resource_id,version,payload,pdf_key,published_at,created_at,actor) VALUES(?,?,?,?,?,?,?)').bind(id,version,JSON.stringify(payload),pdf?`/private/packs/${id}/v${version}.pdf`:null,status==='published'?stamp():null,stamp(),'test-fixture').run();return id;}
@@ -189,7 +192,7 @@ test('staff publishing validates grants and source URL protocols without leaking
 const plantApplication={schoolName:'Fixture school',suburb:'Glenorie',schoolType:'primary',preferredKey:'r1-p7',consent:true};
 const fixturePhoto={mime:'image/webp',base64:'UklGRh4AAABXRUJQVlA4TBEAAAAvAYAAAAdQwqb1rf+BiOh/AAA='};
 async function plantApplicationId(f,actor=f.a,preferredKey='r1-p7'){
- await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey},actor),200);
+ await code(await f.post('/api/plants/apply',{...plantApplication,schoolName:actor===f.b?'Fixture second school':plantApplication.schoolName,preferredKey},actor),200);
  return (await (await f.req('/api/plants/me',{actor})).json()).application.id;
 }
 async function approvePlant(f,actor=f.a,key='r1-p7'){
@@ -339,7 +342,7 @@ test('plant classroom questions and replies stay in the submitting teacher’s a
  const mine=await(await f.req('/api/plants/me',{actor:f.a})).json();
  assert.equal(mine.questions.length,1);assert.equal(mine.questions[0].answer,'Look near the tip.');
  const classroom=await(await f.req('/api/plants/classroom',{actor:f.a})).json();
- assert.deepEqual(classroom,{application:{plantKey:'r1-p7',schoolType:'primary',status:'active'},updates:[]});
+ assert.deepEqual(classroom,{application:{id:applicationId,plantKey:'r1-p7',schoolType:'primary',status:'active',stage:2},updates:[]});
  assert.deepEqual(await(await f.req('/api/plants/classroom',{actor:f.b})).json(),{application:null,updates:[]});
  // Access follows the verified person even after switching their current workspace.
  const otherWorkspace=await f.school(f.a.user,{name:'Another approved workspace'}),switched=await f.session(f.a.user,otherWorkspace);
@@ -369,4 +372,87 @@ test('plant staff allowlist bounds farmer identity to field work, strips private
  for(const path of ['/','/education','/api/education/session','/api/session','/api/editions','/api/education/plants/answer'])assert.equal((await route(path)).status,403,path);
  assert.equal((await route('/plants',{},access('other@example.test'))).status,403);
  const owner=await(await route('/api/education/plants/dashboard',{},access())).json();assert.equal(owner.role,'owner');assert.equal(owner.applications[0].id,uid);
+});
+
+test('school co-teachers adopt together, hand over the lead, and keep planning workspaces private',async t=>{
+ const f=await fixture(t),api='/api/plants/',master=f.a,peer=f.b;
+ const app=await plantApplicationId(f),orgId=master.schoolId;
+ const me=async(actor,suffix='')=>code(await f.req(api+'me'+suffix,{actor}),200);
+ const info=await me(master);
+ let r=await f.post(api+'organisation',{orgId,name:'Glenorie Test School',address:'4 Example Rd, Glenorie NSW',publicName:true,revision:info.organisation.revision},master);
+ await code(r,200);
+ await code(await f.post(api+'organisation/logo',{orgId,logo:fixturePhoto},master),200);
+ const logo=(await me(master)).organisation.logoUrl;
+ const blob=await f.req(logo,{actor:master});assert.equal(blob.status,200);assert.equal(Buffer.from(await blob.arrayBuffer()).toString('base64'),fixturePhoto.base64);
+ await code(await f.req(logo,{actor:peer}),404);
+ await code(await f.post(api+'invite',{orgId,email:peer.user.email},master),200);
+ await code(await f.post(api+'invite',{orgId,email:peer.user.email},master),200);
+ const wait=(await me(peer)).incomingInvitations;assert.equal(wait.length,1);
+ await code(await f.post(api+'invite/accept',{invitationId:wait[0].id},master),409,'invitation_unavailable');
+ await code(await f.post(api+'invite/accept',{invitationId:wait[0].id},peer),200);
+ const other=await me(peer);assert.equal(other.organisation.isMaster,false);assert.equal(other.application.id,app);assert.deepEqual(other.members,[]);
+ assert.equal((await f.req(logo,{actor:peer})).status,200);
+ assert.equal(await f.db.prepare('SELECT COUNT(*) AS n FROM edu_memberships WHERE school_id=? AND user_id=?').bind(orgId,peer.user.id).first('n'),0);
+ await code(await f.post(api+'organisation',{orgId,name:'Intrusion',address:'Cross school',publicName:false,revision:other.organisation.revision},peer),409);
+ await code(await f.post(api+'transfer',{orgId,userId:peer.user.id},master),200);
+ assert.equal((await me(peer)).organisation.isMaster,true);
+ assert.equal((await me(master)).organisation.isMaster,false);
+ await code(await f.post(api+'invite',{orgId,email:'noaccess@example.test'},master),403);
+ await code(await f.post(api+'member/remove',{orgId,userId:master.user.id},peer),200);
+ assert.equal((await me(master)).application,null);
+ await code(await f.req(logo,{actor:master}),404);
+ const history=(await me(peer)).events.map(e=>e.action);
+ for(const type of ['organisation_registered','organisation_updated','logo_updated','teacher_invited','invitation_accepted','lead_teacher_transferred','teacher_removed'])assert.ok(history.includes(type),type);
+});
+
+test('a school has three slots including simultaneous additional requests and cannot re-register its campus',async t=>{
+ const f=await fixture(t),base={...plantApplication,address:'11 Example Road'},orgId=f.a.schoolId;
+ await code(await f.post('/api/plants/apply',base,f.a),200);
+ await code(await f.post('/api/plants/apply',{...base,schoolName:'  FIXTURE  school ',address:'11 Different Road'},f.b),409,'school_already_registered');
+ const additional={orgId,consent:true,reason:'Separate senior classes will compare stages.',preferredKey:null};
+ await code(await f.post('/api/plants/apply',{...additional,reason:'short',requestId:uuid()},f.a),400,'additional_reason_required');
+ const race=await Promise.all(Array.from({length:3},()=>f.post('/api/plants/apply',{...additional,requestId:uuid()},f.a)));
+ assert.deepEqual(race.map(r=>r.status).sort(),[200,200,409]);
+ const me=await code(await f.req('/api/plants/me',{actor:f.a}),200);assert.equal(me.applications.length,3);
+ const more=me.applications.filter(a=>a.reason);assert.equal(more.length,2);
+ await code(await f.post('/api/plants/apply',{...additional,requestId:more[0].id},f.a),200);
+ const owner=await code(await f.staff('/plants/dashboard'),200);
+ assert.equal(owner.applications[0].schoolSlotCount,3);assert.equal(owner.applications[0].organisation.address,'11 Example Road');
+ await code(await f.post('/api/plants/accept',{applicationId:more[0].id,plantKey:'r1-p3'},f.a),409);
+});
+
+test('withdrawal protects the held tree, then releases it while distinct school conversations stay private',async t=>{
+ const f=await fixture(t),key='r1-p7',app=await approvePlant(f),orgId=f.a.schoolId;
+ const me=async(actor,query='')=>code(await f.req('/api/plants/me'+query,{actor}),200);
+ const map=async()=>(await code(await f.req('/api/plants/map'),200)).plants.find(p=>p.key===key);
+ const first=await me(f.a);assert.equal((await map()).adoptedBy,undefined);
+ await code(await f.post('/api/plants/organisation',{orgId,name:'Example Public School',address:'1 Public Street',publicName:true,revision:first.organisation.revision},f.a),200);
+ assert.equal((await map()).adoptedBy,'Example Public School');assert.equal((await map()).adoptionStatus,'adopted');
+ const render={key,requestId:uuid(),observedOn:'2026-01-01',note:'Permanent field note',photo:fixturePhoto};
+ await code(await f.staff('/plants/update',render),200);
+ await code(await f.post('/api/plants/question',{applicationId:app,requestId:uuid(),question:'Our class asked about leaves.',consent:true},f.a),200);
+ await code(await f.post('/api/plants/withdraw',{applicationId:app,reason:'Term is ending soon.'},f.a),200);
+ const cooling=await me(f.a);assert.equal(cooling.application.status,'cooling');assert.ok(Date.parse(cooling.application.releaseAt)>Date.now());
+ assert.equal((await map()).adoptionStatus,'cooling');assert.equal(cooling.updates.length,1);
+ await code(await f.staff('/plants/row',{row:1,enabledCount:0,revision:1}),409,'row_in_use');
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:key},f.a),409);
+ await code(await f.post('/api/plants/withdraw/cancel',{applicationId:app},f.a),200);
+ assert.equal((await me(f.a)).application.status,'active');assert.equal((await map()).adoptionStatus,'adopted');
+ await code(await f.post('/api/plants/withdraw',{applicationId:app,reason:'Our programme has finished.'},f.a),200);
+ await f.db.prepare("UPDATE edu_plant_applications SET release_at='2026-01-02T00:00:00.000Z' WHERE id=?").bind(app).run();
+ await code(await f.post('/api/plants/withdraw/cancel',{applicationId:app},f.a),409);
+ const again=await map();assert.equal(again.status,'available');assert.equal(again.adoptionStatus,undefined);assert.equal(again.adoptedBy,undefined);
+ assert.equal((await me(f.a)).application.status,'released');
+ const newApp=await plantApplicationId(f,f.b,key);
+ await code(await f.staff('/plants/review',{decision:'offer',applicationId:newApp,plantKey:key}),200);
+ await code(await f.post('/api/plants/accept',{applicationId:newApp,plantKey:key},f.b),200);
+ const later=await me(f.b);assert.equal(later.application.id,newApp);assert.equal(later.updates[0].note,render.note);assert.deepEqual(later.questions,[]);
+ assert.equal((await f.req(later.updates[0].photoUrl,{actor:f.b})).status,200);await code(await f.req(later.updates[0].photoUrl,{actor:f.a}),404);
+ assert.deepEqual((await me(f.a)).updates,[]);
+ const labels=(await me(f.a)).events.map(e=>e.action);
+ for(const wanted of ['offered','active','withdrawal_requested','withdrawal_cancelled','released'])assert.ok(labels.includes(wanted),wanted);
+ await code(await f.staff('/plants/withdraw-update',{updateId:render.requestId}),200);
+ assert.equal((await me(f.b)).updates.length,0);
+ const kept=await f.db.prepare('SELECT note,length(photo_bytes) AS photoSize FROM edu_plant_updates WHERE id=?').bind(render.requestId).first();
+ assert.equal(kept.note,render.note);assert.ok(kept.photoSize>0);
 });

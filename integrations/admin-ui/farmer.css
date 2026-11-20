@@ -39,3 +39,5 @@ details{margin:1.5rem 0}summary{cursor:pointer;color:var(--green);padding:.75rem
 @media(max-width:680px){.atlas-grid{grid-template-columns:1fr}.atlas-grid button{width:100%}}
 
 .save-result{margin:.65rem 0 0;color:var(--green);font-size:.9rem}.save-result:empty{display:none}
+
+.school-profile,.observation-log{margin:.65rem 0}.school-profile summary,.observation-log summary{cursor:pointer;color:var(--green)}.school-logo{display:block;max-width:12rem;max-height:5rem;object-fit:contain;margin:.5rem 0}.request h4{margin:.85rem 0 .2rem}.request p,.observation-log p{overflow-wrap:anywhere}

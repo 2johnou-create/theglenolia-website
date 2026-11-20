@@ -4,8 +4,8 @@ import {mountFarmAtlas} from './farm-atlas.js';
   'use strict';
   const $ = id => document.getElementById(id);
   const base = '/api/education/plants';
-  const statuses = {unverified:'Needs a field check',available:'Available for schools',unavailable:'Held at the farm',offered:'Offered to a school',active:'School following'};
-  const applicationStatuses = {pending:'Awaiting review',offered:'Awaiting teacher acceptance',active:'School following',declined:'Declined'};
+  const statuses = {unverified:'Needs a field check',available:'Available for schools',unavailable:'Held at the farm',offered:'Offered to a school',active:'School following',cooling:'Withdrawal cooling period'};
+  const applicationStatuses = {pending:'Awaiting review',offered:'Awaiting teacher acceptance',active:'School following',declined:'Declined',cooling:'Withdrawal cooling period',released:'Adoption ended',cancelled:'Cancelled'};
   const drafts = new Map();
   let dashboard = null, journalVersion = 0, reading = false, writing = false;
   const atlas = mountFarmAtlas({api,run,reload});
@@ -23,6 +23,13 @@ import {mountFarmAtlas} from './farm-atlas.js';
     if (!value) return '';
     const date = new Date(value?.length === 10 ? value + 'T12:00:00Z' : value);
     return Number.isFinite(date.getTime()) ? date.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric',timeZone:'Australia/Sydney'}) : '';
+  }
+  function farmTime(timestamp) {
+    if (!timestamp) return '';
+    const time = new Date(timestamp);
+    return Number.isFinite(time.getTime()) ? new Intl.DateTimeFormat('en-AU', {
+      timeZone:'Australia/Sydney', day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'
+    }).format(time) : '';
   }
   function position(plant) { return 'Row ' + plant.row + ' · ' + (plant.label || 'Plant ' + plant.position); }
   function name(plant) { return position(plant) + (plant.tag ? ' · ' + plant.tag : ''); }
@@ -172,15 +179,42 @@ import {mountFarmAtlas} from './farm-atlas.js';
     const match = /^r(\d+)-p(\d+)$/.exec(key);
     return match ? 'Preference · Row ' + match[1] + ', position ' + match[2] + ' (hidden from atlas)' : 'Previously selected position';
   }
+  function schoolDetails(box, application) {
+    const org = application.organisation;
+    if (org) {
+      const details = element('details',null,'school-profile');
+      details.append(element('summary','Organisation details'));
+      if (org.address) details.append(element('p',org.address));
+      if (org.logoUrl && /^\/api\/education\/plants\/organisation-logo\/[\da-f-]{36}$/i.test(org.logoUrl)) {
+        const logo = element('img',null,'school-logo');
+        logo.src=org.logoUrl; logo.alt=(org.name || 'School')+' logo'; logo.loading='lazy'; details.append(logo);
+      }
+      box.append(details);
+    }
+    if (Number.isInteger(application.schoolSlotCount)) {
+      const active = application.activeTreeCount || 0;
+      box.append(element('p',active+' adopted or cooling · '+application.schoolSlotCount+' of 3 places in use','hint'));
+    }
+    if (application.reason) {
+      box.append(element('h4','Why the school needs this tree'),element('p',application.reason));
+    }
+    if (application.withdrawalReason) {
+      box.append(element('h4','Reason for withdrawal'),element('p',application.withdrawalReason));
+    }
+    if (application.status === 'cooling' && application.releaseAt) {
+      box.append(element('p','Reserved until '+farmTime(application.releaseAt),'field-state'));
+    }
+  }
   function renderRequests() {
     const cards = [], inbox = [];
-    if (dashboard.role === 'farmer') { $('questions').replaceChildren(); $('applications').replaceChildren(); return; }
+    if (dashboard.role === 'farmer') { $('adoption-events').replaceChildren(); $('questions').replaceChildren(); $('applications').replaceChildren(); return; }
     const available = dashboard.plants.filter(item => item.status === 'available' && item.stage !== 1);
     for (const application of dashboard.applications) {
       const box = element('article',null,'request'), assigned = plant(application.plantKey);
       box.append(element('p',applicationStatuses[application.status] || application.status,'eyebrow'),element('h3',application.schoolName),
         element('p',[application.suburb,application.schoolType,application.email].filter(Boolean).join(' · ')),
         element('p',assigned ? 'Plant · ' + name(assigned) : requestedPosition(application.preferredKey),'hint'));
+      schoolDetails(box,application);
       if (application.status === 'pending') {
         const choose = element('select'); choose.id = 'offer-' + application.id;
         choose.append(option('','Choose a verified plant'), ...available.map(item => option(item.key,name(item))));
@@ -209,6 +243,18 @@ import {mountFarmAtlas} from './farm-atlas.js';
       }
       cards.push(box);
     }
+    const schoolNames = new Map(dashboard.applications.map(a => [a.orgId,a.organisation?.name || a.schoolName]));
+    const events = (dashboard.events || []).map(event => {
+      const line=element('li');
+      const title=event.action.replaceAll('_',' ');
+      const p=plant(event.plantKey);
+      line.append(element('strong',title.charAt(0).toUpperCase()+title.slice(1)),
+        element('p',[schoolNames.get(event.orgId),p ? position(p) : null,farmTime(event.createdAt)].filter(Boolean).join(' · '),'hint'));
+      if(event.reason) line.append(element('p',event.reason));
+      return line;
+    });
+    $('adoption-history').hidden = !events.length;
+    $('adoption-events').replaceChildren(...events);
     for (const item of dashboard.questions) {
       const box = element('article',null,'request'), app = dashboard.applications.find(a => a.id === item.applicationId);
       box.append(element('p',app?.schoolName || 'School question','eyebrow'),element('p',item.question));
@@ -253,6 +299,38 @@ import {mountFarmAtlas} from './farm-atlas.js';
     const url = new URL(value,location.origin);
     return url.origin === location.origin && url.pathname.startsWith(base + '/') ? url.href : null;
   }
+  function observationConditions(update, p) {
+    const weather = update.weather;
+    const info = element('details',null,'observation-log');
+    info.append(element('summary','Observation log'));
+    const stamp = farmTime(weather?.loggedAt || update.createdAt);
+    const place = weather?.location?.name || 'Glenorie';
+    info.append(element('p',[place,position(p),stamp].filter(Boolean).join(' · '),'hint'));
+    if (!weather) {
+      info.append(element('p','No weather snapshot for this entry.','hint'));
+      return info;
+    }
+    const current=weather.current;
+    if (current) {
+      const readings = [[current.temperatureC,' °C'],[current.humidityPct,'% humidity'],[current.windKmh,' km/h wind']]
+        .filter(([value])=>Number.isFinite(value)).map(([value,unit])=>value+unit);
+      if (readings.length) {
+        info.append(element('p',readings.join(' · ')),
+          element('p',[current.source,farmTime(current.validAt),current.stale?'Last available reading':''].filter(Boolean).join(' · '),'hint'));
+      }
+    } else {
+      info.append(element('p','Regional weather was unavailable when this entry was logged.','hint'));
+    }
+    const daily = weather.observedDay, rain=weather.rainfall;
+    if (daily && Number.isFinite(daily.rainfallMm)) {
+      info.append(element('p','Observation-day rainfall · '+daily.rainfallMm+' mm · '+displayDate(daily.day)+' · '+daily.source,'hint'));
+    } else if (rain && Number.isFinite(rain.mm)) {
+      info.append(element('p','Latest daily rainfall · '+rain.mm+' mm · '+displayDate(rain.day)+' · '+rain.source,'hint'));
+    } else {
+      info.append(element('p','Daily rainfall was unavailable for this entry.','hint'));
+    }
+    return info;
+  }
   async function loadHistory() {
     const version = ++journalVersion, p = selected(), list = $('history-list');
     list.replaceChildren();
@@ -267,7 +345,9 @@ import {mountFarmAtlas} from './farm-atlas.js';
         if (photoPath(update.photoUrl)) {
           const image = element('img'); image.src = photoPath(update.photoUrl); image.alt = 'Field photograph of ' + name(p); image.loading = 'lazy'; row.append(image);
         }
-        row.append(action('Withdraw update',() => {
+        row.append(observationConditions(update,p));
+        if (update.withdrawn) row.append(element('p','Withdrawn from classroom view','field-state'));
+        else row.append(action('Withdraw update',() => {
           if (!window.confirm('Remove this observation and its photograph from the class journal?')) return;
           run(async () => { await api('/withdraw-update',{updateId:update.id}); await loadHistory(); message('Update withdrawn from the journal.',true); });
         },'text'));

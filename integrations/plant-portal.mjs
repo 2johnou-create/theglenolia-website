@@ -1,4 +1,7 @@
+import {snapshotForUpdate} from './plant-weather.mjs';
 import { all, dateValue, digest, fail, id, json, keys, nowISO, rate, revision, SECURITY, text } from './education-common.mjs';
+import {orgDetails,orgMember,masterWhere,openStates,longReason,orgRoutes,saveOrgLogo,loadLogo,releaseDueAdoptions} from './plant-organisation.mjs';
+import {plantLearning} from './plant-learning.mjs';
 import { currentSydneyDate } from './education-workspace.mjs';
 import { IMAGE_MAX_BYTES, normaliseProgrammeImage, ProgrammeMediaError } from './programme-media.mjs';
 
@@ -13,23 +16,27 @@ function position(key) {
   return { key, row:Number(row), position:Number(number) };
 }
 const applicationFields = `a.id,a.school_name AS schoolName,a.suburb,a.school_type AS schoolType,
-  a.preferred_key AS preferredKey,a.plant_key AS plantKey,a.status,a.created_at AS createdAt`;
-const ownerAccess = `a.teacher_id=? AND EXISTS (
-  SELECT 1 FROM edu_memberships m JOIN edu_schools s ON s.id=m.school_id
-  WHERE m.school_id=a.workspace_id AND m.user_id=a.teacher_id AND m.active=1 AND s.status<>'suspended')`;
-const activeAccess = `SELECT a.plant_key FROM edu_plant_applications a WHERE ${ownerAccess} AND a.status='active'`;
+  a.preferred_key AS preferredKey,a.plant_key AS plantKey,a.status,a.created_at AS createdAt,a.workspace_id AS orgId,
+  a.reason,a.release_at AS releaseAt,a.withdrawal_reason AS withdrawalReason,a.released_at AS releasedAt,
+  (SELECT stage FROM edu_atlas_positions WHERE plant_key=COALESCE(a.plant_key,a.preferred_key)) AS stage`;
+const memberAccess = 'a.workspace_id IN ('+orgMember+')';
+const ownerAccess = `a.workspace_id IN (SELECT id FROM edu_plant_organisations WHERE ${masterWhere})`;
+const activeAccess = `SELECT a.plant_key FROM edu_plant_applications a WHERE ${memberAccess}
+ AND (a.status='active' OR (a.status='cooling' AND a.release_at>strftime('%Y-%m-%dT%H:%M:%fZ','now')))`;
 
 const rowCapacity = 19;
 const visiblePositions = `SELECT v.plant_key FROM edu_atlas_positions v JOIN edu_atlas_rows r USING(row_num)
   WHERE v.position<=r.enabled_count`;
 const plantedPositions = visiblePositions+' AND v.stage>1';
 async function inventory(db, staff=false) {
+  await releaseDueAdoptions(db);
   // One read snapshot keeps each row's count consistent with its stage records.
   const slots = await all(db.prepare(`SELECT r.row_num,r.enabled_count,r.revision AS row_revision,
-    v.plant_key,v.position,v.stage,v.revision,p.tag,p.available,a.status AS allocation
+    v.plant_key,v.position,v.stage,v.revision,p.tag,p.available,a.status AS allocation,CASE WHEN o.public_name=1 THEN o.name END AS adopted_by
     FROM edu_atlas_rows r JOIN edu_atlas_positions v USING(row_num)
     LEFT JOIN edu_plants p ON p.plant_key=v.plant_key
-    LEFT JOIN edu_plant_applications a ON a.plant_key=v.plant_key AND a.status IN ('offered','active')
+    LEFT JOIN edu_plant_applications a ON a.plant_key=v.plant_key AND a.status IN ('offered','active','cooling')
+    LEFT JOIN edu_plant_organisations o ON o.id=a.workspace_id
     ORDER BY r.row_num,v.position`));
   const rows=[], plants=[], archivedPlants=[];
   for (const slot of slots) {
@@ -41,8 +48,10 @@ async function inventory(db, staff=false) {
     let status = 'unverified';
     if (slot.tag) status = slot.allocation ? (staff ? slot.allocation : 'unavailable') : (slot.available ? 'available' : 'unavailable');
     if (!staff && slot.stage===1) status='preparing';
+    const adoption = !staff && ['active','cooling'].includes(slot.allocation)
+      ? {adoptionStatus:slot.allocation==='active'?'adopted':'cooling',...(slot.adopted_by?{adoptedBy:slot.adopted_by}:{})} : {};
     const plant = {key:slot.plant_key,row,position:slot.position,label:'P'+((row-1)*rowCapacity+slot.position),
-      stage:slot.stage,status,...(staff ? {revision:slot.revision,tag:slot.tag} : {})};
+      stage:slot.stage,status,...adoption,...(staff ? {revision:slot.revision,tag:slot.tag} : {})};
     (visible ? plants : archivedPlants).push(plant);
   }
   return {rows,plants,...(staff ? {archivedPlants} : {})};
@@ -54,10 +63,11 @@ export async function publicPlantMap(request,env) {
 }
 async function journal(db,plantKey,photoPrefix,actorId=null) {
   const scope=actorId ? ' AND plant_key IN ('+activeAccess+')' : '';
-  const rows=await all(db.prepare(`SELECT id,observed_on AS observedOn,note,created_at AS createdAt,photo_mime AS mime
+  const rows=await all(db.prepare(`SELECT id,observed_on AS observedOn,note,created_at AS createdAt,photo_mime AS mime,
+    (SELECT payload FROM edu_plant_weather_logs WHERE update_id=edu_plant_updates.id) AS weatherJson
     FROM edu_plant_updates WHERE plant_key=? AND withdrawn=0${scope} ORDER BY observed_on DESC,created_at DESC,id DESC`)
     .bind(plantKey,...(actorId ? [actorId] : [])));
-  return rows.map(({ mime,...row }) => ({ ...row, photoUrl:mime ? photoPrefix+row.id : null }));
+  return rows.map(({ mime,weatherJson,...row }) => ({ ...row, weather:weatherJson ? JSON.parse(weatherJson) : null, photoUrl:mime ? photoPrefix+row.id : null }));
 }
 async function photo(db,updateId,actorId=null) {
   const scope=actorId ? ' AND plant_key IN ('+activeAccess+')' : '';
@@ -67,38 +77,84 @@ async function photo(db,updateId,actorId=null) {
   const bytes=Array.isArray(row.photo_bytes) ? Uint8Array.from(row.photo_bytes) : row.photo_bytes;
   return new Response(bytes,{headers:{...SECURITY,'Content-Type':row.photo_mime,'Content-Security-Policy':"default-src 'none'; sandbox",'X-Robots-Tag':'noindex, nofollow'}});
 }
-async function myPlant(db,actor) {
-  const application=await db.prepare(`SELECT ${applicationFields} FROM edu_plant_applications a
-    WHERE ${ownerAccess} ORDER BY (a.status<>'declined') DESC,a.created_at DESC,a.id DESC LIMIT 1`).bind(actor.id).first();
-  if (application?.status!=='active') return json({application,updates:[],questions:[]});
-  const updates=await journal(db,application.plantKey,'/api/plants/photos/',actor.id);
-  const questions=await all(db.prepare(`SELECT q.id,q.question,q.answer,q.created_at AS createdAt FROM edu_plant_questions q
-    JOIN edu_plant_applications a ON a.id=q.application_id WHERE a.id=? AND ${ownerAccess} AND a.status='active' ORDER BY q.created_at DESC`).bind(application.id,actor.id));
-  return json({application,updates,questions});
+async function myPlant(db,actor,url) {
+  await releaseDueAdoptions(db);
+  const requested=url.searchParams.get('applicationId'),orgRequest=url.searchParams.get('orgId');
+  let orgId=orgRequest;
+  if(requested){
+    const resolved=await db.prepare(`SELECT a.workspace_id AS orgId FROM edu_plant_applications a WHERE a.id=? AND ${memberAccess}`).bind(uuid(requested),actor.id).first();
+    if(!resolved || (orgId && resolved.orgId!==orgId))fail(404,'application_not_found');
+    orgId=resolved.orgId;
+  }
+  const profile=await orgDetails(db,actor.id,orgId);
+  const applications=profile.organisation ? await all(db.prepare(`SELECT ${applicationFields} FROM edu_plant_applications a WHERE a.workspace_id=? AND ${memberAccess}
+    ORDER BY CASE a.status WHEN 'active' THEN 0 WHEN 'cooling' THEN 1 WHEN 'offered' THEN 2 WHEN 'pending' THEN 3 ELSE 4 END,a.created_at DESC,a.id DESC`)
+      .bind(profile.organisation.id,actor.id)):[];
+  const application=(requested?applications.find(a=>a.id===requested):applications[0]) || null;
+  const result={...profile,applications,application,updates:[],questions:[]};
+  if(!application || !['active','cooling'].includes(application.status)) return json(result);
+  result.updates=await journal(db,application.plantKey,'/api/plants/photos/',actor.id);
+  result.questions=await all(db.prepare(`SELECT q.id,q.question,q.answer,q.created_at AS createdAt FROM edu_plant_questions q
+    JOIN edu_plant_applications a ON a.id=q.application_id WHERE a.id=? AND ${memberAccess} AND a.status IN('active','cooling') ORDER BY q.created_at DESC`).bind(application.id,actor.id));
+  return json(result);
 }
 const ok=()=>json({ok:true});
 async function apply(db,actor,body) {
-  const b=keys(body,['schoolName','suburb','schoolType','preferredKey','consent']);
-  if (b.consent!==true) fail(400,'consent_required');
-  const school=text(b.schoolName,160), suburb=text(b.suburb,100);
-  if (!['primary','high','combined','other'].includes(b.schoolType)) fail(400,'invalid_field');
-  const key=b.preferredKey==null ? null : position(b.preferredKey).key;
-  // Availability and one-current-application are evaluated on the same write.
-  const result=await db.prepare(`INSERT INTO edu_plant_applications(id,teacher_id,workspace_id,school_name,suburb,school_type,preferred_key,created_at)
-    SELECT ?,?,?,?,?,?,?,? WHERE (? IS NULL OR ? IN (${plantedPositions}))
-    AND NOT EXISTS (SELECT 1 FROM edu_plants WHERE plant_key=? AND available=0)
-    AND NOT EXISTS (SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN ('offered','active'))
-    ON CONFLICT(teacher_id) WHERE status <> 'declined' DO NOTHING`)
-    .bind(id(),actor.id,actor.schoolId,school,suburb,b.schoolType,key,nowISO(),key,key,key,key).run();
-  if (result.meta.changes) return ok();
-  const exists=await db.prepare("SELECT id FROM edu_plant_applications WHERE teacher_id=? AND status<>'declined'").bind(actor.id).first();
-  fail(409,exists ? 'school_application_exists' : 'plant_unavailable');
+  const b=keys(body,['schoolName','suburb','schoolType','preferredKey','consent','orgId','requestId','reason','publicName','address']);
+  if(b.consent!==true)fail(400,'consent_required');
+  if(b.publicName!==undefined&&typeof b.publicName!=='boolean')fail(400,'invalid_field');
+  const orgId=b.orgId?uuid(b.orgId):actor.schoolId,appId=b.requestId?uuid(b.requestId):id();
+  const key=b.preferredKey==null?null:position(b.preferredKey).key,at=nowISO();
+  await releaseDueAdoptions(db,at);
+  const org=await db.prepare(`SELECT o.id,o.name,o.suburb,o.school_type AS schoolType,o.master_id AS masterId,
+    (SELECT COUNT(*) FROM edu_plant_applications WHERE workspace_id=o.id AND status IN(${openStates})) AS slots
+    FROM edu_plant_organisations o WHERE o.id=? AND o.id IN(${orgMember})`).bind(orgId,actor.id).first();
+  if((b.orgId&&!org)||(org&&org.masterId!==actor.id))fail(403,'master_required');
+  const reason=b.reason?longReason(b.reason,'additional_reason_required'):'';
+  if(b.requestId){
+    const existing=await db.prepare('SELECT workspace_id,teacher_id,preferred_key,reason FROM edu_plant_applications WHERE id=?').bind(appId).first();
+    if(existing){
+      if(existing.workspace_id===orgId&&existing.teacher_id===actor.id&&existing.preferred_key===key&&existing.reason===reason)return ok();
+      fail(409,'request_conflict');
+    }
+  }
+  if(org?.slots>=3)fail(409,'plant_school_limit');
+  if(org?.slots && !b.orgId)fail(409,'school_application_exists');
+  if(org?.slots && (!reason||!b.requestId))fail(400,'additional_reason_required');
+  const school=org?.name || text(b.schoolName,160).normalize('NFKC').replace(/\s+/g,' '),suburb=org?.suburb || text(b.suburb,100).normalize('NFKC').replace(/\s+/g,' '),type=org?.schoolType || b.schoolType;
+  if(!['primary','high','combined','other'].includes(type))fail(400,'invalid_field');
+  const address=text(b.address??'',300,{empty:true});
+  const eligible=`(? IS NULL OR ? IN (${plantedPositions})) AND NOT EXISTS(SELECT 1 FROM edu_plants WHERE plant_key=? AND available=0)
+    AND NOT EXISTS(SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN('offered','active','cooling'))`;
+  const statements=[];
+  if(!org){
+   statements.push(db.prepare(`INSERT INTO edu_plant_organisations(id,master_id,name,suburb,school_type,address,public_name,created_at,changed_by)
+     SELECT s.id,?,?,?,?,?,?,?,? FROM edu_schools s JOIN edu_memberships m ON m.school_id=s.id
+     WHERE s.id=? AND s.status<>'suspended' AND m.user_id=? AND m.active=1 AND ${eligible}
+     ON CONFLICT(id) DO NOTHING`).bind(actor.id,school,suburb,type,address,Number(!!b.publicName),at,actor.id,orgId,actor.id,key,key,key,key));
+  }
+  statements.push(db.prepare(`INSERT INTO edu_plant_applications(id,teacher_id,workspace_id,school_name,suburb,school_type,preferred_key,reason,created_at)
+    SELECT ?,?,o.id,o.name,o.suburb,o.school_type,?,?,? FROM edu_plant_organisations o WHERE o.id=? AND ${masterWhere} AND ${eligible}
+    AND (?<>'' OR NOT EXISTS(SELECT 1 FROM edu_plant_applications a WHERE a.workspace_id=o.id AND a.status IN(${openStates})))
+    ON CONFLICT(id) DO NOTHING`).bind(appId,actor.id,key,reason,at,orgId,actor.id,actor.id,key,key,key,key,reason));
+  try{
+    const result=await db.batch(statements);
+    if(result.at(-1).meta.changes)return ok();
+  }catch(e){
+    if(String(e.message).includes('plant_school_limit'))fail(409,'plant_school_limit');
+    if(/edu_plant_school_address|edu_plant_school_names/.test(e.message))fail(409,'school_already_registered');
+    throw e;
+  }
+  const found=await db.prepare('SELECT id FROM edu_plant_applications WHERE id=? AND teacher_id=? AND workspace_id=? AND reason=? AND preferred_key IS ?')
+    .bind(appId,actor.id,orgId,reason,key).first();
+  if(found&&b.requestId)return ok();
+  fail(409,'plant_unavailable');
 }
 async function accept(db,actor,body) {
   const {applicationId,plantKey}=keys(body,['applicationId','plantKey']);
   const key=position(plantKey).key;
-  const result=await db.prepare(`UPDATE edu_plant_applications AS a SET status='active',accepted_at=COALESCE(accepted_at,?)
-    WHERE id=? AND plant_key=? AND ${ownerAccess} AND status IN ('offered','active')`).bind(nowISO(),uuid(applicationId),key,actor.id).run();
+  const result=await db.prepare(`UPDATE edu_plant_applications AS a SET status='active',accepted_at=COALESCE(accepted_at,?),changed_by=?
+    WHERE id=? AND plant_key=? AND ${ownerAccess} AND status IN ('offered','active')`).bind(nowISO(),actor.id,uuid(applicationId),key,actor.id,actor.id).run();
   if (!result.meta.changes) fail(409,'offer_unavailable');
   return ok();
 }
@@ -107,22 +163,28 @@ async function question(db,actor,body) {
   if (b.consent!==true) fail(400,'consent_required');
   const app=uuid(b.applicationId), req=uuid(b.requestId), note=text(b.question,800);
   const existing=await db.prepare(`SELECT q.question FROM edu_plant_questions q JOIN edu_plant_applications a ON a.id=q.application_id
-    WHERE q.id=? AND a.id=? AND ${ownerAccess} AND a.status='active'`).bind(req,app,actor.id).first();
+    WHERE q.id=? AND a.id=? AND ${memberAccess} AND a.status IN('active','cooling')`).bind(req,app,actor.id).first();
   if (existing) { if (existing.question!==note) fail(409,'request_conflict'); return ok(); }
   if (!await rate(db,'plant-question:'+actor.id,12,3600000)) fail(429,'question_limit');
-  const result=await db.prepare(`INSERT INTO edu_plant_questions(id,application_id,question,created_at)
-    SELECT ?,a.id,?,? FROM edu_plant_applications a WHERE a.id=? AND ${ownerAccess} AND a.status='active'`)
-    .bind(req,note,nowISO(),app,actor.id).run();
+  const result=await db.prepare(`INSERT INTO edu_plant_questions(id,application_id,question,created_at,submitted_by)
+    SELECT ?,a.id,?,?,? FROM edu_plant_applications a WHERE a.id=? AND ${memberAccess} AND a.status IN('active','cooling')`)
+    .bind(req,note,nowISO(),actor.id,app,actor.id).run();
   if (!result.meta.changes) fail(403,'plant_access_required');
   return ok();
 }
 export async function teacherPlantRoutes(request,env,path,actor,body) {
   const db=env.EDU_DB;
   if (request.method==='GET') {
-    if (path==='/api/plants/me') return myPlant(db,actor);
-    if (path==='/api/plants/classroom') {
-      const application=await db.prepare(`SELECT a.plant_key AS plantKey,a.school_type AS schoolType,a.status
-        FROM edu_plant_applications a WHERE ${ownerAccess} AND a.status='active'`).bind(actor.id).first();
+    const url=new URL(request.url);
+    if(path==='/api/plants/learning')return json(plantLearning);
+    if(path==='/api/plants/me')return myPlant(db,actor,url);
+    if(path.startsWith('/api/plants/organisation/logo/'))return loadLogo(db,path.split('/').at(-1),actor.id);
+    if(path==='/api/plants/classroom') {
+      await releaseDueAdoptions(db);
+      const appId=url.searchParams.get('applicationId');
+      const application=await db.prepare(`SELECT a.id,a.plant_key AS plantKey,a.school_type AS schoolType,a.status,(SELECT stage FROM edu_atlas_positions WHERE plant_key=a.plant_key) AS stage FROM edu_plant_applications a
+        WHERE ${memberAccess} AND a.status IN('active','cooling') AND (? IS NULL OR a.id=?) ORDER BY a.created_at DESC,a.id DESC LIMIT 1`)
+        .bind(actor.id,appId,appId).first();
       const updates=application ? await journal(db,application.plantKey,'/api/plants/photos/',actor.id) : [];
       return json({application,updates});
     }
@@ -130,7 +192,15 @@ export async function teacherPlantRoutes(request,env,path,actor,body) {
   } else if (request.method==='POST') {
     if (path==='/api/plants/apply') return apply(db,actor,body);
     if (path==='/api/plants/accept') return accept(db,actor,body);
-    if (path==='/api/plants/question') return question(db,actor,body);
+    if (path==='/api/plants/question') {await releaseDueAdoptions(db);return question(db,actor,body);}
+    if(path==='/api/plants/organisation/logo'){
+      const b=keys(body,['orgId','logo']);
+      if(!Object.hasOwn(b,'logo'))fail(400,'invalid_field');
+      const image=cleanPhoto(b.logo);
+      if(image&&(image.width>512||image.height>512))fail(400,'invalid_image');
+      return saveOrgLogo(db,actor,b,image);
+    }
+    const managed=await orgRoutes(db,path,actor,body);if(managed)return managed;
   }
   fail(404,'not_found');
 }
@@ -138,11 +208,16 @@ export async function teacherPlantRoutes(request,env,path,actor,body) {
 async function dashboard(db,farmer) {
   const atlas=await inventory(db,true);
   if (farmer) return json({role:'farmer',...atlas,applications:[],questions:[]});
-  const applications=await all(db.prepare(`SELECT ${applicationFields},u.email FROM edu_plant_applications a
-    JOIN edu_users u ON u.id=a.teacher_id ORDER BY a.created_at DESC`));
+  const records=await all(db.prepare(`SELECT ${applicationFields},u.email,o.name AS orgName,o.address,o.public_name AS publicName,
+    (o.logo_bytes IS NOT NULL) AS hasLogo,(SELECT COUNT(*) FROM edu_plant_applications p WHERE p.workspace_id=a.workspace_id AND p.status IN(${openStates})) AS schoolSlotCount,
+    (SELECT COUNT(*) FROM edu_plant_applications p WHERE p.workspace_id=a.workspace_id AND p.status IN('active','cooling')) AS activeTreeCount
+    FROM edu_plant_applications a JOIN edu_plant_organisations o ON o.id=a.workspace_id JOIN edu_users u ON u.id=o.master_id ORDER BY a.created_at DESC`));
+  const applications=records.map(({orgName,address,publicName,hasLogo,...a})=>({...a,organisation:{id:a.orgId,name:orgName,address,publicName:!!publicName,
+    logoUrl:hasLogo?'/api/education/plants/organisation-logo/'+a.orgId:null}}));
+  const events=await all(db.prepare('SELECT org_id AS orgId,application_id AS applicationId,plant_key AS plantKey,action,actor_id AS actorId,related_user_id AS relatedUserId,reason,created_at AS createdAt FROM edu_plant_events ORDER BY id DESC LIMIT 250'));
   const questions=await all(db.prepare(`SELECT id,application_id AS applicationId,question,answer,created_at AS createdAt
     FROM edu_plant_questions ORDER BY (answer IS NULL) DESC,created_at DESC`));
-  return json({role:'owner',...atlas,applications,questions});
+  return json({role:'owner',...atlas,applications,questions,events});
 }
 async function verify(db,body) {
   const b=keys(body,['key','tag']),p=position(b.key),tag=text(b.tag,60);
@@ -170,7 +245,7 @@ async function saveRow(db,body) {
   const result=await db.prepare(`UPDATE edu_atlas_rows SET enabled_count=?,revision=revision+1
     WHERE row_num=? AND revision=? AND enabled_count<>? AND NOT EXISTS (
       SELECT 1 FROM edu_atlas_positions v JOIN edu_plant_applications a ON a.plant_key=v.plant_key
-      WHERE v.row_num=? AND v.position>? AND a.status IN ('offered','active'))`).bind(count,row,version,count,row,count).run();
+      WHERE v.row_num=? AND v.position>? AND a.status IN ('offered','active','cooling'))`).bind(count,row,version,count,row,count).run();
   if (result.meta.changes) return ok();
   const current=await db.prepare('SELECT enabled_count,revision FROM edu_atlas_rows WHERE row_num=?').bind(row).first();
   if (current?.enabled_count===count && (current.revision===version || current.revision===version+1)) return ok();
@@ -183,7 +258,7 @@ async function saveStage(db,body) {
   const stage=boundedInt(b.stage,1,10),version=revision(b.revision);
   const result=await db.prepare(`UPDATE edu_atlas_positions SET stage=?,revision=revision+1
     WHERE plant_key=? AND revision=? AND stage<>? AND plant_key IN (${visiblePositions}) AND
-    (?<>1 OR NOT EXISTS (SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN ('offered','active')))`)
+    (?<>1 OR NOT EXISTS (SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN ('offered','active','cooling')))`)
     .bind(stage,p.key,version,stage,stage,p.key).run();
   if (result.meta.changes) return ok();
   const current=await db.prepare(`SELECT stage,revision FROM edu_atlas_positions
@@ -198,32 +273,32 @@ async function availability(db,body) {
   const b=keys(body,['key','available']),p=position(b.key);
   if (typeof b.available!=='boolean') fail(400,'invalid_field');
   const result=await db.prepare(`UPDATE edu_plants SET available=? WHERE plant_key=? AND NOT EXISTS (
-    SELECT 1 FROM edu_plant_applications a WHERE a.plant_key=edu_plants.plant_key AND status IN ('offered','active'))`)
+    SELECT 1 FROM edu_plant_applications a WHERE a.plant_key=edu_plants.plant_key AND status IN ('offered','active','cooling'))`)
     .bind(Number(b.available),p.key).run();
   if (!result.meta.changes) fail(409,'plant_unavailable');
   return ok();
 }
-async function review(db,body) {
+async function review(db,body,staffId) {
   const b=keys(body,['applicationId','decision','plantKey']),app=uuid(b.applicationId),at=nowISO();
   if (!['offer','decline','withdraw'].includes(b.decision)) fail(400,'invalid_field');
   if (b.decision==='withdraw') {
-    const result=await db.prepare(`UPDATE edu_plant_applications SET status='pending',plant_key=NULL,decided_at=NULL
-      WHERE id=? AND status='offered'`).bind(app).run();
+    const result=await db.prepare(`UPDATE edu_plant_applications SET status='pending',plant_key=NULL,decided_at=NULL,changed_by=?
+      WHERE id=? AND status='offered'`).bind(staffId,app).run();
     if (!result.meta.changes) fail(409,'application_changed');
     return ok();
   }
   if (b.decision==='decline') {
-    const result=await db.prepare(`UPDATE edu_plant_applications SET status='declined',decided_at=?
-      WHERE id=? AND status='pending'`).bind(at,app).run();
+    const result=await db.prepare(`UPDATE edu_plant_applications SET status='declined',decided_at=?,changed_by=?
+      WHERE id=? AND status='pending'`).bind(at,staffId,app).run();
     if (!result.meta.changes) fail(409,'application_changed');
     return ok();
   }
   const p=position(b.plantKey);
-  const result=await db.prepare(`UPDATE edu_plant_applications SET status='offered',plant_key=?,decided_at=?
+  const result=await db.prepare(`UPDATE edu_plant_applications SET status='offered',plant_key=?,decided_at=?,changed_by=?
     WHERE id=? AND status='pending' AND ? IN (${plantedPositions})
     AND EXISTS (SELECT 1 FROM edu_plants WHERE plant_key=? AND available=1)
-    AND NOT EXISTS (SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN ('offered','active'))`)
-    .bind(p.key,at,app,p.key,p.key,p.key).run();
+    AND NOT EXISTS (SELECT 1 FROM edu_plant_applications WHERE plant_key=? AND status IN ('offered','active','cooling'))`)
+    .bind(p.key,at,staffId,app,p.key,p.key,p.key).run();
   if (!result.meta.changes) fail(409,'plant_unavailable');
   return ok();
 }
@@ -240,34 +315,44 @@ function cleanPhoto(value) {
     throw error;
   }
 }
-async function publishUpdate(db,body) {
+async function publishUpdate(env,body,staffId) {
+  const db=env.EDU_DB;
   const b=keys(body,['key','observedOn','note','requestId','photo']),p=position(b.key),req=uuid(b.requestId);
   const observed=dateValue(b.observedOn),at=nowISO();
   if (observed>currentSydneyDate(new Date(at))) fail(400,'future_observation');
   const note=text(b.note??'',1200,{empty:true}),picture=cleanPhoto(b.photo);
   if (!note && !picture) fail(400,'invalid_field');
   const fingerprint=await digest(JSON.stringify([p.key,observed,note,b.photo?.mime??null,b.photo?.base64??null]));
-  const result=await db.prepare(`INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at,photo_mime,photo_bytes,request_hash)
-    SELECT ?,plant_key,?,?,?,?,?,? FROM edu_plants WHERE plant_key=? ON CONFLICT(id) DO NOTHING`)
-    .bind(req,observed,note,at,picture?.mime??null,picture?.bytes.buffer??null,fingerprint,p.key).run();
-  if (!result.meta.changes) {
-    const old=await db.prepare('SELECT request_hash,withdrawn FROM edu_plant_updates WHERE id=?').bind(req).first();
+  const existing=()=>db.prepare('SELECT request_hash,withdrawn FROM edu_plant_updates WHERE id=?').bind(req).first();
+  function confirmRetry(old) {
     if (!old) fail(404,'plant_not_verified');
     if (old.withdrawn) fail(409,'update_withdrawn');
     if (old.request_hash!==fingerprint) fail(409,'request_conflict');
   }
+  const previous=await existing();
+  if (previous) { confirmRetry(previous); return ok(); }
+  if (!await db.prepare('SELECT 1 FROM edu_plants WHERE plant_key=?').bind(p.key).first()) fail(404,'plant_not_verified');
+  const log=await snapshotForUpdate(env,p,observed,at);
+  const [result]=await db.batch([
+    db.prepare(`INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at,photo_mime,photo_bytes,request_hash,posted_by)
+      SELECT ?,plant_key,?,?,?,?,?,?,? FROM edu_plants WHERE plant_key=? ON CONFLICT(id) DO NOTHING`)
+      .bind(req,observed,note,at,picture?.mime??null,picture?.bytes.buffer??null,fingerprint,staffId,p.key),
+    db.prepare(`INSERT OR IGNORE INTO edu_plant_weather_logs(update_id,payload)
+      SELECT id,? FROM edu_plant_updates WHERE id=? AND request_hash=? AND created_at=?`).bind(log,req,fingerprint,at)
+  ]);
+  if (!result.meta.changes) confirmRetry(await existing());
   return ok();
 }
-async function withdraw(db,body) {
+async function withdraw(db,body,staffId) {
   const {updateId}=keys(body,['updateId']);
-  const result=await db.prepare("UPDATE edu_plant_updates SET withdrawn=1,note='',photo_mime=NULL,photo_bytes=NULL WHERE id=?").bind(uuid(updateId)).run();
+  const result=await db.prepare("UPDATE edu_plant_updates SET withdrawn=1,withdrawn_by=COALESCE(withdrawn_by,?),withdrawn_at=COALESCE(withdrawn_at,?) WHERE id=?").bind(staffId,nowISO(),uuid(updateId)).run();
   if (!result.meta.changes) fail(404,'update_not_found');
   return ok();
 }
-async function answer(db,body) {
+async function answer(db,body,staffId) {
   const {questionId,answer:raw}=keys(body,['questionId','answer']),answer=text(raw,800);
-  const result=await db.prepare('UPDATE edu_plant_questions SET answer=?,answered_at=COALESCE(answered_at,?) WHERE id=? AND (answer IS NULL OR answer=?)')
-    .bind(answer,nowISO(),uuid(questionId),answer).run();
+  const result=await db.prepare('UPDATE edu_plant_questions SET answer=?,answered_at=COALESCE(answered_at,?),answered_by=COALESCE(answered_by,?) WHERE id=? AND (answer IS NULL OR answer=?)')
+    .bind(answer,nowISO(),staffId,uuid(questionId),answer).run();
   if (!result.meta.changes) {
     const exists=await db.prepare('SELECT id FROM edu_plant_questions WHERE id=?').bind(questionId).first();
     fail(exists?409:404,exists?'answer_changed':'question_not_found');
@@ -279,6 +364,10 @@ async function answer(db,body) {
 export async function staffPlantRoutes(request,env,path,body) {
   const db=env.EDU_DB,farmer=request.headers.get('X-Glenolia-Plant-Role')==='farmer';
   if (request.method==='GET') {
+    if(path.startsWith('/plants/organisation-logo/')){
+      if(farmer)fail(403,'owner_required');
+      return loadLogo(db,path.split('/').at(-1));
+    }
     if (path==='/plants/dashboard') return dashboard(db,farmer);
     if (path==='/plants/journal') return json({updates:await journal(db,position(new URL(request.url).searchParams.get('key')).key,'/api/education/plants/photos/')});
     if (path.startsWith('/plants/photos/')) return photo(db,path.slice('/plants/photos/'.length));
@@ -287,11 +376,11 @@ export async function staffPlantRoutes(request,env,path,body) {
     if (path==='/plants/stage') return saveStage(db,body);
     if (path==='/plants/verify') return verify(db,body);
     if (path==='/plants/availability') return availability(db,body);
-    if (path==='/plants/update') return publishUpdate(db,body);
-    if (path==='/plants/withdraw-update') return withdraw(db,body);
+    if (path==='/plants/update') return publishUpdate(env,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_staff');
+    if (path==='/plants/withdraw-update') return withdraw(db,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_staff');
     if (farmer) fail(403,'owner_required');
-    if (path==='/plants/review') return review(db,body);
-    if (path==='/plants/answer') return answer(db,body);
+    if (path==='/plants/review') {await releaseDueAdoptions(db);return review(db,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_owner');}
+    if (path==='/plants/answer') return answer(db,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_owner');
   }
   fail(404,'not_found');
 }

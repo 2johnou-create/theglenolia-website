@@ -31,10 +31,35 @@ changes mailing-list contacts. Current authentication mail is capped at 20/day,
 with per-address and per-IP limits. Known or ambiguous delivery failures stop
 without automatic retry. Review the provider state before changing allowance.
 
+## Plant school emails
+
+Apply `plant-notifications-schema.sql` after the adoption migration. Deploy the
+newsletter relay before the education Worker when changing email payloads.
+The education database records each teacher’s versioned privacy, educational
+use and separate choices for farmer updates and monthly summaries. A school
+invitation grants access only when its matched teacher signs in and accepts.
+
+A journal INSERT queues messages for currently eligible, opted-in teachers
+within the journal transaction. The education cron drains the queue every
+five minutes and rechecks membership, consent and the status of the note and
+adoption before calling the existing transactional relay. Monthly letters
+summarise the previous Sydney calendar month per school. The first eligible
+run is 9 am on the first of the month. A teacher who joined or subscribed
+after that period waits for the next relevant summary.
+
+The `edu_plant_mail_outbox` records pending, accepted (`sent`), cancelled and
+review states. Provider rate rejection retries with a stable message key.
+Reconcile `review` against the provider delivery log before a manual retry,
+since a timeout can occur after provider acceptance. Email acceptance does
+not confirm delivery to an inbox. Every optional message has a signed
+unsubscribe link. Opening it displays a confirmation, and submitting it
+disables that email category immediately without requiring a login.
+
 ## Teacher and school boundaries
 
-Email sign-in links expire after 15minutes, work once and require the browser that
-requested them. The host-only secure session expires after eight hours or
+The primary teacher sign-in is a six-digit emailed code, valid for 15 minutes in
+the requesting browser. Five attempts are allowed per challenge. Its optional
+email link and any previously issued link work once in the requesting browser. The host-only secure session expires after eight hours or
 30 minutes of inactivity. Mutation endpoints require same-origin requests and a
 session-bound CSRF value. The verified adult account starts with a personal
 planning workspace. It can save favourites, private notes, groups and pinned
@@ -132,16 +157,40 @@ Open `/plants` on the protected admin service to work in the field.
 4. Reopen the plant's previous updates to check the entry. Use the classroom
    view in the teacher workspace to discuss observations with the students.
 
-For new databases apply `education-schema.sql`, `plant-schema.sql`, then
-`plant-atlas-schema.sql`. For an existing school Plant Portal, apply only
-`plant-atlas-schema.sql` to the **education** D1 database. Execute that entire
-file as one transactional D1 import before deploying the education Worker,
-protected admin Worker, and public site, in that order. The migration copies
-the physical register, widens its row check to 1–12 and restores all existing
-keys, verification dates, tags and availability. Offers and journal references
-retain their keys. The layout migration can be replayed without resetting
-saved row counts or stages. Verify foreign keys and the counts of existing
-physical records, offers and journal records after the migration.
+For a new database apply the education, plant and plant atlas schemas in order.
+For a database already running the atlas, take a D1 recovery bookmark and
+record the existing teacher, application, verified tag, journal and question
+counts. Apply `plant-adoption-schema.sql` **once**, followed by
+`plant-weather-schema.sql` and `plant-notifications-schema.sql` to the
+education D1. Import each complete migration transactionally. Check the
+counts and run `PRAGMA foreign_key_check`. The adoption migration preserves
+application IDs, existing assignments, teachers, journal entries and questions.
+Publish the compatible newsletter relay, education service, protected admin,
+then public Pages. Regenerate private teacher assets and the embedded staff
+bundle from the current public teacher UI source before deploying.
+
+The first verified applicant manages the school account. The lead teacher can
+invite another teacher by email and transfer responsibility to an accepted
+member. Members have their own sign-in and email preferences. The lead can
+add the school address and a fitted logo. Publicly naming the school on the map
+requires its permission. Additional applications require an educational reason
+and a farm review. Each school has up to three places, including pending
+applications, offers and trees in their cooling period.
+
+A lead teacher can withdraw an adoption with a reason, or cancel the withdrawal
+during the five NSW working days before release. The scheduled job and portal
+reconcile expired reservations. The adoption log retains the changes. Every
+farmer note and photo belongs to its permanent plant ID across adoptions;
+private questions belong to the original school application. When staff withdraw
+a mistaken field note, its archived entry is retained.
+
+New field notes record the submission time, reported observation date and
+registered farm row/position. Weather comes from a regional MET Norway model
+and the Australian SILO gridded climate dataset. Read each metric's date and
+source. A delayed daily rainfall observation is labelled separately from a
+forecast. Missing fields stay blank and do not block a farmer from posting.
+Teachers can open the stage-specific learning and classroom prompts adapted
+from the AgriFutures *Australian Coffee Grower’s Manual* in the plant journal.
 
 The farmer dashboard controls how many of a row's 19 mapped positions appear
 and selects an individual illustration stage from 1 through 10. Rows 1 and 2
@@ -159,7 +208,7 @@ preview. The shared `plant-illustration.js` helper derives this appearance
 from the row and position, so reopening a row restores the same drawings.
 
 The public `GET /api/plants/map` returns the 12 row counts and enabled
-positions only, without school details, physical tag strings, notes or photos.
+positions, adoption status and an approved public school name when permitted. Addresses, teacher identities, physical tag strings, notes and photos remain private.
 Public plant numbers are fixed by row and position: P1 is `r1-p1`, P20 is
 `r2-p1`, and P39 is `r3-p1`. Changing a different row never renumbers a plant.
 Stage 1 and hidden positions cannot be requested or offered. Plant stages
@@ -172,7 +221,7 @@ takes `key`, `stage` (1–10) and the individual position's `revision`. The
 server checks that revision on the write. Reducing a row hides its trailing
 positions without deleting them. Verified hidden journals stay available to
 staff in the archive. Re-enabling a position restores its previous stage
-and physical record. Offered and active school positions cannot be hidden
+and physical record. Offered, active and cooling school positions cannot be hidden
 or returned to the soil-preparation stage. School photographs continue to use
 the private education service.
 

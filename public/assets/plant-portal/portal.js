@@ -1,3 +1,4 @@
+import { installFarmWeather } from './farm-weather.js';
 import { STAGE_NAMES } from './stages.js';
 import { setPlantIllustration, stageIllustrationFile } from './plant-illustration.js';
 
@@ -20,7 +21,7 @@ const svg = (name, attributes, value) => {
   if (value !== undefined) node.textContent = value;
   return node;
 };
-const canRequest = plant => plant && plant.stage !== 1 && ['available','unverified'].includes(plant.status);
+const canRequest = plant => plant && !plant.adoptionStatus && plant.stage !== 1 && ['available','unverified'].includes(plant.status);
 function showIllustrationSet() {
   const list = byId('stage-plates');
   const choice = byId('stage-set').value;
@@ -120,7 +121,16 @@ byId('retry-art').onclick = () => {
 };
 
 function label(plant) { return 'P' + ((plant.row - 1) * 19 + plant.position); }
+function adoptionText(plant) {
+  if (plant.adoptionStatus === 'cooling')
+    return (plant.adoptedBy || 'School adoption') + ' · Release pending';
+  if (plant.adoptionStatus === 'adopted')
+    return plant.adoptedBy ? 'Adopted by ' + plant.adoptedBy : 'Adopted by a school';
+  return '';
+}
 function describe(plant) {
+  if (plant.adoptionStatus) return adoptionText(plant) + (plant.adoptionStatus === 'cooling'
+    ? '. This plant stays reserved during the five-working-day withdrawal period.' : '.');
   if (plant.stage === 1) return 'The farm is preparing this position for planting.';
   if (plant.status === 'available') return 'Field-verified and open for a school request.';
   if (plant.status === 'unavailable') return 'This plant is currently unavailable for a school request.';
@@ -326,23 +336,54 @@ byId('select-plant').onclick = () => {
 function showPosition(plant, focus = false) {
   if (!plant) return;
   const y = rootPoint(plant.row,plant.position)[1];
-  setRoving(plant.key); jump(plant.row,y); inspect(plant,'pinned',focus);
+  setRoving(plant.key);
+  jump(plant.row,y);
+  // A teacher can open the list from the toolbar before the map has entered the page viewport.
+  const mark = markers.get(plant.key)?.getBoundingClientRect();
+  if (frame.dataset.artState === 'ready' && mark && (mark.top < 0 || mark.bottom > innerHeight))
+    viewport.scrollIntoView({block:'center',behavior:'instant'});
+  inspect(plant,'pinned',focus);
 }
 byId('return-selected').onclick = () => showPosition(register.get(preferred),true);
 jumpList.onchange = () => { dismiss(); jump(Number(jumpList.value)); };
 
+const textMeasure = document.createElement('canvas').getContext('2d');
+function shortAttribution(plant) {
+  const name = plant.adoptedBy || (plant.adoptionStatus === 'cooling' ? 'Pending' : 'Adopted');
+  if (!textMeasure) return name.length > 7 ? name.slice(0,6) + '…' : name;
+  textMeasure.font = 'bold 9px Arial';
+  const fits = text => textMeasure.measureText(text).width <= 40;
+  if (fits(name)) return name;
+  const compact = name.replace(/\bPublic School\b/i,'PS').replace(/\bHigh School\b/i,'HS')
+    .replace(/\bPrimary School\b/i,'PS').replace(/\bSecondary College\b/i,'SC');
+  if (fits(compact)) return compact;
+  const words = name.split(/[^\p{L}\p{N}]+/u).filter(w=>w && !/^(the|and|of|for)$/i.test(w));
+  const initials = words.map(w=>[...w][0]).join('').toUpperCase();
+  if (words.length > 1 && fits(initials)) return initials;
+  let short = '';
+  for (const glyph of name) {
+    if (textMeasure.measureText(short+glyph+'…').width > 40) break;
+    short += glyph;
+  }
+  return short.trimEnd()+'…';
+}
 function markerFor(plant) {
   const [x,y] = rootPoint(plant.row,plant.position);
   const width = 52 - (plant.position - 1) * .25, height = width * 288 / 256;
   const g = svg('g', {class:'coffee-marker','data-plant-key':plant.key,'data-stage':plant.stage,
     transform:'translate(' + x + ' ' + y + ')',role:'button',tabindex:'-1','aria-pressed':'false',
-    'aria-label':label(plant) + ', Row ' + plant.row + ', ' + STAGE_NAMES[plant.stage - 1]});
+    'aria-label':[label(plant),'Row '+plant.row,STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', ')});
   const drawing = svg('image',{x:-width/2,y:-height*.8993,width,height,'pointer-events':'none'});
   setPlantIllustration(drawing, assets + '/stages', plant.stage, plant);
   g.append(drawing);
   g.append(svg('rect',{class:'plant-hit',x:-20,y:-31,width:40,height:49,rx:5,fill:'transparent'}));
   g.append(svg('rect',{class:'tag-bg',x:-17,y:1,width:34,height:16,rx:6}));
   g.append(svg('text',{class:'plant-id',x:0,y:13,'text-anchor':'middle'},label(plant)));
+  if (plant.adoptionStatus) {
+    g.dataset.adoption = plant.adoptionStatus;
+    g.append(svg('text',{class:'plant-attribution',x:0,y:26,'text-anchor':'middle'},shortAttribution(plant)));
+    g.append(svg('title',{},label(plant)+' · '+adoptionText(plant)));
+  }
   function peek(event) {
     if (event.pointerType === 'mouse' && !dismissedAt && (!active || mode === 'hover') && active?.key !== plant.key) inspect(plant,'hover');
   }
@@ -375,7 +416,13 @@ function rebuildDialog() {
     const btn = document.createElement('button');
     btn.type = 'button'; btn.textContent = label(plant); btn.dataset.listKey = plant.key;
     btn.setAttribute('aria-pressed',String(plant.key === preferred));
-    btn.setAttribute('aria-label',label(plant) + ', ' + STAGE_NAMES[plant.stage-1]);
+    if (plant.adoptionStatus) {
+      btn.dataset.adoption = plant.adoptionStatus;
+      const caption = document.createElement('small');
+      caption.textContent = adoptionText(plant);
+      btn.append(caption);
+    }
+    btn.setAttribute('aria-label',[label(plant),STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', '));
     btn.onclick = () => { dialog.close(); showPosition(plant,true); };
     options.append(btn);
   }
@@ -401,10 +448,30 @@ function validate(data) {
     if (!row || row.row !== plant.row || !Number.isInteger(plant.position) || plant.position < 1 || plant.position > row.enabledCount ||
         plant.key !== 'r'+plant.row+'-p'+plant.position || result.has(plant.key) || !Number.isInteger(plant.stage) ||
         plant.stage < 1 || plant.stage > STAGE_NAMES.length || !['available','unavailable','unverified','preparing'].includes(plant.status)) throw new Error('Invalid position');
-    result.set(plant.key,{key:plant.key,row:plant.row,position:plant.position,stage:plant.stage,status:plant.status});
+    const adoptionStatus = ['adopted','cooling'].includes(plant.adoptionStatus) ? plant.adoptionStatus : null;
+    const adoptedBy = adoptionStatus && typeof plant.adoptedBy === 'string' ? plant.adoptedBy.trim().slice(0,160) : '';
+    result.set(plant.key,{key:plant.key,row:plant.row,position:plant.position,stage:plant.stage,status:plant.status,adoptionStatus,adoptedBy});
   }
   if (result.size !== layout.reduce((total,r) => total+r.enabledCount,0)) throw new Error('Incomplete farm layout');
   return {layout,result};
+}
+function showAdoptions() {
+  const adopted = [...register.values()].filter(plant=>plant.adoptionStatus);
+  byId('map-adoption-key').hidden = !adopted.length;
+  const section = byId('school-register'), list = byId('school-register-list');
+  section.hidden = !adopted.length;
+  byId('school-register-title').textContent = 'School adoptions ('+adopted.length+')';
+  list.replaceChildren();
+  for (const plant of adopted) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.dataset.adoption = plant.adoptionStatus;
+    button.textContent = label(plant) + ' · ' + adoptionText(plant);
+    button.onclick = () => {
+      viewport.scrollIntoView({block:'center',behavior:'instant'});
+      showPosition(plant,true);
+    };
+    const item = document.createElement('li'); item.append(button); list.append(item);
+  }
 }
 function draw(layout,result) {
   const prev = active?.key;
@@ -438,6 +505,7 @@ function draw(layout,result) {
   setRoving(register.has(prevRoving) ? prevRoving : (preferred || register.keys().next().value));
   updatePreference();
   byId('plant-list').disabled = !register.size;
+  showAdoptions();
   if (dialog.open) {
     if (!register.size) dialog.close();
     else {
@@ -455,6 +523,7 @@ function draw(layout,result) {
   if (prev && register.has(prev) && prevMode !== 'hover') inspect(register.get(prev),prevMode,focusOnCard);
   main.querySelectorAll('a.hero-marker[data-preview]').forEach(link => {
     const plant = register.get('r1-p'+link.dataset.preview);
+    link.hidden = !plant;
     link.setAttribute('aria-label',plant ? 'Explore '+label(plant)+' in Row 1' : 'Explore the estate atlas');
   });
   if (lost) notice('Your previous plant preference is no longer open. Explore another position or apply without a preference.');
@@ -484,12 +553,14 @@ async function refresh() {
     dismiss(); if (dialog.open) dialog.close();
     lastDrawn = null; rows=[]; register.clear(); markers.clear(); markerLayer.replaceChildren();
     byId('atlas-row-labels').replaceChildren(); jumpList.replaceChildren();
-    for (const link of main.querySelectorAll('a.hero-marker[data-preview]')) link.setAttribute('aria-label','Explore the estate atlas');
+    showAdoptions();
+    for (const link of main.querySelectorAll('a.hero-marker[data-preview]')) link.hidden = true;
     updatePreference(); byId('plant-list').disabled=true;
     notice('The planting register could not be loaded. You can still register your school without a preference.',true);
   } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length || frame.dataset.artState !== 'ready'; }
 }
 byId('retry-map').onclick = refresh;
+installFarmWeather(main.dataset.weatherUrl);
 jumpList.disabled=true; explorer.hidden=false; checkArtwork(); refresh();
 window.addEventListener('pageshow',refresh);
 window.addEventListener('focus',refresh);

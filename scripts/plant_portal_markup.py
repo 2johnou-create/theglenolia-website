@@ -31,34 +31,35 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <link rel="canonical" href="{canonical}"><link rel="alternate" hreflang="en-AU" href="{canonical}"><link rel="alternate" hreflang="x-default" href="{canonical}">{preview_meta}
 <meta property="og:type" content="website"><meta property="og:locale" content="en_AU"><meta property="og:site_name" content="The Glenolia">
 <meta property="og:title" content="A coffee plant for your classroom | The Glenolia"><meta property="og:description" content="{escape(description)}"><meta property="og:url" content="{canonical}">
-<meta property="og:image" content="{origin.rstrip('/')}/assets/plant-portal/orchard-share.jpg"><meta property="og:image:alt" content="Illustrated view of two people working between magnolia rows"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:image" content="{origin.rstrip('/')}/assets/plant-portal/two-worker-orchard.webp"><meta property="og:image:alt" content="Two workers tending a row of young coffee plants between magnolias"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="{base}/assets/logos/leaf.svg" type="image/svg+xml"><link rel="stylesheet" href="{assets}/portal.css?v={revision}">
 <script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script><script type="module" src="{assets}/portal.js?v={revision}"></script></head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="mast"><a class="identity" href="{base}/" aria-label="The Glenolia home"><img src="{base}/assets/logos/logo-compact.svg" width="250" height="70" alt="The Glenolia"></a><span class="mast-title">School Plant Portal</span>
 <nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}">Teacher sign in <span aria-hidden="true">↗</span></a></nav></header>
-<main id="main" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-atlas-assets="{assets}">
+<main id="main" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-weather-url="{escape(teacher_origin, quote=True)}/api/plants/weather" data-atlas-assets="{assets}">
 <section class="welcome" aria-labelledby="invite-heading">
-<div class="welcome-scene"><picture><source media="(max-width: 760px)" srcset="{assets}/approved-row-mobile.webp"><img src="{assets}/approved-row.webp" width="934" height="736" fetchpriority="high" alt="Illustration of two workers tending young coffee plants in a sunny magnolia aisle."></picture>
-<small class="scene-credit">Illustrated farm view</small>
-<a class="hero-marker marker-1" href="#rows" data-preview="1" aria-label="Explore the estate atlas"><span class="sr">Plant 1</span></a>
-<a class="hero-marker marker-2" href="#rows" data-preview="2" aria-label="Explore the estate atlas"><span class="sr">Plant 2</span></a>
-<a class="hero-marker marker-3" href="#rows" data-preview="3" aria-label="Explore the estate atlas"><span class="sr">Plant 3</span></a>
-</div>
-<div class="invite-frame"><div class="invite"><div class="invite-heading"><p class="eyebrow">Free school programme</p><h1 id="invite-heading">A coffee plant <br>for your class.</h1></div>
-<div class="invite-portrait"><img src="{assets}/approved-young-plant.webp" alt="Illustrated young coffee plant" width="287" height="226"></div>
-<div class="invite-actions"><p>Follow one plant in Glenorie through the farmer’s photos and field notes.</p>
-<a class="cta" href="#rows">Explore the rows <span aria-hidden="true">↓</span></a>
-<a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></div></div></section>
+<div class="welcome-scene"><picture><source media="(max-width: 760px)" srcset="{assets}/two-worker-orchard-small.webp"><img src="{assets}/two-worker-orchard.webp" width="1672" height="941" fetchpriority="high" alt="Two workers tending young coffee plants between magnolia trees in Glenorie."></picture>
+<a class="hero-marker marker-1" href="#rows" data-preview="1" hidden>P1</a>
+<a class="hero-marker marker-2" href="#rows" data-preview="2" hidden>P2</a>
+<a class="hero-marker marker-3" href="#rows" data-preview="3" hidden>P3</a></div>
+<div class="invite"><p class="eyebrow">Free school programme · Glenorie, NSW</p><h1 id="invite-heading">A coffee plant<br> for your class.</h1>
+<p class="hero-intro">Watch it grow with the farmer’s photos, field notes and classroom activities.</p>
+<div class="invite-actions"><a class="cta" href="#rows">Explore the rows <span aria-hidden="true">↓</span></a>
+<a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></div></section>
 <section class="explore shell" id="rows" aria-labelledby="rows-heading" tabindex="-1">
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
-<p>Explore the coffee plants among the established magnolias. Select a plant to take your preference into your school application.</p></div>
+<p>Explore the coffee plants among the established magnolias. Choose an open plant for your school or see which organisations are already growing with us.</p></div>
 <div id="row-app" hidden>
 <details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary><p>The farmer sets each plant’s stage. The tiny seedling is drawn at about 10 cm.</p>
 <label for="stage-set">Illustration set</label> <select id="stage-set" aria-controls="stage-plates"><option value="1">A</option><option value="2">B</option><option value="3">C</option><option value="4">D</option><option value="5">E</option></select>
 <ol id="stage-plates"></ol></details>
 <div class="atlas-tools"><label for="row-jump"><span class="wide-label">Jump to </span>row</label><select id="row-jump" aria-label="Jump to row"></select>
-<span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button></div>
+<span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button>
+<div class="farm-clock" aria-label="Glenorie local time"><span class="clock-face" aria-hidden="true"><i id="clock-hour"></i><i id="clock-minute"></i></span><div><span class="clock-place">Glenorie farm time</span><time id="farm-time">Sydney time</time></div></div></div>
+<section class="weather-strip" aria-label="Glenorie weather">
+<dl class="weather-readings"><div><dt>Air temperature</dt><dd id="wx-temp">—</dd></div><div><dt>Humidity</dt><dd id="wx-humidity">—</dd></div><div><dt>Wind</dt><dd id="wx-wind">—</dd></div><div><dt>Rain, next hour</dt><dd id="wx-rain">—</dd></div><div class="mean-reading"><dt>14-day avg. temp</dt><dd id="wx-mean-temp">—</dd></div><div><dt>14-day avg. rain</dt><dd id="wx-mean-rain">—</dd></div></dl>
+<details class="weather-notes"><summary>Weather details</summary><div><p id="wx-current-note">Loading the Glenorie area forecast…</p><p id="wx-history-note">Checking the last 14 complete local days…</p><p id="wx-source"></p></div></details></section>
 <div class="map-notice" id="map-notice" role="status"><span id="map-message">Loading the farmer’s planting map…</span><button type="button" id="retry-map" hidden>Try again</button></div>
 <figure class="atlas-sheet"><div id="art-notice" class="map-notice" role="status"><span id="art-message">Loading the orchard illustration…</span><button type="button" id="retry-art" hidden>Retry illustration</button></div>
 <div id="atlas-viewport" role="region" aria-label="Scrollable orchard map" aria-describedby="atlas-scroll-tip" tabindex="0"><div id="atlas-frame" data-art-state="loading"><picture><source id="mobile-art" media="(max-width:620px)" srcset="{assets}/estate-atlas-mobile.webp"><img id="estate-art" src="{assets}/estate-atlas.webp" width="1400" height="3332" alt="" loading="eager" decoding="async"></picture>
@@ -66,6 +67,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <title id="atlas-title">The Glenolia estate atlas</title><desc id="atlas-desc">A continuous illustrated orchard map. Explore individual planting positions in the plant list or use the arrow keys between them.</desc>
 <g id="atlas-row-labels" aria-hidden="true"></g><g id="atlas-plants" role="group" aria-label="Coffee planting positions"></g></svg></div></div>
 <figcaption><span id="atlas-scroll-tip">Scroll the map to explore all 12 rows.</span><span>Rows 3–12 are in the autumn 2027 planting plan. The farm updates each row as work progresses.</span></figcaption></figure>
+<p class="map-key" id="map-adoption-key" hidden><span><i class="school-colour" aria-hidden="true">✓</i> Adopted</span><span><i class="cooling-colour" aria-hidden="true">◷</i> Release pending</span></p>
+<details class="school-register" id="school-register" hidden><summary id="school-register-title">School adoptions</summary><ul id="school-register-list"></ul></details>
 <a class="sub-link plain-apply" id="no-preference" href="{teacher}">Apply without a preference ↗</a>
 <p id="selection-live" class="sr" role="status"></p>
 <dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list">Close</button></header>
@@ -79,9 +82,9 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <noscript><p>The interactive map uses JavaScript. You can register your school directly and the farmer can help match your class to a plant.</p><a class="cta" href="{teacher}">Register your school ↗</a></noscript>
 </section>
 <section class="school shell" id="schools" aria-labelledby="schools-heading"><div><p class="eyebrow">For primary and high schools</p><h2 id="schools-heading">A growing classroom.</h2></div>
-<div><ol><li><strong>Register your school.</strong> An authorised teacher applies with their work email. Nearby schools receive priority.</li>
+<div><ol><li><strong>Register your school.</strong> An authorised teacher applies with a work email. Nearby primary and high schools receive priority.</li>
 <li><strong>Meet your plant.</strong> The farm team reviews your application and offers a verified plant when one is available.</li>
-<li><strong>Follow it together.</strong> Open the journal with your students to compare the farmer’s dated photos and notes.</li></ol>
-<p class="terms">School adoption is free. The plant stays in the care of the farm. Students participate through their teacher.</p>
+<li><strong>Follow it together.</strong> Invite other teachers to the same journal. Compare the farmer’s dated photos with your class.</li></ol>
+<p class="terms">Your school can apply for up to three plants. Each extra plant needs an educational reason and approval. The farm cares for the plants. Students take part through a teacher.</p>
 <a class="cta" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></section>
 </main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a></nav></footer></body></html>'''

@@ -24,6 +24,7 @@
 </div><p class="hint">Photograph the plant. Keep people and identifying details outside the frame.</p></fieldset>
 <label for="update-note">Field note</label><textarea id="update-note" maxlength="1200" rows="3" placeholder="What changed since your last visit?"></textarea>
 <label for="observed-on">Date observed</label><input id="observed-on" type="date" required>
+<p class="hint">The farm location, posting time and available regional weather are logged automatically with this tree.</p>
 </div>
 <div class="preview-wrap"><div class="preview-card"><p class="eyebrow">Class journal preview</p><h3 id="preview-plant">Your plant</h3><p id="preview-date" class="hint"></p>
 <img id="preview-photo" alt="Selected field photograph" hidden><p id="preview-note"></p><button class="text" id="remove-photo" type="button" hidden>Remove photo</button>
@@ -60,7 +61,7 @@
 </section>
 <section id="requests" aria-labelledby="requests-heading" hidden>
 <h2 id="requests-heading" tabindex="-1">School requests</h2><p class="intro">Review nearby schools first. The teacher accepts the offer in their portal.</p>
-<div id="applications"></div><h3>Class questions</h3><div id="questions"></div>
+<div id="applications"></div><details id="adoption-history"><summary>Recent account and adoption history</summary><ol id="adoption-events"></ol></details><h3>Class questions</h3><div id="questions"></div>
 </section>
 <section id="register" aria-labelledby="register-heading" hidden>
 <h2 id="register-heading" tabindex="-1">Plant register</h2>
