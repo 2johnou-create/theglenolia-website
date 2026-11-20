@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {cleanCanvasJpeg} from './admin-ui/photo-preparation.js';
 import {validateProgrammeImage, normaliseProgrammeImage, programmeImageResponse, IMAGE_MAX_BYTES, IMAGE_MAX_EDGE} from './programme-media.mjs';
 
 // Real, decoded/re-encoded 2×3 sRGB solid-colour fixtures generated with Pillow.
@@ -395,4 +396,16 @@ test('a valid JPEG ICC APP2 does not permit EXIF, XMP, Photoshop data, comments 
     normalizedRejected(join(JPEG.slice(0, 2), icc, forbidden, JPEG.slice(2)), 'image/jpeg');
     normalizedRejected(join(JPEG.slice(0, 2), forbidden, icc, JPEG.slice(2)), 'image/jpeg');
   }
+});
+
+test('freshly encoded WebKit JPEG loses ancillary headers and retains the original scan', async () => {
+  const output = join(JPEG.slice(0,2),segment(0xe1,ascii('Exif\0\0')),segment(0xed,ascii('Photoshop 3.0\0')),JPEG.slice(2));
+  normalizedRejected(output,'image/jpeg','raw canvas metadata remains invalid for direct uploads');
+  const cleaned = await cleanCanvasJpeg(new Blob([output],{type:'image/jpeg'}));
+  const bytes = new Uint8Array(await cleaned.arrayBuffer());
+  assert.deepEqual(bytes,withoutJpegMarker(0xe0));
+  const stored = normaliseProgrammeImage(bytes,cleaned.type);
+  assert.deepEqual([stored.width,stored.height],[2,3]);
+  assert.equal(await cleanCanvasJpeg(cleaned),cleaned,'already clean JPEG is reused');
+  await assert.rejects(cleanCanvasJpeg(new Blob([Uint8Array.of(0xff,0xd8,0xff,0xe1,0,255)])));
 });

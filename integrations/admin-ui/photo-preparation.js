@@ -1,3 +1,34 @@
+// WebKit can add EXIF and Photoshop headers to an otherwise fresh canvas JPEG.
+// Only run this on the canvas encoder's output, after decoding the source photo.
+export async function cleanCanvasJpeg(blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const invalid = () => Error('This browser could not prepare the photo. Please choose another image.');
+  if (bytes[0] !== 0xff || bytes[1] !== 0xd8) throw invalid();
+  const parts = [];
+  let offset = 2, keepFrom = 0;
+  while (offset < bytes.length) {
+    const start = offset;
+    if (bytes[offset++] !== 0xff) throw invalid();
+    while (bytes[offset] === 0xff) offset++;
+    const marker = bytes[offset++];
+    // The compressed scan must be copied byte for byte.
+    if (marker === 0xda) {
+      if (!parts.length) return blob;
+      parts.push(bytes.subarray(keepFrom));
+      return new Blob(parts,{type:'image/jpeg'});
+    }
+    if (offset + 2 > bytes.length) throw invalid();
+    const length = bytes[offset] * 256 + bytes[offset+1];
+    if (length < 2 || length > bytes.length - offset) throw invalid();
+    offset += length;
+    if ((marker >= 0xe0 && marker <= 0xef) || marker === 0xfe) {
+      parts.push(bytes.subarray(keepFrom,start));
+      keepFrom = offset;
+    }
+  }
+  throw invalid();
+}
+
 // Only decoded pixels are drawn to a fresh canvas. Camera metadata never enters the journal.
 export async function prepareFieldPhoto(file, allowPhoneFormats = false){
   const usual = ['image/jpeg','image/png','image/webp'].includes(file.type);
@@ -15,7 +46,10 @@ export async function prepareFieldPhoto(file, allowPhoneFormats = false){
     for(const quality of [.84,.72,.6,.48]){
      let blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
      if(blob?.type!=='image/webp')blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
-     if(blob&&['image/webp','image/jpeg'].includes(blob.type)&&blob.size<=307200)return blob;
+     if (blob?.size && blob.size <= 307200) {
+       if (blob.type === 'image/webp') return blob;
+       if (blob.type === 'image/jpeg') return await cleanCanvasJpeg(blob);
+     }
     }
     edgeScale*=.78;
    }
