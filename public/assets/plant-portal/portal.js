@@ -1,9 +1,9 @@
 import { STAGE_NAMES } from './stages.js';
+import { setPlantIllustration, stageIllustrationFile } from './plant-illustration.js';
 
 const byId = id => document.getElementById(id);
 const main = byId('main');
 const explorer = byId('row-app');
-const map = byId('estate-map');
 const card = byId('plant-card');
 const dialog = byId('plant-dialog');
 const jumpList = byId('row-jump');
@@ -21,19 +21,23 @@ const svg = (name, attributes, value) => {
   return node;
 };
 const canRequest = plant => plant && plant.stage !== 1 && ['available','unverified'].includes(plant.status);
-const stageImage = stage => assets + '/stages/stage-' + stage + '.webp';
-byId('stage-guide').addEventListener('toggle', () => {
+function showIllustrationSet() {
   const list = byId('stage-plates');
-  if (!byId('stage-guide').open || list.children.length) return;
-  for (const [index,name] of STAGE_NAMES.entries()) {
+  const choice = byId('stage-set').value;
+  if (!byId('stage-guide').open || list.dataset.set === choice) return;
+  list.replaceChildren(...STAGE_NAMES.map((name,index) => {
     const li = document.createElement('li');
     const drawing = new Image(70,79);
-    drawing.alt = ''; drawing.src = stageImage(index+1);
+    drawing.alt = ''; drawing.src = assets + '/stages/' + stageIllustrationFile(index+1, Number(choice));
     const caption = document.createElement('span');
     caption.textContent = (index+1) + '. ' + name;
-    li.append(drawing,caption); list.append(li);
-  }
-});
+    li.append(drawing,caption);
+    return li;
+  }));
+  list.dataset.set = choice;
+}
+byId('stage-guide').addEventListener('toggle',showIllustrationSet);
+byId('stage-set').addEventListener('change',showIllustrationSet);
 function readPreference() {
   try { return sessionStorage.getItem(preferenceKey); } catch { return null; }
 }
@@ -60,10 +64,14 @@ let dismissedAt = null;
 let restoringFocus = false;
 let lastDrawn = null;
 let fetching = false;
+const viewport = byId('atlas-viewport');
 const frame = byId('atlas-frame');
 const picture = byId('estate-art');
 const mobileSource = byId('mobile-art');
 let artCheck = 0;
+let initialView = true;
+let previousMapWidth = 0;
+let previousMapTop = 0;
 
 function showArtState(state) {
   frame.dataset.artState = state;
@@ -73,6 +81,13 @@ function showArtState(state) {
     ? 'The orchard illustration could not be loaded. You can still explore positions in the plant list.'
     : 'Loading the orchard illustration…';
   jumpList.disabled = !rows.length || state !== 'ready';
+  if (state === 'ready' && initialView) {
+    initialView = false;
+    // Start in the pilot lanes; the hillside at the top is still reachable.
+    viewport.scrollTop = frame.clientWidth * .04;
+    explicitRow = currentRow;
+  }
+  if (state === 'ready') scrollChanged();
   if (active) positionCard();
 }
 async function checkArtwork() {
@@ -123,57 +138,78 @@ function rootPoint(row, position) {
   return [88 + 837 * t, 654 + (row - 3) * 174 - 151 * t];
 }
 function rowLabelPoint(row) {
-  if (row <= 2) return [9, row === 1 ? 274 : 453];
-  return [14, 658 + (row - 3) * 174];
+  // Use the far headland for the row names so the full pilot is visible together.
+  return [986,row === 1 ? 88 : row === 2 ? 233 : 470 + (row - 3) * 174];
 }
 function setRow(row) {
   currentRow = row;
   jumpList.value = String(row);
 }
-function jump(row, worldY = rowLabelPoint(row)[1]) {
+function jump(row, worldY = rootPoint(row,10)[1]) {
   explicitRow = row;
-  if (frame.dataset.artState !== 'ready') { setRow(row); return; }
-  const box = map.getBoundingClientRect();
-  const toolbar = explorer.querySelector('.atlas-tools').offsetHeight;
-  const readingLine = toolbar + (innerHeight - toolbar) * .35;
-  window.scrollTo({top:Math.max(0, scrollY + box.top + worldY * box.height / 2380 - readingLine), behavior:'instant'});
   setRow(row);
+  if (frame.dataset.artState !== 'ready') return;
+  viewport.scrollTo({top:worldY * frame.clientWidth / 1000 - viewport.clientHeight * .45, behavior:'instant'});
+  previousMapWidth = frame.clientWidth;
+  previousMapTop = viewport.scrollTop;
 }
 function readScroll() {
   pendingScroll = false;
-  const bounds = map.getBoundingClientRect();
-  if (!rows.length || !bounds.height || frame.dataset.artState !== 'ready') return;
+  if (!rows.length || !frame.clientWidth || frame.dataset.artState !== 'ready') return;
+  // Preserve the place in the drawing on rotation, including when the browser
+  // clamps the old pixel scroll offset to a shorter image during the resize.
+  if (previousMapWidth && previousMapWidth !== frame.clientWidth) {
+    viewport.scrollTop = previousMapTop * frame.clientWidth / previousMapWidth;
+  }
+  previousMapWidth = frame.clientWidth;
+  previousMapTop = viewport.scrollTop;
+  const scale = frame.clientWidth / 1000;
+  const start = viewport.scrollTop / scale;
+  const end = (viewport.scrollTop + viewport.clientHeight) / scale;
   if (explicitRow === null) {
-    const line = (innerHeight * .36 - bounds.top) * 2380 / bounds.height;
+    const line = start + Math.min(84,(end-start) * .45);
     let nearest = rows[0].row, distance = Infinity;
     for (const {row} of rows) {
-      const difference = Math.abs(rootPoint(row, 10)[1] - line);
+      const difference = Math.abs(rowLabelPoint(row)[1] - line);
       if (difference < distance) { nearest = row; distance = difference; }
     }
-    setRow(nearest);
+    const bottom = viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - 1;
+    setRow(bottom ? rows[rows.length-1].row : nearest);
+  }
+  // Tab moves on from empty lanes instead of pulling the map back to the pilot.
+  const inView = plant => {
+    if (!plant) return false;
+    const y = rootPoint(plant.row,plant.position)[1];
+    return y >= start && y <= end;
+  };
+  if (!inView(register.get(rovingKey))) {
+    const first = [...register.values()].find(inView);
+    setRoving(first?.key);
   }
   if (active && markers.has(active.key)) {
     const box = markers.get(active.key).getBoundingClientRect();
-    if (box.bottom < explorer.querySelector('.atlas-tools').offsetHeight || box.top > innerHeight) dismiss();
+    const clip = viewport.getBoundingClientRect();
+    if (box.bottom < Math.max(0,clip.top) || box.top > Math.min(innerHeight,clip.bottom)) dismiss();
     else positionCard();
   }
 }
 function scrollChanged() { if (!pendingScroll) { pendingScroll = true; requestAnimationFrame(readScroll); } }
-function manualScroll(event) {
-  if (event.target instanceof Element && event.target.closest('#plant-card,dialog,.atlas-tools')) return;
-  if (event.type === 'keydown' && event.target.closest?.('[data-plant-key]')) return;
-  explicitRow = null;
-  scrollChanged();
-}
-for (const type of ['wheel','touchmove']) window.addEventListener(type, manualScroll, {passive:true});
-window.addEventListener('pointerdown', event => {
-  if (event.clientX >= document.documentElement.clientWidth) manualScroll(event);
-}, {passive:true});
-window.addEventListener('keydown', event => {
-  if (['PageUp','PageDown','Home','End','ArrowUp','ArrowDown',' '].includes(event.key)) manualScroll(event);
+function manualScroll() { explicitRow = null; }
+for (const name of ['wheel','touchmove','pointerdown']) viewport.addEventListener(name,manualScroll,{passive:true});
+viewport.addEventListener('keydown',event => {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return;
+  const step = Math.max(1,viewport.clientHeight*.9);
+  const offsets = {ArrowUp:-40,ArrowDown:40,PageUp:-step,PageDown:step,Home:-viewport.scrollHeight,End:viewport.scrollHeight};
+  const offset = event.key === ' ' ? (event.shiftKey ? -step : step) : offsets[event.key];
+  if (offset === undefined) return;
+  manualScroll();
+  const next = Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop + offset));
+  if (Math.abs(next-viewport.scrollTop) < 1) return;
+  event.preventDefault(); viewport.scrollTop = next;
 });
-window.addEventListener('scroll', scrollChanged, {passive:true});
-window.addEventListener('resize', scrollChanged, {passive:true});
+viewport.addEventListener('scroll',scrollChanged,{passive:true});
+window.addEventListener('scroll',scrollChanged,{passive:true});
+window.addEventListener('resize',scrollChanged,{passive:true});
 
 function notice(message = '', retry = false) {
   byId('map-message').textContent = message;
@@ -221,7 +257,7 @@ function inspect(plant, nextMode, focus = false) {
   card.dataset.stage = String(plant.stage);
   byId('card-kind').textContent = (selected ? 'Class preference' : 'Planting position') + ' · Row ' + plant.row;
   byId('plant-title').textContent = label(plant);
-  byId('card-image').src = stageImage(plant.stage);
+  setPlantIllustration(byId('card-image'), assets + '/stages', plant.stage, plant);
   byId('stage-title').textContent = STAGE_NAMES[plant.stage - 1];
   byId('stage-number').textContent = 'Stage ' + plant.stage + ' of 10';
   card.querySelector('.height').hidden = plant.stage === 1;
@@ -301,7 +337,9 @@ function markerFor(plant) {
   const g = svg('g', {class:'coffee-marker','data-plant-key':plant.key,'data-stage':plant.stage,
     transform:'translate(' + x + ' ' + y + ')',role:'button',tabindex:'-1','aria-pressed':'false',
     'aria-label':label(plant) + ', Row ' + plant.row + ', ' + STAGE_NAMES[plant.stage - 1]});
-  g.append(svg('image',{href:stageImage(plant.stage),x:-width/2,y:-height*.8993,width,height,'pointer-events':'none'}));
+  const drawing = svg('image',{x:-width/2,y:-height*.8993,width,height,'pointer-events':'none'});
+  setPlantIllustration(drawing, assets + '/stages', plant.stage, plant);
+  g.append(drawing);
   g.append(svg('rect',{class:'plant-hit',x:-20,y:-31,width:40,height:49,rx:5,fill:'transparent'}));
   g.append(svg('rect',{class:'tag-bg',x:-17,y:1,width:34,height:16,rx:6}));
   g.append(svg('text',{class:'plant-id',x:0,y:13,'text-anchor':'middle'},label(plant)));
@@ -426,7 +464,9 @@ function draw(layout,result) {
 main.querySelectorAll('a.hero-marker[data-preview]').forEach(link => link.addEventListener('click',event => {
   const plant = register.get('r1-p'+link.dataset.preview);
   if (!plant) return;
-  event.preventDefault(); showPosition(plant,true);
+  event.preventDefault();
+  explorer.querySelector('.atlas-tools').scrollIntoView({block:'start',behavior:'instant'});
+  showPosition(plant,true);
 }));
 
 async function refresh() {

@@ -54,16 +54,18 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
 <p>Explore the coffee plants among the established magnolias. Select a plant to take your preference into your school application.</p></div>
 <div id="row-app" hidden>
-<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary><p>Each illustration shows the stage chosen by the farmer. The seedling drawing represents a plant about 10 cm tall.</p><ol id="stage-plates"></ol></details>
+<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary><p>The farmer sets each plant’s stage. The tiny seedling is drawn at about 10 cm.</p>
+<label for="stage-set">Illustration set</label> <select id="stage-set" aria-controls="stage-plates"><option value="1">A</option><option value="2">B</option><option value="3">C</option><option value="4">D</option><option value="5">E</option></select>
+<ol id="stage-plates"></ol></details>
 <div class="atlas-tools"><label for="row-jump"><span class="wide-label">Jump to </span>row</label><select id="row-jump" aria-label="Jump to row"></select>
-<span class="atlas-hint">Scroll to explore the orchard ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button></div>
+<span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button></div>
 <div class="map-notice" id="map-notice" role="status"><span id="map-message">Loading the farmer’s planting map…</span><button type="button" id="retry-map" hidden>Try again</button></div>
 <figure class="atlas-sheet"><div id="art-notice" class="map-notice" role="status"><span id="art-message">Loading the orchard illustration…</span><button type="button" id="retry-art" hidden>Retry illustration</button></div>
-<div id="atlas-frame" data-art-state="loading"><picture><source id="mobile-art" media="(max-width:620px)" srcset="{assets}/estate-atlas-mobile.webp"><img id="estate-art" src="{assets}/estate-atlas.webp" width="1400" height="3332" alt="" loading="eager" decoding="async"></picture>
+<div id="atlas-viewport" role="region" aria-label="Scrollable orchard map" aria-describedby="atlas-scroll-tip" tabindex="0"><div id="atlas-frame" data-art-state="loading"><picture><source id="mobile-art" media="(max-width:620px)" srcset="{assets}/estate-atlas-mobile.webp"><img id="estate-art" src="{assets}/estate-atlas.webp" width="1400" height="3332" alt="" loading="eager" decoding="async"></picture>
 <svg id="estate-map" viewBox="0 0 1000 2380" role="group" aria-labelledby="atlas-title atlas-desc">
 <title id="atlas-title">The Glenolia estate atlas</title><desc id="atlas-desc">A continuous illustrated orchard map. Explore individual planting positions in the plant list or use the arrow keys between them.</desc>
-<g id="atlas-row-labels" aria-hidden="true"></g><g id="atlas-plants" role="group" aria-label="Coffee planting positions"></g></svg></div>
-<figcaption><span>Illustrated plan · Glenorie, NSW</span><span>Rows 3–12 are in the autumn 2027 planting plan. The farm updates each row as work progresses.</span></figcaption></figure>
+<g id="atlas-row-labels" aria-hidden="true"></g><g id="atlas-plants" role="group" aria-label="Coffee planting positions"></g></svg></div></div>
+<figcaption><span id="atlas-scroll-tip">Scroll the map to explore all 12 rows.</span><span>Rows 3–12 are in the autumn 2027 planting plan. The farm updates each row as work progresses.</span></figcaption></figure>
 <a class="sub-link plain-apply" id="no-preference" href="{teacher}">Apply without a preference ↗</a>
 <p id="selection-live" class="sr" role="status"></p>
 <dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list">Close</button></header>

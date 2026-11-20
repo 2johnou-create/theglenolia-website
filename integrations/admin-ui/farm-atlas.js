@@ -1,4 +1,5 @@
 import { STAGE_NAMES } from '../../public/assets/plant-portal/stages.js';
+import { setPlantIllustration } from '../../public/assets/plant-portal/plant-illustration.js';
 
 export function mountFarmAtlas({api,run,reload}) {
   const by = id => document.getElementById(id);
@@ -34,7 +35,7 @@ export function mountFarmAtlas({api,run,reload}) {
   function previewStage() {
     const p = plant(), stage = Number(stageSelect.value);
     if (!p || !Number.isInteger(stage) || !STAGE_NAMES[stage - 1]) return;
-    by('atlas-stage-art').src = 'https://theglenolia.com.au/assets/plant-portal/stages/stage-' + stage + '.webp';
+    setPlantIllustration(by('atlas-stage-art'), 'https://theglenolia.com.au/assets/plant-portal/stages', stage, p);
     by('atlas-stage-art').hidden = false;
     by('atlas-stage-hint').textContent = stage === 1 ?
       'The public map shows prepared soil here. Schools can choose the plant once a later stage is set.' :

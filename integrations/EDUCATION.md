@@ -151,6 +151,13 @@ is retained on upgrade. The pilot starts with the young-seedling illustration;
 new non-pilot slots start as prepared soil. Stage is an illustration setting.
 Plant-specific heights come from actual recorded measurements.
 
+The public atlas displays up to three rows in a scrollable map. All twelve
+rows are reachable through the row menu. Teachers can also select a position
+from the plant list. Each stage has five illustrated specimens. A position
+keeps the same specimen, lean and width across the map, plant card and farmer
+preview. The shared `plant-illustration.js` helper derives this appearance
+from the row and position, so reopening a row restores the same drawings.
+
 The public `GET /api/plants/map` returns the 12 row counts and enabled
 positions only, without school details, physical tag strings, notes or photos.
 Public plant numbers are fixed by row and position: P1 is `r1-p1`, P20 is
