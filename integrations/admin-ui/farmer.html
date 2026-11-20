@@ -8,7 +8,7 @@
 <header><a href="/" aria-label="The Glenolia admin home"><img src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="240"></a><a href="/cdn-cgi/access/logout">Sign out</a></header>
 <main id="main">
 <p class="eyebrow">Farm workspace</p><h1>Plant journal</h1>
-<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Post an update</a><a href="#requests">School requests</a><a href="#register">Plant register</a></nav>
+<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Post an update</a><a href="#atlas">Estate atlas</a><a href="#register">Plant register</a><a href="#requests">School requests</a></nav>
 <div id="notice" role="status" tabindex="-1" aria-live="polite">Loading your farm workspace…</div>
 <button id="retry" type="button" class="quiet" hidden>Retry loading</button>
 <section id="update" aria-labelledby="update-heading" hidden>
@@ -28,9 +28,35 @@
 <div class="preview-wrap"><div class="preview-card"><p class="eyebrow">Class journal preview</p><h3 id="preview-plant">Your plant</h3><p id="preview-date" class="hint"></p>
 <img id="preview-photo" alt="Selected field photograph" hidden><p id="preview-note"></p><button class="text" id="remove-photo" type="button" hidden>Remove photo</button>
 </div><button type="submit" id="post-update" class="primary">Post update</button>
-<p class="hint" id="school-visibility"></p></div>
+<p class="hint" id="school-visibility"></p><a id="update-atlas" href="#atlas">Edit this plant’s atlas stage</a></div>
 </form>
 <details id="history" hidden><summary>Previous updates</summary><div id="history-list"></div></details>
+</section>
+<section id="atlas" aria-labelledby="atlas-heading" hidden>
+<h2 id="atlas-heading" tabindex="-1">Estate atlas</h2>
+<p class="intro">Set how many coffee positions appear in each row. Choose a growth illustration for each plant. <a href="https://theglenolia.com.au/plant-portal/#rows" target="_blank" rel="noopener noreferrer">View the public atlas ↗</a></p>
+<p id="atlas-missing" class="quiet-state" hidden>Atlas settings are unavailable. Refresh the farm workspace to try again.</p>
+<div id="atlas-editor" hidden>
+<label for="atlas-row" class="atlas-label">Orchard row</label><select id="atlas-row"></select>
+<div class="atlas-grid">
+<form id="atlas-row-form" class="editor">
+<h3>Row visibility</h3>
+<label for="atlas-count">Positions on the public map</label>
+<input id="atlas-count" type="number" inputmode="numeric" step="1" min="0" required aria-describedby="atlas-row-change">
+<p id="atlas-row-change" class="hint" aria-live="polite"></p>
+<button type="submit" id="save-atlas-row">Save row</button><p class="save-result" id="atlas-row-result" role="status"></p>
+</form>
+<form id="atlas-stage-form" class="editor">
+<h3>Plant illustration</h3>
+<p id="atlas-no-plants" class="hint" hidden>Save at least one visible position in this row to choose its illustration.</p>
+<div id="atlas-stage-fields">
+<label for="atlas-plant">Plant</label><select id="atlas-plant"></select>
+<div class="stage-preview"><img id="atlas-stage-art" alt="" width="72" height="81" referrerpolicy="no-referrer"><div><label for="atlas-stage">Growth stage</label><select id="atlas-stage"></select></div></div>
+<p id="atlas-stage-hint" class="hint"></p>
+<button type="submit" id="save-atlas-stage">Save stage</button><p class="save-result" id="atlas-stage-result" role="status"></p>
+</div>
+</form>
+</div></div>
 </section>
 <section id="requests" aria-labelledby="requests-heading" hidden>
 <h2 id="requests-heading" tabindex="-1">School requests</h2><p class="intro">Review nearby schools first. The teacher accepts the offer in their portal.</p>
@@ -39,11 +65,12 @@
 <section id="register" aria-labelledby="register-heading" hidden>
 <h2 id="register-heading" tabindex="-1">Plant register</h2>
 <p class="intro">Match a physical tag to its row and position before offering a plant to a school.</p>
+<p id="register-empty" class="quiet-state" hidden>There are no visible positions to verify. <a href="#atlas">Open the estate atlas</a> to add positions.</p>
 <form id="register-form" class="editor narrow">
 <label for="field-position">Row and position</label><select id="field-position" required></select>
 <p class="field-state" id="register-state"></p>
 <div id="tag-fields"><label for="field-tag">Physical tag</label><input id="field-tag" type="text" autocomplete="off" maxlength="60" placeholder="As written on the plant" required>
-<p class="hint">Verifying this tag makes the plant available for school review.</p>
+<p class="hint" id="tag-hint">Verify the tag before offering this plant to a school.</p>
 <button type="submit">Verify plant</button></div>
 <div id="manage-tag" hidden><p id="tag-description"></p><div class="actions"><button id="field-observe" type="button">Add a field note</button><button id="availability" type="button" class="quiet" hidden></button></div></div>
 </form></section>

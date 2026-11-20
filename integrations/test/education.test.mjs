@@ -57,8 +57,10 @@ test('new staff story catalogue and image routes remain gated by exact owner Acc
 
 
 // Real SQLite, including constraints and transactional batches. No network or real people.
+const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.meta.url),'utf8');
+function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
- constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));}
+ constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);}
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
  async batch(statements){this.sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of statements)out.push(await s.run());this.sql.exec('COMMIT');return out;}catch(e){this.sql.exec('ROLLBACK');throw e;}}
  close(){this.sql.close();}
@@ -197,14 +199,16 @@ async function approvePlant(f,actor=f.a,key='r1-p7'){
  await code(await f.post('/api/plants/accept',{applicationId,plantKey:key},actor),200);
  return applicationId;
 }
-test('plant selection lists two rows of nineteen provisional positions and only staff-verified stock',async t=>{
+test('plant atlas lists the 27 pilot positions with stable labels and no personal or verification data',async t=>{
  const f=await fixture(t);
  const map=await f.req('/api/plants/map',{headers:{Origin:'https://theglenolia.com.au'}});
  assert.equal(map.headers.get('Access-Control-Allow-Origin'),'https://theglenolia.com.au');
- const {plants}=await map.json();
- assert.equal(plants.length,38);assert.equal(new Set(plants.map(p=>p.key)).size,38);
- assert.ok(plants.every(p=>p.status==='unverified'&&!('tag' in p)));
- assert.deepEqual(plants[37],{key:'r2-p19',row:2,position:19,status:'unverified'});
+ const {plants,rows}=await map.json();
+ assert.deepEqual(rows.map(r=>r.enabledCount),[19,8,0,0,0,0,0,0,0,0,0,0]);
+ assert.ok(rows.every(r=>r.capacity===19&&!('revision' in r)));
+ assert.equal(plants.length,27);assert.equal(new Set(plants.map(p=>p.key)).size,27);
+ assert.ok(plants.every(p=>p.stage===2&&p.status==='unverified'&&!('tag' in p)&&!('revision' in p)));
+ assert.deepEqual(plants[26],{key:'r2-p8',row:2,position:8,label:'P27',stage:2,status:'unverified'});
  for(const body of [{key:'r2-p20',tag:'T'},{key:'r0-p1',tag:'T'},{key:'r1-p7',tag:''}])await code(await f.staff('/plants/verify',body),400);
  await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'T7'}),200);
  await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'T7'}),200);
@@ -215,6 +219,67 @@ test('plant selection lists two rows of nineteen provisional positions and only 
  list=await (await f.req('/api/plants/map')).json();assert.equal(list.plants[6].status,'unavailable');
  await code(await f.post('/api/plants/apply',plantApplication,f.a),409,'plant_unavailable');
  await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey:null},f.a),200);
+});
+test('atlas migration retains verified tags, allocations, journal history and future positions across retries',()=>{
+ const db=new DatabaseSync(':memory:');
+ try {
+  db.exec("PRAGMA foreign_keys=ON; CREATE TABLE edu_users(id TEXT PRIMARY KEY); CREATE TABLE edu_schools(id TEXT PRIMARY KEY);");
+  db.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));
+  db.exec(`INSERT INTO edu_users VALUES('teacher'); INSERT INTO edu_schools VALUES('workspace');
+    INSERT INTO edu_plants VALUES('r2-p12',2,12,'LEGACY-12',0,'2026-01-01');
+    INSERT INTO edu_plant_applications(id,teacher_id,workspace_id,school_name,suburb,school_type,preferred_key,plant_key,status,created_at)
+      VALUES('application','teacher','workspace','Fixture','Local','primary','r2-p12','r2-p12','active','2026-01-02');
+    INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at,photo_mime,photo_bytes,request_hash)
+      VALUES('journal','r2-p12','2026-01-03','A note','2026-01-03','image/webp',x'0102','hash');
+    INSERT INTO edu_plant_questions(id,application_id,question,created_at) VALUES('question','application','Why?','2026-01-03');`);
+  migrateAtlas(db);
+  assert.equal(db.prepare('SELECT enabled_count FROM edu_atlas_rows WHERE row_num=2').get().enabled_count,12);
+  db.exec("UPDATE edu_atlas_positions SET stage=9,revision=2 WHERE plant_key='r2-p12';");
+  migrateAtlas(db);
+  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM edu_plant_questions JOIN edu_plant_applications a ON application_id=a.id JOIN edu_plants p ON a.plant_key=p.plant_key JOIN edu_plant_updates u ON u.plant_key=p.plant_key WHERE a.status='active' AND p.tag='LEGACY-12' AND p.available=0 AND hex(u.photo_bytes)='0102' AND u.note='A note'").get().n,1);
+  assert.equal(db.prepare("SELECT stage FROM edu_atlas_positions WHERE plant_key='r2-p12'").get().stage,9);
+  assert.equal(db.prepare('SELECT COUNT(*) n FROM edu_atlas_positions').get().n,228);
+  db.exec("INSERT INTO edu_plants VALUES('r12-p19',12,19,'FUTURE-19',1,'2027-03-01')");
+  assert.throws(()=>db.exec("INSERT INTO edu_plants VALUES('r12-p18',12,18,'legacy-12',1,'2027-03-01')"),/UNIQUE/);
+ } finally { db.close(); }
+});
+test('atlas row visibility, individual stages, school eligibility and archived settings change atomically',async t=>{
+ const f=await fixture(t), key='r12-p2', row='/plants/row',stage='/plants/stage';
+ const setRow=(enabledCount,revision)=>f.staff(row,{row:12,enabledCount,revision});
+ const setStage=(number,revision)=>f.staff(stage,{key,stage:number,revision});
+ const atlas=async()=>code(await f.req('/api/plants/map'),200);
+ for(const [path,body] of [[row,{row:13,enabledCount:1,revision:1}],[row,{row:3,enabledCount:-1,revision:1}],[row,{row:3,enabledCount:20,revision:1}],[stage,{key,stage:'2',revision:1}],[stage,{key,stage:11,revision:1}],[stage,{key,stage:0,revision:1}]])await code(await f.staff(path,body),400);
+ await code(await setStage(2,1),409,'position_hidden');
+ await code(await f.staff('/plants/verify',{key,tag:'Trial tag'}),409,'position_hidden');
+ await code(await setRow(2,1),200);await code(await setRow(2,1),200);
+ assert.deepEqual((await atlas()).plants.at(-1),{key,row:12,position:2,label:'P211',stage:1,status:'preparing'});
+ await code(await setRow(3,1),409,'atlas_changed');
+ await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey:key},f.a),409,'plant_unavailable');
+ const applicationId=await plantApplicationId(f,f.a,null);
+ await code(await f.staff('/plants/verify',{key,tag:'Trial tag'}),200);
+ await code(await f.staff('/plants/review',{applicationId,decision:'offer',plantKey:key}),409,'plant_unavailable');
+ await code(await setStage(2,1),200);await code(await setStage(2,1),200);
+ await code(await setStage(9,1),409,'atlas_changed');
+ const races=await Promise.all([setStage(3,2),setStage(4,2)]);
+ assert.deepEqual(races.map(x=>x.status).sort(),[200,409]);
+ await code(await setStage(10,3),200);
+ await code(await f.staff('/plants/update',{key,observedOn:'2026-01-03',note:'Archive me',requestId:uuid()}),200);
+ await code(await setRow(0,2),200);
+ assert.ok(!(await atlas()).plants.some(p=>p.key===key));
+ const staff=await code(await f.staff('/plants/dashboard'),200);
+ assert.ok(staff.archivedPlants.some(p=>p.key===key&&p.stage===10&&p.tag==='Trial tag'&&p.revision===4));
+ assert.equal((await code(await f.staff('/plants/journal?key='+key),200)).updates[0].note,'Archive me');
+ await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey:key},f.b),409,'plant_unavailable');
+ await code(await setRow(2,3),200);
+ assert.deepEqual((await atlas()).plants.at(-1),{key,row:12,position:2,label:'P211',stage:10,status:'available'});
+ await code(await f.staff('/plants/review',{applicationId,decision:'offer',plantKey:key}),200);
+ await code(await setRow(1,4),409,'row_in_use');await code(await setStage(1,4),409,'plant_in_use');
+ await code(await f.post('/api/plants/accept',{applicationId,plantKey:key},f.a),200);
+ await code(await setRow(0,4),409,'row_in_use');await code(await setStage(1,4),409,'plant_in_use');
+ assert.equal((await atlas()).plants.at(-1).status,'unavailable');
+ assert.equal((await code(await f.req('/api/plants/me',{actor:f.a}),200)).updates[0].note,'Archive me');
+ await code(await setStage(8,4),200);
 });
 test('plant registration verifies teacher session and consent, reserves atomically and enforces offer acceptance',async t=>{
  const f=await fixture(t);
@@ -291,6 +356,13 @@ test('plant staff allowlist bounds farmer identity to field work, strips private
  const route=(path,options={},ctx=farmer)=>handleAdmin(adminReq(path,options),env,ctx);
  const dashboard=await(await route('/api/education/plants/dashboard')).json();assert.equal(dashboard.role,'farmer');assert.deepEqual(dashboard.applications,[]);assert.deepEqual(dashboard.questions,[]);
  assert.equal((await route('/plants')).status,200);
+ for(const [suffix,body] of [['row',{row:3,enabledCount:1,revision:1}],['stage',{key:'r3-p1',stage:2,revision:1}]]){
+  const target='/api/education/plants/'+suffix;
+  assert.equal((await route(target,{method:'POST',body},access('stranger@example.test'))).status,403);
+  assert.equal((await route(target,{method:'POST',body,origin:null})).status,403);
+  assert.equal((await route(target,{method:'POST',body})).status,200);
+ }
+ assert.equal((await code(await f.req('/api/plants/map'),200)).plants.at(-1).label,'P39');
  assert.equal((await route('/api/education/plants/verify',{method:'POST',body:{key:'r1-p1',tag:'Verified on fixture'}})).status,200);
  assert.equal((await route('/api/education/plants/verify',{method:'POST',origin:null,body:{key:'r1-p2',tag:'Second'}})).status,403);
  assert.equal((await route('/api/education/plants/review',{method:'POST',body:{applicationId:uid,decision:'decline'}})).status,403);

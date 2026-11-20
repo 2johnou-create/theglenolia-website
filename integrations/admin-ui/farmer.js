@@ -1,4 +1,5 @@
 import {prepareFieldPhoto} from './photo-preparation.js';
+import {mountFarmAtlas} from './farm-atlas.js';
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -7,6 +8,7 @@ import {prepareFieldPhoto} from './photo-preparation.js';
   const applicationStatuses = {pending:'Awaiting review',offered:'Awaiting teacher acceptance',active:'School following',declined:'Declined'};
   const drafts = new Map();
   let dashboard = null, journalVersion = 0, reading = false, writing = false;
+  const atlas = mountFarmAtlas({api,run,reload});
 
   function message(text, focus = false) {
     $('notice').textContent = text;
@@ -22,9 +24,9 @@ import {prepareFieldPhoto} from './photo-preparation.js';
     const date = new Date(value?.length === 10 ? value + 'T12:00:00Z' : value);
     return Number.isFinite(date.getTime()) ? date.toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric',timeZone:'Australia/Sydney'}) : '';
   }
-  function position(plant) { return 'Row ' + plant.row + ' · Plant ' + plant.position; }
+  function position(plant) { return 'Row ' + plant.row + ' · ' + (plant.label || 'Plant ' + plant.position); }
   function name(plant) { return position(plant) + (plant.tag ? ' · ' + plant.tag : ''); }
-  function plant(key) { return dashboard?.plants.find(item => item.key === key); }
+  function plant(key) { return dashboard?.plants.find(item => item.key === key) || dashboard?.archivedPlants?.find(item => item.key === key); }
   function selected() { return plant($('update-plant').value); }
   function draft(key) {
     if (!drafts.has(key)) drafts.set(key,{date:today(),note:'',blob:null,url:'',requestId:null});
@@ -34,10 +36,14 @@ import {prepareFieldPhoto} from './photo-preparation.js';
     if (d.url) URL.revokeObjectURL(d.url);
     d.url = ''; d.blob = null; d.requestId = null;
   }
-  function dirty() { return [...drafts.values()].some(d => d.note.trim() || d.blob); }
+  function dirty() { return atlas.hasChanges() || [...drafts.values()].some(d => d.note.trim() || d.blob); }
   window.addEventListener('beforeunload', event => { if (dirty()) { event.preventDefault(); event.returnValue = ''; } });
 
   const knownErrors = {
+    atlas_changed:'Another staff member changed the atlas. Refresh the farm workspace and check the latest values.',
+    row_in_use:'A position in this range is offered or assigned to a school. Keep that position visible.',
+    position_hidden:'This position is now hidden. Refresh the farm workspace and choose a visible position.',
+    plant_in_use:'This plant is offered or assigned to a school. Choose a planted stage.',
     origin:'Please reopen the protected farm workspace.', access_required:'Your staff session expired. Sign in again in another tab, then retry.',
     owner_required:'Your account cannot manage school applications.',changed_elsewhere:'Another staff member changed this record. Refresh the farm workspace.',
     tag_in_use:'That tag is already registered. Check the physical tag and position.',
@@ -66,8 +72,8 @@ import {prepareFieldPhoto} from './photo-preparation.js';
 
   function showTab(focus = false) {
     let tab = location.hash.slice(1);
-    if (!['register','requests','update'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
-    for (const id of ['update','requests','register']) $(id).hidden = !dashboard || id !== tab;
+    if (!['register','requests','update','atlas'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
+    for (const id of ['update','requests','register','atlas']) $(id).hidden = !dashboard || id !== tab;
     for (const link of document.querySelectorAll('nav a')) {
       if (link.hash === '#' + tab) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
       link.hidden = link.hash === '#requests' && dashboard?.role === 'farmer';
@@ -80,32 +86,44 @@ import {prepareFieldPhoto} from './photo-preparation.js';
   function updateSelectors() {
     const previous = $('update-plant').value, registerChoice = $('field-position').value;
     const verified = dashboard.plants.filter(item => item.status !== 'unverified');
-    $('update-plant').replaceChildren(...verified.map(item => option(item.key,name(item))));
-    if (verified.some(item => item.key === previous)) $('update-plant').value = previous;
+    const hidden = dashboard.archivedPlants || [];
+    const updateOptions = verified.map(item => option(item.key,name(item)));
+    if (hidden.length) {
+      const archived = element('optgroup'); archived.label = 'Hidden from atlas';
+      archived.append(...hidden.map(item => option(item.key,name(item))));
+      updateOptions.push(archived);
+    }
+    $('update-plant').replaceChildren(...updateOptions);
+    if ([...verified,...hidden].some(item => item.key === previous)) $('update-plant').value = previous;
     $('field-position').replaceChildren(...dashboard.plants.map(item => option(item.key,position(item))));
-    if (plant(registerChoice)) $('field-position').value = registerChoice;
-    $('empty-field').hidden = verified.length > 0; $('update-form').hidden = !verified.length;
-    $('history').hidden = !verified.length;
-    renderRegister(); renderDraft();
+    if (dashboard.plants.some(p => p.key === registerChoice)) $('field-position').value = registerChoice;
+    const hasFieldRecord = verified.length > 0 || hidden.length > 0;
+    $('empty-field').hidden = hasFieldRecord; $('update-form').hidden = !hasFieldRecord;
+    $('history').hidden = !hasFieldRecord;
+    atlas.refresh(dashboard); renderRegister(); renderDraft();
   }
   function renderRegister() {
     const item = plant($('field-position').value);
-    $('register-form').hidden = !item;
+    $('register-form').hidden = !item; $('register-empty').hidden = Boolean(item);
     if (!item) return;
     const verified = item.status !== 'unverified';
-    $('register-state').textContent = statuses[item.status] || item.status;
+    $('register-state').textContent = item.stage === 1 ? 'Soil preparation' : (statuses[item.status] || item.status);
+    $('tag-hint').textContent = item.stage === 1 ? 'You can tag this position while preparing the soil. School offers require a planted stage.' : 'Verify the tag before offering this plant to a school.';
     $('tag-fields').hidden = verified; $('field-tag').required = !verified;
     $('manage-tag').hidden = !verified; $('tag-description').textContent = verified ? 'Field tag · ' + item.tag : '';
-    $('availability').hidden = !['available','unavailable'].includes(item.status);
+    $('availability').hidden = item.stage === 1 || !['available','unavailable'].includes(item.status);
     $('availability').textContent = item.status === 'available' ? 'Hold at farm' : 'Make available to schools';
   }
   function renderDraft() {
     const p = selected();
     if (!p) return;
+    const visible = dashboard.plants.some(item => item.key === p.key);
+    $('update-atlas').hidden = !dashboard.rows?.length || !visible;
     const d = draft(p.key);
     $('update-note').value = d.note; $('observed-on').value = d.date; $('observed-on').max = today();
     $('preview-plant').textContent = name(p);
-    $('school-visibility').textContent = p.status === 'active' ? 'Its teacher can see the update as soon as you post.' : 'Its class can read these observations once a teacher accepts the plant.';
+    $('school-visibility').textContent = !visible ? 'This position is hidden from the public atlas. Notes and photos stay in its journal.' :
+      p.status === 'active' ? 'Its teacher can see the update as soon as you post.' : 'Its class can read these observations once a teacher accepts the plant.';
     $('preview-date').textContent = displayDate(d.date);
     $('preview-note').textContent = d.note.trim() || (d.url ? '' : 'Your field note or photograph will appear here.');
     if (d.url) $('preview-photo').src = d.url; else $('preview-photo').removeAttribute('src');
@@ -122,6 +140,7 @@ import {prepareFieldPhoto} from './photo-preparation.js';
   $('update-note').addEventListener('input',captureDraft); $('observed-on').addEventListener('input',captureDraft);
   $('update-plant').addEventListener('change',() => { renderDraft(); loadHistory(); });
   $('field-position').addEventListener('change',() => { $('field-tag').value = ''; renderRegister(); });
+  $('update-atlas').addEventListener('click',() => atlas.openPlant(selected()));
   $('remove-photo').addEventListener('click',() => { clearPhoto(draft(selected().key)); renderDraft(); $('library-file').focus(); });
 
   function element(tag, text, cls) {
@@ -141,20 +160,27 @@ import {prepareFieldPhoto} from './photo-preparation.js';
     $('main').setAttribute('aria-busy','true');
     try { await operation(); }
     catch (error) { message(error.message,true); }
-    finally { for (const control of enabled) control.disabled = false; $('main').removeAttribute('aria-busy'); writing = false; }
+    finally { for (const control of enabled) control.disabled = false; $('main').removeAttribute('aria-busy'); writing = false; atlas.syncButtons(); }
   }
   function formLabel(text, control) {
     const label = element('label',text); label.htmlFor = control.id; return label;
   }
+  function requestedPosition(key) {
+    if (!key) return 'Open to any plant';
+    const preferred = plant(key);
+    if (preferred) return 'Preference · ' + position(preferred);
+    const match = /^r(\d+)-p(\d+)$/.exec(key);
+    return match ? 'Preference · Row ' + match[1] + ', position ' + match[2] + ' (hidden from atlas)' : 'Previously selected position';
+  }
   function renderRequests() {
     const cards = [], inbox = [];
     if (dashboard.role === 'farmer') { $('questions').replaceChildren(); $('applications').replaceChildren(); return; }
-    const available = dashboard.plants.filter(item => item.status === 'available');
+    const available = dashboard.plants.filter(item => item.status === 'available' && item.stage !== 1);
     for (const application of dashboard.applications) {
-      const box = element('article',null,'request'), preferred = plant(application.preferredKey), assigned = plant(application.plantKey);
+      const box = element('article',null,'request'), assigned = plant(application.plantKey);
       box.append(element('p',applicationStatuses[application.status] || application.status,'eyebrow'),element('h3',application.schoolName),
         element('p',[application.suburb,application.schoolType,application.email].filter(Boolean).join(' · ')),
-        element('p',assigned ? 'Plant · ' + name(assigned) : preferred ? 'Preference · ' + position(preferred) : 'Open to any plant','hint'));
+        element('p',assigned ? 'Plant · ' + name(assigned) : requestedPosition(application.preferredKey),'hint'));
       if (application.status === 'pending') {
         const choose = element('select'); choose.id = 'offer-' + application.id;
         choose.append(option('','Choose a verified plant'), ...available.map(item => option(item.key,name(item))));
@@ -279,7 +305,7 @@ import {prepareFieldPhoto} from './photo-preparation.js';
     });
   });
 
-  async function reload(success) {
+  async function reload(success, localResult = null) {
     if (reading) return; reading = true;
     try {
       const next = await api('/dashboard');
@@ -288,7 +314,9 @@ import {prepareFieldPhoto} from './photo-preparation.js';
       $('retry').textContent = 'Retry loading';
       $('main').querySelector('nav').hidden = false;
       if (next.role === 'farmer') { const home = document.querySelector('header a'); home.href = '/plants'; home.setAttribute('aria-label','The Glenolia farm workspace'); }
-      await loadHistory(); message(success || '',Boolean(success));
+      await loadHistory();
+      if (localResult) { message(''); localResult.textContent = success; }
+      else message(success || '',Boolean(success));
     } catch (error) {
       message((success ? success + ' ' : '') + error.message,true); $('retry').hidden = false;
     } finally { reading = false; }

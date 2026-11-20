@@ -113,7 +113,7 @@ is not malware scanning or PDF accessibility certification.
 
 ## School Plant Portal
 
-The public programme and two-row selector are at `/plant-portal/` on the main
+The public programme and scrolling estate atlas are at `/plant-portal/` on the main
 site. The signed-in teacher opens `/#plant` on the education service. A
 row-qualified preference, such as `/#plant?prefer=r2-p7`, follows the teacher
 to the application. A free school application can also be submitted without
@@ -132,14 +132,42 @@ Open `/plants` on the protected admin service to work in the field.
 4. Reopen the plant's previous updates to check the entry. Use the classroom
    view in the teacher workspace to discuss observations with the students.
 
-`plant-schema.sql` is an additive, repeatable migration for the existing
-**education** D1 database. Apply it before deploying the education service,
-then deploy protected admin, then publish the public site. For a fresh setup,
-apply `education-schema.sql` first. The plant migration creates no field
-records. A position becomes available after staff verify its tag. Each
-confirmed pairing ties a dated journal to the assigned teacher account.
-Photographs use the private education data service. Public crawlers can index
-the programme invitation and row guide.
+For new databases apply `education-schema.sql`, `plant-schema.sql`, then
+`plant-atlas-schema.sql`. For an existing school Plant Portal, apply only
+`plant-atlas-schema.sql` to the **education** D1 database. Execute that entire
+file as one transactional D1 import before deploying the education Worker,
+protected admin Worker, and public site, in that order. The migration copies
+the physical register, widens its row check to 1–12 and restores all existing
+keys, verification dates, tags and availability. Offers and journal references
+retain their keys. The layout migration can be replayed without resetting
+saved row counts or stages. Verify foreign keys and the counts of existing
+physical records, offers and journal records after the migration.
+
+The farmer dashboard controls how many of a row's 19 mapped positions appear
+and selects an individual illustration stage from 1 through 10. Rows 1 and 2
+initially show the 19 and eight pilot positions; the remaining ten rows start
+closed to coffee. Any previously field-verified position beyond those counts
+is retained on upgrade. The pilot starts with the young-seedling illustration;
+new non-pilot slots start as prepared soil. Stage is an illustration setting.
+Plant-specific heights come from actual recorded measurements.
+
+The public `GET /api/plants/map` returns the 12 row counts and enabled
+positions only, without school details, physical tag strings, notes or photos.
+Public plant numbers are fixed by row and position: P1 is `r1-p1`, P20 is
+`r2-p1`, and P39 is `r3-p1`. Changing a different row never renumbers a plant.
+Stage 1 and hidden positions cannot be requested or offered. Plant stages
+2–10 permit a school preference; staff still have to verify the tag and review
+the school before an offer. The public response uses no-store caching.
+
+The protected `POST /api/education/plants/row` takes `row`, `enabledCount`
+(0–19) and the dashboard's row `revision`. The corresponding `/stage` route
+takes `key`, `stage` (1–10) and the individual position's `revision`. The
+server checks that revision on the write. Reducing a row hides its trailing
+positions without deleting them. Verified hidden journals stay available to
+staff in the archive. Re-enabling a position restores its previous stage
+and physical record. Offered and active school positions cannot be hidden
+or returned to the soil-preparation stage. School photographs continue to use
+the private education service.
 
 The classroom endpoint omits teacher details and private questions. Private photo
 responses are authenticated and use no-store caching.
