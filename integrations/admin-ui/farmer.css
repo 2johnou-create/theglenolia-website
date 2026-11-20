@@ -41,3 +41,46 @@ details{margin:1.5rem 0}summary{cursor:pointer;color:var(--green);padding:.75rem
 .save-result{margin:.65rem 0 0;color:var(--green);font-size:.9rem}.save-result:empty{display:none}
 
 .school-profile,.observation-log{margin:.65rem 0}.school-profile summary,.observation-log summary{cursor:pointer;color:var(--green)}.school-logo{display:block;max-width:12rem;max-height:5rem;object-fit:contain;margin:.5rem 0}.request h4{margin:.85rem 0 .2rem}.request p,.observation-log p{overflow-wrap:anywhere}
+
+.workspace-title h1{font-size:clamp(2.15rem,4vw,3.25rem)}
+.field-heading{font-size:clamp(1.55rem,3vw,2.1rem);margin:0 0 .85rem}
+.picker,.tree-card,.field-editor,.field-tool,#tree-work>#history,#quick-verify{max-width:54rem}
+.picker{background:#fffdf8;border:1px solid var(--rule);border-radius:.65rem;margin:0 0 1rem}
+.picker summary,.field-tool summary,#tree-work>#history>summary{padding:.7rem 1rem;font-weight:650;min-height:44px}
+.picker[open] summary{border-bottom:1px solid var(--sage)}
+.picker-body{display:grid;grid-template-columns:1fr 1fr;column-gap:1.4rem;padding:1rem;align-items:end}
+.picker-body>#find-tree{grid-row:span 2}.picker-body label,#field-stage-form label{display:block;font-size:.9rem;font-weight:700;color:var(--green);margin:0 0 .3rem}
+.picker-body input,.picker-body select,.find-controls input{margin:0}
+.find-controls{display:flex;gap:.5rem;align-items:stretch}
+.find-controls input{flex:1;min-width:0}.find-controls button{flex:none}
+#find-result{margin:.45rem 0 0;grid-column:1/-1}#find-result:empty{display:none}
+.tree-card{display:flex;align-items:center;gap:1rem;padding:.65rem 1rem;background:#e8ece1;border-radius:.65rem .65rem 0 0;border:1px solid var(--sage);border-bottom:0}
+.tree-card img{width:50px;height:58px;object-fit:contain;flex:none}
+.tree-card h3{font-size:1.9rem;margin:0}.tree-card p{font-size:.88rem;margin:.12rem 0 0;overflow-wrap:anywhere}
+.field-editor,#quick-verify{border-radius:0 0 .65rem .65rem;padding:1rem}
+.field-editor{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(14rem,.8fr);gap:.8rem 2rem;align-items:start}
+.field-editor .photo-hint{margin:.35rem 0 .75rem}.field-editor textarea{margin:0}
+#photo-review{display:flex;align-items:center;gap:.8rem;margin:.4rem 0 .75rem}
+#preview-photo{width:90px;height:75px;object-fit:contain;border:1px solid var(--sage);border-radius:.4rem;background:var(--ivory)}
+#date-options{margin:0}#date-options summary{min-height:44px;padding:.55rem 0}
+#date-options .hint{margin:.15rem 0 .5rem}
+.field-editor .primary{margin:.45rem 0 0}.field-editor #school-visibility{font-size:.8rem;margin:.5rem 0 0}
+#quick-verify h3{margin:0 0 .7rem}#quick-tag-hint{margin:.15rem 0 .5rem}
+.field-tool,#tree-work>#history{border-bottom:1px solid var(--sage);margin:.45rem 0 0}
+#field-stage-current{font-size:.8rem;font-weight:400;margin-left:.45rem}
+#field-stage-form{max-width:34rem;padding:0 1rem 1rem}#field-stage-form select{margin-bottom:.35rem}#field-stage-form .hint{margin:.2rem 0 .7rem}
+#history-list{padding:0 1rem}
+@media(max-width:680px){
+  main{margin-top:.8rem;width:min(calc(100% - 2rem),1060px)}
+  header{padding:.55rem 1rem}header>a:last-child{display:inline-flex;align-items:center;min-height:44px}
+  nav{margin:.45rem 0 1rem;padding-bottom:.35rem}
+  .field-editor,.picker-body{grid-template-columns:minmax(0,1fr);gap:.55rem}
+  .picker-body>#find-tree{grid-row:auto}.picker-body>label{margin:.45rem 0 -.3rem}
+  .tree-card{padding:.45rem .8rem}.field-editor,#quick-verify{padding:.8rem}
+  .field-editor .photo-actions{flex-wrap:nowrap}
+  #post-update{margin:0;min-height:50px}
+}
+.posted-result{margin:.65rem 0 0;background:#e8ece1;border-radius:.4rem;padding:.6rem .75rem}
+.posted-result p{margin:0;color:var(--green);font-weight:700}
+.posted-result button{margin-top:.45rem;background:#fffdf8}
+#tree-picker[open] ~ #tree-work{display:none}

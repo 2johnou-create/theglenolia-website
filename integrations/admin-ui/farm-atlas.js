@@ -129,11 +129,5 @@ export function mountFarmAtlas({api,run,reload}) {
     });
   });
 
-  function openPlant(p) {
-    if (!p || !plants.some(item => item.key === p.key)) return;
-    selectedByRow.set(p.row,p.key);
-    rowSelect.value = String(p.row);
-    renderRow();
-  }
-  return {refresh,syncButtons,openPlant,hasChanges:() => countDrafts.size > 0 || stageDrafts.size > 0};
+  return {refresh,syncButtons,hasChanges:() => countDrafts.size > 0 || stageDrafts.size > 0};
 }

@@ -1,5 +1,7 @@
 import {prepareFieldPhoto} from './photo-preparation.js';
 import {mountFarmAtlas} from './farm-atlas.js';
+import {STAGE_NAMES} from '../../public/assets/plant-portal/stages.js';
+import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illustration.js';
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
@@ -7,6 +9,8 @@ import {mountFarmAtlas} from './farm-atlas.js';
   const statuses = {unverified:'Needs a field check',available:'Available for schools',unavailable:'Held at the farm',offered:'Offered to a school',active:'School following',cooling:'Withdrawal cooling period'};
   const applicationStatuses = {pending:'Awaiting review',offered:'Awaiting teacher acceptance',active:'School following',declined:'Declined',cooling:'Withdrawal cooling period',released:'Adoption ended',cancelled:'Cancelled'};
   const drafts = new Map();
+  const fieldStageDrafts = new Map();
+  let treeKey = new URL(location.href).searchParams.get('plant') || '';
   let dashboard = null, journalVersion = 0, reading = false, writing = false;
   const atlas = mountFarmAtlas({api,run,reload});
 
@@ -34,7 +38,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
   function position(plant) { return 'Row ' + plant.row + ' · ' + (plant.label || 'Plant ' + plant.position); }
   function name(plant) { return position(plant) + (plant.tag ? ' · ' + plant.tag : ''); }
   function plant(key) { return dashboard?.plants.find(item => item.key === key) || dashboard?.archivedPlants?.find(item => item.key === key); }
-  function selected() { return plant($('update-plant').value); }
+  function selected() { return plant(treeKey); }
   function draft(key) {
     if (!drafts.has(key)) drafts.set(key,{date:today(),note:'',blob:null,url:'',requestId:null});
     return drafts.get(key);
@@ -43,7 +47,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
     if (d.url) URL.revokeObjectURL(d.url);
     d.url = ''; d.blob = null; d.requestId = null;
   }
-  function dirty() { return atlas.hasChanges() || [...drafts.values()].some(d => d.note.trim() || d.blob); }
+  function dirty() { return atlas.hasChanges() || fieldStageDrafts.size > 0 || [...drafts.values()].some(d => d.note.trim() || d.blob); }
   window.addEventListener('beforeunload', event => { if (dirty()) { event.preventDefault(); event.returnValue = ''; } });
 
   const knownErrors = {
@@ -91,24 +95,115 @@ import {mountFarmAtlas} from './farm-atlas.js';
 
   function option(value, label) { return new Option(label,value); }
   function updateSelectors() {
-    const previous = $('update-plant').value, registerChoice = $('field-position').value;
-    const verified = dashboard.plants.filter(item => item.status !== 'unverified');
-    const hidden = dashboard.archivedPlants || [];
-    const updateOptions = verified.map(item => option(item.key,name(item)));
-    if (hidden.length) {
-      const archived = element('optgroup'); archived.label = 'Hidden from atlas';
-      archived.append(...hidden.map(item => option(item.key,name(item))));
-      updateOptions.push(archived);
+    const registerChoice = $('field-position').value;
+    const groups = new Map();
+    for (const item of dashboard.plants) {
+      const label = 'Row ' + item.row;
+      if (!groups.has(label)) groups.set(label,[]);
+      groups.get(label).push(item);
     }
-    $('update-plant').replaceChildren(...updateOptions);
-    if ([...verified,...hidden].some(item => item.key === previous)) $('update-plant').value = previous;
+    if (dashboard.archivedPlants?.length) groups.set('Hidden from atlas',dashboard.archivedPlants);
+    const options = [option('','Choose a tree…')];
+    for (const [label,items] of groups) {
+      const group = element('optgroup'); group.label = label;
+      group.append(...items.map(p => option(p.key,p.label + (p.tag ? ' · ' + p.tag : ' · tag needed'))));
+      options.push(group);
+    }
+    $('update-plant').replaceChildren(...options);
     $('field-position').replaceChildren(...dashboard.plants.map(item => option(item.key,position(item))));
     if (dashboard.plants.some(p => p.key === registerChoice)) $('field-position').value = registerChoice;
-    const hasFieldRecord = verified.length > 0 || hidden.length > 0;
-    $('empty-field').hidden = hasFieldRecord; $('update-form').hidden = !hasFieldRecord;
-    $('history').hidden = !hasFieldRecord;
-    atlas.refresh(dashboard); renderRegister(); renderDraft();
+    $('empty-field').hidden = groups.size > 0;
+    $('tree-picker').hidden = !groups.size;
+    for (const [key,pending] of fieldStageDrafts) {
+      if (plant(key)?.revision !== pending.revision) fieldStageDrafts.delete(key);
+    }
+    atlas.refresh(dashboard); renderRegister(); renderTree();
+    if (treeKey && !selected()) {
+      $('find-result').textContent = 'That tree is unavailable. Choose a tree from the register.';
+    }
   }
+
+  function chooseTree(key) {
+    if (writing || !plant(key)) return;
+    treeKey = key;
+    const url = new URL(location.href);
+    url.searchParams.set('plant',key);
+    window.history.replaceState(null,'',url);
+    $('quick-tag').value = ''; $('find-tree-input').value = ''; $('find-result').textContent = '';
+    $('field-stage-result').textContent = ''; $('posted-result').hidden = true;
+    $('field-stage-panel').open = false; $('date-options').open = false; $('history').open = false;
+    message(''); renderTree(); loadHistory();
+    $('tree-id').focus({preventScroll:true});
+  }
+
+  $('find-tree').addEventListener('submit',event => {
+    event.preventDefault();
+    const query = $('find-tree-input').value.trim().toLowerCase();
+    const printed = query.match(/^p?\s*0*([1-9]\d*)$/);
+    const plants = [...dashboard.plants,...(dashboard.archivedPlants || [])];
+    const matches = plants.filter(p => (printed && p.label === 'P'+printed[1]) || p.tag?.toLowerCase() === query);
+    if (matches.length === 1) { chooseTree(matches[0].key); return; }
+    $('find-result').textContent = matches.length ? 'More than one match. Choose the tree by row.' : 'No matching tree. Check its ID or browse by row.';
+    $('find-tree-input').focus();
+  });
+  $('update-plant').addEventListener('change',() => {
+    if ($('update-plant').value) chooseTree($('update-plant').value);
+    else $('update-plant').value = treeKey;
+  });
+
+  function renderTree() {
+    const p = selected();
+    $('update-plant').value = p?.key || '';
+    $('tree-work').hidden = !p; $('tree-picker').open = !p;
+    $('picker-label').textContent = p ? 'Change tree' : 'Choose a tree';
+    if (!p) { $('update-form').hidden = true; $('quick-verify').hidden = true; $('history').hidden = true; return; }
+    const verified = p.status !== 'unverified', visible = dashboard.plants.includes(p);
+    $('quick-verify').hidden = verified; $('update-form').hidden = !verified; $('history').hidden = !verified;
+    $('tree-id').textContent = p.label;
+    $('tree-place').textContent = ['Row ' + p.row + ' · Position ' + p.position,p.tag ? 'Tag ' + p.tag : null,!visible ? 'Hidden from atlas' : null].filter(Boolean).join(' · ');
+    $('quick-tag-label').textContent = 'Physical tag for ' + p.label;
+    $('field-art').hidden = !STAGE_NAMES[p.stage-1];
+    if (!$('field-art').hidden) setPlantIllustration($('field-art'),'https://theglenolia.com.au/assets/plant-portal/stages',p.stage,p);
+    $('field-stage-panel').hidden = !visible || !dashboard.rows?.length;
+    $('field-stage-current').textContent = STAGE_NAMES[p.stage-1] || '';
+    $('field-stage').value = String(fieldStageDrafts.get(p.key)?.value || p.stage);
+    syncFieldStage();
+    if (verified) renderDraft();
+  }
+
+  $('quick-verify').addEventListener('submit',event => {
+    event.preventDefault();
+    const p = selected(), tag = $('quick-tag').value.trim();
+    if (!p || p.status !== 'unverified' || !tag) return;
+    run(async () => {
+      await api('/verify',{key:p.key,tag});
+      $('quick-tag').value = '';
+      await reload(p.label + ' verified. You can now post a field update.');
+    });
+  });
+  for (const [index,title] of STAGE_NAMES.entries()) $('field-stage').add(option(String(index+1),(index+1)+' · '+title));
+  function syncFieldStage() {
+    const p = selected();
+    $('save-field-stage').disabled = !p || Number($('field-stage').value) === p.stage;
+  }
+  $('field-stage').addEventListener('change',() => {
+    const p = selected();
+    if (!p) return;
+    const value = Number($('field-stage').value);
+    if (value === p.stage) fieldStageDrafts.delete(p.key);
+    else fieldStageDrafts.set(p.key,{revision:p.revision,value});
+    $('field-stage-result').textContent = ''; syncFieldStage();
+  });
+  $('field-stage-form').addEventListener('submit',event => {
+    event.preventDefault();
+    const p = selected(), pending = p && fieldStageDrafts.get(p.key);
+    if (!pending || !STAGE_NAMES[pending.value-1]) return;
+    run(async () => {
+      await api('/stage',{key:p.key,stage:pending.value,revision:pending.revision});
+      fieldStageDrafts.delete(p.key);
+      await reload('Stage saved for '+p.label+'.',$('field-stage-result'));
+    });
+  });
   function renderRegister() {
     const item = plant($('field-position').value);
     $('register-form').hidden = !item; $('register-empty').hidden = Boolean(item);
@@ -124,30 +219,27 @@ import {mountFarmAtlas} from './farm-atlas.js';
   function renderDraft() {
     const p = selected();
     if (!p) return;
-    const visible = dashboard.plants.some(item => item.key === p.key);
-    $('update-atlas').hidden = !dashboard.rows?.length || !visible;
+    const visible = dashboard.plants.includes(p);
     const d = draft(p.key);
     $('update-note').value = d.note; $('observed-on').value = d.date; $('observed-on').max = today();
-    $('preview-plant').textContent = name(p);
+    $('post-update').textContent = 'Post update to ' + p.label;
     $('school-visibility').textContent = !visible ? 'This position is hidden from the public atlas. Notes and photos stay in its journal.' :
-      p.status === 'active' ? 'Its teacher can see the update as soon as you post.' : 'Its class can read these observations once a teacher accepts the plant.';
-    $('preview-date').textContent = displayDate(d.date);
-    $('preview-note').textContent = d.note.trim() || (d.url ? '' : 'Your field note or photograph will appear here.');
+      ['active','cooling'].includes(p.status) ? 'The school can read this update when you post.' : 'Its class can read these observations once a teacher accepts the plant.';
+    $('preview-date').textContent = d.date === today() ? 'today' : displayDate(d.date);
+    $('photo-review').hidden = !d.url;
     if (d.url) $('preview-photo').src = d.url; else $('preview-photo').removeAttribute('src');
     $('preview-photo').hidden = !d.url; $('remove-photo').hidden = !d.url;
   }
   function captureDraft() {
     if (!selected()) return;
     const d = draft(selected().key), note = $('update-note').value, date = $('observed-on').value;
-    if (d.date !== date || d.note !== note) d.requestId = null;
+    if (d.date !== date || d.note !== note) { d.requestId = null; $('posted-result').hidden = true; }
     d.note = note; d.date = date;
-    $('preview-date').textContent = displayDate(date);
-    $('preview-note').textContent = note.trim() || (d.url ? '' : 'Your field note or photograph will appear here.');
+    $('preview-date').textContent = date === today() ? 'today' : displayDate(date);
   }
   $('update-note').addEventListener('input',captureDraft); $('observed-on').addEventListener('input',captureDraft);
-  $('update-plant').addEventListener('change',() => { renderDraft(); loadHistory(); });
+  $('observed-on').addEventListener('invalid',() => { $('date-options').open = true; });
   $('field-position').addEventListener('change',() => { $('field-tag').value = ''; renderRegister(); });
-  $('update-atlas').addEventListener('click',() => atlas.openPlant(selected()));
   $('remove-photo').addEventListener('click',() => { clearPhoto(draft(selected().key)); renderDraft(); $('library-file').focus(); });
 
   function element(tag, text, cls) {
@@ -167,7 +259,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
     $('main').setAttribute('aria-busy','true');
     try { await operation(); }
     catch (error) { message(error.message,true); }
-    finally { for (const control of enabled) control.disabled = false; $('main').removeAttribute('aria-busy'); writing = false; atlas.syncButtons(); }
+    finally { for (const control of enabled) control.disabled = false; $('main').removeAttribute('aria-busy'); writing = false; atlas.syncButtons(); syncFieldStage(); }
   }
   function formLabel(text, control) {
     const label = element('label',text); label.htmlFor = control.id; return label;
@@ -280,19 +372,20 @@ import {mountFarmAtlas} from './farm-atlas.js';
     run(async () => {
       await api('/verify',{key:p.key,tag}); $('field-tag').value = '';
       await reload('Field tag verified. You can now post an update for ' + position(p) + '.');
-      if (plant(p.key)?.status !== 'unverified') { $('update-plant').value = p.key; renderDraft(); }
     });
   });
   $('field-observe').addEventListener('click',() => {
     const p = plant($('field-position').value);
     if (!p || p.status === 'unverified') return;
-    $('update-plant').value = p.key; renderDraft(); loadHistory(); location.hash = 'update';
+    chooseTree(p.key); location.hash = 'update';
   });
   $('availability').addEventListener('click',() => {
     const p = plant($('field-position').value); if (!p) return;
     const available = p.status === 'unavailable';
     run(async () => { await api('/availability',{key:p.key,available}); await reload(available ? 'Plant is available for school offers.' : 'Plant held at the farm.'); });
   });
+
+  $('next-tree').addEventListener('click',() => chooseTree($('next-tree').dataset.key));
 
   function photoPath(value) {
     if (typeof value !== 'string' || !value.startsWith(base + '/')) return null;
@@ -334,7 +427,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
   async function loadHistory() {
     const version = ++journalVersion, p = selected(), list = $('history-list');
     list.replaceChildren();
-    if (!p || !$('history').open) return;
+    if (!p || p.status === 'unverified' || !$('history').open) return;
     list.append(element('p','Loading updates…'));
     try {
       const {updates} = await api('/journal?key=' + encodeURIComponent(p.key));
@@ -364,7 +457,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
     await run(async () => {
       message('Preparing your photograph…');
       const blob = await prepareFieldPhoto(f, true);
-      clearPhoto(d); d.blob = blob; d.url = URL.createObjectURL(blob); renderDraft(); message('Photo ready. Check your class preview.');
+      clearPhoto(d); d.blob = blob; d.url = URL.createObjectURL(blob); $('posted-result').hidden = true; renderDraft(); message('Photo ready for '+p.label+'.');
     });
   }
   for (const id of ['camera-file','library-file']) $(id).addEventListener('change',() => choosePhoto($(id)));
@@ -373,7 +466,7 @@ import {mountFarmAtlas} from './farm-atlas.js';
       reader.onload = () => resolve(reader.result.slice(reader.result.indexOf(',') + 1)); reader.readAsDataURL(blob); });
   }
   $('update-form').addEventListener('submit',event => {
-    event.preventDefault(); captureDraft(); const p = selected(); if (!p) return; const d = draft(p.key);
+    event.preventDefault(); const p = selected(); if (!p || p.status === 'unverified') return; captureDraft(); const d = draft(p.key);
     if (!d.note.trim() && !d.blob) { message('Add a field note or a photograph.'); $('update-note').focus(); return; }
     run(async () => {
       message('Posting your observation…'); d.requestId ||= crypto.randomUUID();
@@ -381,7 +474,13 @@ import {mountFarmAtlas} from './farm-atlas.js';
       if (d.blob) body.photo = {mime:d.blob.type,base64:await base64(d.blob)};
       await api('/update',body);
       clearPhoto(d); drafts.delete(p.key); renderDraft(); await loadHistory();
-      message('Posted to the journal for ' + name(p) + '.',true);
+      const index = dashboard.plants.findIndex(item => item.key === p.key);
+      const next = index >= 0 ? dashboard.plants[index+1] : null;
+      $('posted-message').textContent = 'Update posted to '+p.label+'.';
+      $('next-tree').hidden = !next;
+      $('next-tree').dataset.key = next?.key || '';
+      $('next-tree').textContent = next ? 'Next tree · '+next.label : '';
+      message(''); $('posted-result').hidden = false; $('posted-message').focus();
     });
   });
 

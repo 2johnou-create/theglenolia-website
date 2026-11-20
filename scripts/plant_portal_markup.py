@@ -4,7 +4,8 @@ from html import escape
 import json
 from pathlib import Path
 
-ASSETS = Path(__file__).resolve().parents[1] / 'public' / 'assets' / 'plant-portal'
+ROOT = Path(__file__).resolve().parents[1]
+ASSETS = ROOT / 'public' / 'assets' / 'plant-portal'
 
 
 def render(origin, base_path='', teacher_origin='https://glenolia-education.theglenolia.workers.dev'):
@@ -13,6 +14,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
     canonical = origin.rstrip('/') + '/plant-portal/'
     teacher_origin = teacher_origin.rstrip('/')
     teacher = escape(teacher_origin + '/#plant', quote=True)
+    admin_origin = json.loads((ROOT / 'config.json').read_text())['adminUrl']
+    farmer = escape(admin_origin.rstrip('/') + '/plants', quote=True)
     title = 'School Plant Portal | Adopt a coffee plant in Glenorie | The Glenolia'
     description = ('Register your primary or high school to follow a coffee plant at The Glenolia in '
                    'Glenorie, NSW. Explore the estate atlas and follow illustrated coffee growth stages and farmer field notes.')
@@ -36,7 +39,7 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script><script type="module" src="{assets}/portal.js?v={revision}"></script></head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="mast"><a class="identity" href="{base}/" aria-label="The Glenolia home"><img src="{base}/assets/logos/logo-compact.svg" width="250" height="70" alt="The Glenolia"></a><span class="mast-title">School Plant Portal</span>
-<nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}">Teacher sign in <span aria-hidden="true">↗</span></a></nav></header>
+<nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}">Teacher sign in <span aria-hidden="true">↗</span></a><a class="farm-login" id="farmer-login" href="{farmer}" rel="nofollow">Farmer login</a></nav></header>
 <main id="main" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-weather-url="{escape(teacher_origin, quote=True)}/api/plants/weather" data-atlas-assets="{assets}">
 <section class="welcome" aria-labelledby="invite-heading">
 <div class="welcome-scene"><picture><source media="(max-width: 760px)" srcset="{assets}/two-worker-orchard-small.webp"><img src="{assets}/two-worker-orchard.webp" width="1672" height="941" fetchpriority="high" alt="Two workers tending young coffee plants between magnolia trees in Glenorie."></picture>
@@ -77,7 +80,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3></div></div>
 <p class="stage-line"><strong id="stage-title"></strong><span id="stage-number"></span></p>
 <p class="height">Individual height <strong>No reading published</strong></p><p class="cohort">Pilot average <strong>17 cm</strong> · <time datetime="2026-11-01">1 Nov 2026</time></p>
-<p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a></section>
+<p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a>
+<a class="farm-card-link" id="farmer-update" href="{farmer}" rel="nofollow">Farmer · Update tree</a></section>
 </div>
 <noscript><p>The interactive map uses JavaScript. You can register your school directly and the farmer can help match your class to a plant.</p><a class="cta" href="{teacher}">Register your school ↗</a></noscript>
 </section>
@@ -87,4 +91,4 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <li><strong>Follow it together.</strong> Invite other teachers to the same journal. Compare the farmer’s dated photos with your class.</li></ol>
 <p class="terms">Your school can apply for up to three plants. Each extra plant needs an educational reason and approval. The farm cares for the plants. Students take part through a teacher.</p>
 <a class="cta" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></section>
-</main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a></nav></footer></body></html>'''
+</main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a><a href="{farmer}" rel="nofollow">Farmer login</a></nav></footer></body></html>'''

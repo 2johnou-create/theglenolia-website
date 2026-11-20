@@ -267,6 +267,11 @@ function inspect(plant, nextMode, focus = false) {
   card.dataset.stage = String(plant.stage);
   byId('card-kind').textContent = (selected ? 'Class preference' : 'Planting position') + ' · Row ' + plant.row;
   byId('plant-title').textContent = label(plant);
+  const farmerLink = byId('farmer-update');
+  const farmerUrl = new URL(byId('farmer-login').href);
+  farmerUrl.searchParams.set('plant',plant.key);
+  farmerLink.href = farmerUrl.href;
+  farmerLink.textContent = 'Farmer · Update ' + label(plant);
   setPlantIllustration(byId('card-image'), assets + '/stages', plant.stage, plant);
   byId('stage-title').textContent = STAGE_NAMES[plant.stage - 1];
   byId('stage-number').textContent = 'Stage ' + plant.stage + ' of 10';

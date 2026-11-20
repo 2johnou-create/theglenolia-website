@@ -23,6 +23,8 @@ h1,h2,h3,.mast-title{font-family:Editorial,Georgia,serif;font-weight:400;color:v
 .mast nav,footer nav{display:flex;align-items:center;gap:clamp(.8rem,2.2vw,2rem)}
 .mast nav a,footer a{display:inline-flex;align-items:center;min-height:44px;white-space:nowrap;font-size:.85rem}
 .return-link span{margin-left:.4em}
+.mast .farm-login{justify-content:center;padding:0 .85rem;border:1px solid var(--border);border-radius:.45rem;color:var(--green);text-decoration:none;font-weight:600}
+.farm-login:hover{background:var(--sage)}
 .welcome{display:grid;isolation:isolate;position:relative;overflow:hidden;background:#24392b;color:var(--ivory)}
 .welcome-scene,.invite{grid-area:1/1;min-width:0}
 .welcome-scene{position:relative}
@@ -69,7 +71,13 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
   .section-head,.school{grid-template-columns:minmax(0,1fr);gap:1rem}.section-head>p{justify-self:start;max-width:none}.school{gap:1.5rem}
   footer{gap:0;display:block;padding-block:1rem}footer nav{flex-wrap:wrap;gap:1.15rem}
 }
-@media(max-width:360px){.mast{padding-inline:.75rem;gap:.4rem}.mast nav a{font-size:.72rem}.section-head h2{font-size:2.1rem}}
+@media(max-width:460px){
+ .mast{padding:.6rem .75rem;gap:.4rem;min-height:4.4rem;flex-wrap:wrap}
+ .identity img{width:clamp(98px,29vw,132px)}
+ .mast nav{gap:.65rem}.mast nav a{font-size:.8rem}
+ .mast .farm-login{padding-inline:.55rem}.return-link span{display:none}
+}
+@media(max-width:360px){.mast{padding-inline:.5rem}.mast nav{gap:.5rem}.mast .farm-login{padding-inline:.45rem}.section-head h2{font-size:2.1rem}}
 
 /* One unbroken illustrated field. Labels and positions share the art's coordinate system. */
 .explore{max-width:1370px}
@@ -125,6 +133,7 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 #stage-number{font-size:.68rem;white-space:nowrap}.height{font-size:.8rem}.height strong{font-size:.8rem;color:var(--green)}
 .cohort{font-size:.7rem;margin:.23rem 0 .48rem;color:#525247}
 #plant-status{font-size:.79rem;margin:.4rem 0;color:#495040}
+.farm-card-link{display:flex;align-items:center;justify-content:center;min-height:44px;color:var(--green);font-size:.8rem}
 #plant-card .cta{width:100%;min-height:44px;text-align:center;justify-content:center;padding:.45rem;font-size:.85rem}
 @media(max-width:760px),(pointer:coarse){
  #plant-card{inset:auto auto max(8px,env(safe-area-inset-bottom)) 50%!important;transform:translateX(-50%);width:min(356px,calc(100vw - 18px));max-height:57dvh}

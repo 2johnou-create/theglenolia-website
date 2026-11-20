@@ -146,16 +146,26 @@ choosing a plant. The programme owner checks the school's authority and reviews 
 schools first. The teacher returns to the portal to accept the offer. Students
 follow the journal together in the teacher's classroom view.
 
-Open `/plants` on the protected admin service to work in the field.
+### Field updates from a phone
 
-1. Under **Plant register**, match a physical tag to its row and position.
-2. The owner opens **School requests** to review the school and offer a verified plant.
-3. Under **Post an update**, select the tagged plant and observation date. Write
-   a note, take a photo with the rear camera, or choose one from the phone.
-   Check the journal preview and post. Photograph the plant without people or
-   identifying information.
-4. Reopen the plant's previous updates to check the entry. Use the classroom
-   view in the teacher workspace to discuss observations with the students.
+Open **Farmer login** on the public Plant Portal. A farmer standing at a tree
+can also open its map card and follow the farmer update link. Both open the
+existing Access-protected `/plants` workspace. A map link carries a position
+such as `?plant=r2-p2` for P21. The farmer signs in with their authorised
+staff identity.
+
+1. Select the tree from the map or find its printed number in the workspace.
+   The editor displays the tree ID and row. For a new position, match and enter
+   the physical tag before posting its first journal observation.
+2. Take a photo, select one from the phone, or write a short note. The observation
+   date starts at today's date in Sydney. Post the update to that tree's journal.
+   If the connection drops, keep the page open and retry the same draft.
+   After a successful post, **Next tree** opens the following visible position.
+3. To change the tree’s growth illustration, select its growth stage and save it.
+   The map uses the saved stage. A field observation is posted separately.
+4. Open previous updates to read the journal. The plant register and atlas remain
+   available for field management. The owner reviews school applications and
+   offers a verified tree under school requests.
 
 For a new database apply the education, plant and plant atlas schemas in order.
 For a database already running the atlas, take a D1 recovery bookmark and
