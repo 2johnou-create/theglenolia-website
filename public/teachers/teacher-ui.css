@@ -28,3 +28,63 @@
 .edu-app:not([data-edu-motion=reduce]) .edu-button:active:not(:disabled){transform:translateY(1px)}
 .edu-app[data-edu-motion=reduce] *, .edu-app[data-edu-motion=reduce] *::before, .edu-app[data-edu-motion=reduce] *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}
 @media print{.edu-nav-indicator{display:none!important}}
+
+/* The plant journal has a compact teacher header and a separate projection view. */
+.edu-app[data-plant-view="teacher"] .edu-app-nav,
+.edu-app[data-plant-view="teacher"] .edu-guide-toggle,
+.edu-app[data-plant-view="teacher"] .edu-context-bar,
+.edu-app[data-plant-view="classroom"] .edu-app-header,
+.edu-app[data-plant-view="classroom"] .edu-context-bar,
+.edu-app[data-plant-view="classroom"] .edu-app-footer,
+.edu-app[data-plant-view="classroom"] .edu-live-status {display:none}
+[data-plant-view="teacher"] .edu-app-header {justify-content:space-between}
+.plant-panel,.plant-classroom {max-width:960px;margin-inline:auto;overflow-wrap:anywhere}
+.plant-panel .edu-page-heading h1,.plant-classroom .edu-page-heading h1 {font-size:clamp(36px,5.5vw,70px);margin-block:.14em}
+.plant-panel .edu-page-heading,.plant-classroom .edu-page-heading {margin-bottom:clamp(18px,3vw,38px)}
+.plant-panel .edu-page-heading>div>p:not(.edu-kicker) {max-width:54ch}
+.plant-panel .edu-button,.plant-classroom .edu-button {min-height:44px}
+.plant-form {max-width:42rem}
+.plant-form .edu-field,.plant-form .edu-check {margin-block:10px}
+.plant-form .edu-field input,.plant-form .edu-field select,.plant-form .edu-field textarea {min-width:0;width:100%;font-size:16px}
+.plant-form .edu-check {align-items:flex-start}
+.plant-form .edu-check input {flex:0 0 auto}
+.plant-field-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.plant-status,.plant-entry,.plant-prompt {border:1px solid var(--edu-sage);border-radius:12px;overflow:hidden}
+.plant-status,.plant-prompt {padding:clamp(19px,3.5vw,38px);background:var(--edu-sage)}
+.plant-status h2,.plant-prompt h2 {margin:0}
+.plant-status .edu-actions {margin-bottom:0}
+.plant-entry {background:var(--edu-ivory)}
+.plant-entry figure {margin:0;background:var(--edu-sage)}
+.plant-entry figure img {display:block;margin:auto;max-width:100%;width:auto;max-height:clamp(240px,47vw,490px);object-fit:contain}
+.plant-entry-note {padding:clamp(18px,3vw,32px)}
+.plant-entry-note time {font-size:13px;color:var(--edu-green);font-weight:bold}
+.plant-entry-note p,.plant-conversation p {white-space:pre-line;margin:.4em 0 0}
+.plant-history {margin:18px 0;border-top:1px solid var(--edu-sage);padding:.45em 0}
+.plant-history summary {cursor:pointer;font-weight:bold;color:var(--edu-green);padding:.65em 0;min-height:44px}
+.plant-history .plant-entry,.plant-conversation {margin:.75em 0}
+.plant-conversation {padding:20px;background:rgba(217,223,208,.35);border-radius:8px}
+.plant-conversation h3,.plant-conversation strong {font:700 13px var(--edu-sans);color:var(--edu-green)}
+.plant-conversation strong {display:block;margin-top:1.2em}
+.plant-classroom .plant-entry-note p,.plant-classroom .edu-notice p {font-size:clamp(17px,2.3vw,28px);line-height:1.55}
+.plant-prompt {margin-top:24px}
+.plant-class-stage .edu-actions:empty {display:none}
+@media(max-width:540px){
+ [data-plant-view="teacher"] .edu-account-tools {width:auto;margin:0 auto}
+ .plant-field-pair {grid-template-columns:1fr;gap:0}
+ .plant-panel .edu-actions,.plant-classroom .edu-actions {align-items:stretch}
+ .plant-journal .edu-page-heading>.edu-actions {gap:10px}
+}
+@media print{
+ .plant-class-exit,.plant-prompt .edu-kicker {display:none!important}
+ .plant-entry,.plant-status,.plant-prompt {break-inside:avoid}
+ .plant-classroom .plant-entry figure img {max-height:34vh}
+}
+@media screen and (min-width:900px){
+ .plant-classroom {display:grid;grid-template-columns:minmax(0,1.8fr) minmax(250px,1fr);column-gap:clamp(20px,3vw,42px);align-items:start;max-width:1160px}
+ .plant-classroom>.edu-back,.plant-classroom>.edu-page-heading {grid-column:1/-1}
+ .plant-classroom>.edu-back {justify-self:start}
+ .plant-classroom .edu-page-heading {margin:0 0 22px}
+ .plant-classroom .plant-prompt {margin:0;padding:clamp(18px,2.3vw,30px)}
+ .plant-classroom .plant-prompt h2 {font-size:clamp(26px,2.5vw,38px);line-height:1.2}
+ .plant-classroom .plant-entry figure img {max-height:min(49vh,440px)}
+}

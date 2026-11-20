@@ -58,7 +58,7 @@ test('new staff story catalogue and image routes remain gated by exact owner Acc
 
 // Real SQLite, including constraints and transactional batches. No network or real people.
 class D1 {
- constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));}
+ constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));}
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
  async batch(statements){this.sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of statements)out.push(await s.run());this.sql.exec('COMMIT');return out;}catch(e){this.sql.exec('ROLLBACK');throw e;}}
  close(){this.sql.close();}
@@ -182,3 +182,119 @@ test('retention removes stale tokens and sessions while preserving unexpired rec
 test('learner codes and closed groups reject unsafe or accidental personal identifiers',async t=>{const f=await fixture(t);await f.resource();const g=await f.group(f.a);for(const alias of ['Full Name','1234567890','<script>','L_01','a'.repeat(25)])await code(await f.post(`/api/groups/${g.id}/learners`,{alias},f.a),400);assert.equal((await f.post(`/api/groups/${g.id}/update`,{name:g.name,stage:'S2',status:'closed',expectedRevision:1},f.a)).status,200);await code(await f.post(`/api/groups/${g.id}/learners`,{alias:'L-01'},f.a),409,'group_closed');await code(await f.post(`/api/groups/${g.id}/assignments`,{resourceId:'test-pack'},f.a),409,'group_closed');});
 
 test('staff publishing validates grants and source URL protocols without leaking a draft',async t=>{const f=await fixture(t),p=pack('bad-pack');p.sources=[{url:'javascript:alert(1)'}];await code(await f.staff('/resources/save',{resource:p,expectedRevision:0}),400,'invalid_source_url');await draft(f,'gated-pack');const u=await f.user(),sid=await f.school(u,{status:'pending'});await code(await publish(f,'gated-pack',1,1,{availability:'selected',schoolIds:[sid]}),400,'approved_school_required');await f.db.prepare('UPDATE edu_users SET disabled=1 WHERE id=?').bind(u.id).run();await code(await publish(f,'gated-pack',1,1,{availability:'selected',teacherIds:[u.id]}),400,'verified_teacher_required');assert.equal((await f.db.prepare("SELECT published_version FROM edu_resources WHERE id='gated-pack'").first()).published_version,0);assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_resource_grants').first()).n,0);});
+
+// Plant portal fixtures create no persistent records and contact no external service.
+const plantApplication={schoolName:'Fixture school',suburb:'Glenorie',schoolType:'primary',preferredKey:'r1-p7',consent:true};
+const fixturePhoto={mime:'image/webp',base64:'UklGRh4AAABXRUJQVlA4TBEAAAAvAYAAAAdQwqb1rf+BiOh/AAA='};
+async function plantApplicationId(f,actor=f.a,preferredKey='r1-p7'){
+ await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey},actor),200);
+ return (await (await f.req('/api/plants/me',{actor})).json()).application.id;
+}
+async function approvePlant(f,actor=f.a,key='r1-p7'){
+ const applicationId=await plantApplicationId(f,actor,key);
+ await code(await f.staff('/plants/verify',{key,tag:'TEST-'+key}),200);
+ await code(await f.staff('/plants/review',{applicationId,decision:'offer',plantKey:key}),200);
+ await code(await f.post('/api/plants/accept',{applicationId,plantKey:key},actor),200);
+ return applicationId;
+}
+test('plant selection lists two rows of nineteen provisional positions and only staff-verified stock',async t=>{
+ const f=await fixture(t);
+ const map=await f.req('/api/plants/map',{headers:{Origin:'https://theglenolia.com.au'}});
+ assert.equal(map.headers.get('Access-Control-Allow-Origin'),'https://theglenolia.com.au');
+ const {plants}=await map.json();
+ assert.equal(plants.length,38);assert.equal(new Set(plants.map(p=>p.key)).size,38);
+ assert.ok(plants.every(p=>p.status==='unverified'&&!('tag' in p)));
+ assert.deepEqual(plants[37],{key:'r2-p19',row:2,position:19,status:'unverified'});
+ for(const body of [{key:'r2-p20',tag:'T'},{key:'r0-p1',tag:'T'},{key:'r1-p7',tag:''}])await code(await f.staff('/plants/verify',body),400);
+ await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'T7'}),200);
+ await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'T7'}),200);
+ await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'New tag'}),409,'plant_already_verified');
+ await code(await f.staff('/plants/verify',{key:'r2-p7',tag:'t7'}),409,'tag_in_use');
+ let list=await (await f.req('/api/plants/map')).json();assert.equal(list.plants[6].status,'available');assert.equal(list.plants[25].status,'unverified');
+ await code(await f.staff('/plants/availability',{key:'r1-p7',available:false}),200);
+ list=await (await f.req('/api/plants/map')).json();assert.equal(list.plants[6].status,'unavailable');
+ await code(await f.post('/api/plants/apply',plantApplication,f.a),409,'plant_unavailable');
+ await code(await f.post('/api/plants/apply',{...plantApplication,preferredKey:null},f.a),200);
+});
+test('plant registration verifies teacher session and consent, reserves atomically and enforces offer acceptance',async t=>{
+ const f=await fixture(t);
+ await code(await f.post('/api/plants/apply',plantApplication),401);
+ await code(await f.post('/api/plants/apply',plantApplication,f.a,{csrf:false}),403);
+ await code(await f.post('/api/plants/apply',{...plantApplication,consent:false},f.a),400,'consent_required');
+ const a=await plantApplicationId(f),b=await plantApplicationId(f,f.b);
+ await code(await f.post('/api/plants/apply',plantApplication,f.a),409,'school_application_exists');
+ await code(await f.post('/api/plants/accept',{applicationId:a,plantKey:'r1-p7'},f.a),409);
+ await code(await f.staff('/plants/review',{applicationId:a,plantKey:'r1-p7',decision:'offer'}),409);
+ await code(await f.staff('/plants/verify',{key:'r1-p7',tag:'Fixture real tag'}),200);
+ const response=await Promise.all([a,b].map(applicationId=>f.staff('/plants/review',{applicationId,decision:'offer',plantKey:'r1-p7'})));
+ assert.deepEqual(response.map(r=>r.status).sort(),[200,409]);
+ const winner=response[0].status===200?f.a:f.b,other=winner===f.a?f.b:f.a,app=winner===f.a?a:b;
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:'r1-p7'},other),409);
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:'r2-p7'},winner),409);
+ await code(await f.staff('/plants/availability',{key:'r1-p7',available:false}),409);
+ await code(await f.staff('/plants/review',{applicationId:app,decision:'withdraw'}),200);
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:'r1-p7'},winner),409);
+ await code(await f.staff('/plants/review',{applicationId:app,decision:'offer',plantKey:'r1-p7'}),200);
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:'r1-p7'},winner),200);
+ await code(await f.post('/api/plants/accept',{applicationId:app,plantKey:'r1-p7'},winner),200);
+ await code(await f.staff('/plants/review',{applicationId:app,decision:'withdraw'}),409,'application_changed');
+ assert.equal((await(await f.req('/api/plants/me',{actor:winner})).json()).application.status,'active');
+ await code(await f.staff('/plants/review',{applicationId:app,decision:'decline'}),409);
+});
+test('plant school journal delivers actual private photo bytes, trims notes, safely retries and retracts',async t=>{
+ const f=await fixture(t);await approvePlant(f);
+ const update={key:'r1-p7',observedOn:'2026-01-01',note:'  Classroom test note.  ',photo:fixturePhoto,requestId:uuid()};
+ await code(await f.staff('/plants/update',{...update,key:'r2-p7'}),404,'plant_not_verified');
+ await code(await f.staff('/plants/update',update),200);await code(await f.staff('/plants/update',update),200);
+ await code(await f.staff('/plants/update',{...update,note:'Changed'}),409,'request_conflict');
+ const r=await f.req('/api/plants/me',{actor:f.a}),v=await r.json();assert.equal(v.updates.length,1);assert.equal(v.updates[0].note,'Classroom test note.');
+ const url=v.updates[0].photoUrl,photo=await f.req(url,{actor:f.a});
+ assert.equal(photo.status,200);assert.equal(photo.headers.get('Content-Type'),'image/webp');assert.equal(photo.headers.get('Cache-Control'),'no-store');
+ assert.equal(Buffer.from(await photo.arrayBuffer()).toString('base64'),fixturePhoto.base64);
+ await code(await f.req(url,{actor:f.b}),404);await code(await f.req(url),401);
+ assert.deepEqual((await(await f.req('/api/plants/me',{actor:f.b})).json()).updates,[]);
+ const staffJournal=await(await f.staff('/plants/journal?key=r1-p7')).json();
+ assert.equal(staffJournal.updates[0].photoUrl,'/api/education/plants/photos/'+update.requestId);
+ for(const body of [{...update,photo:{mime:'image/webp',base64:'QUFB'},requestId:uuid()},{...update,photo:null,note:' ',requestId:uuid()},{...update,observedOn:'2099-01-01'}])await code(await f.staff('/plants/update',body),400);
+ await code(await f.staff('/plants/update',{...update,photo:{...fixturePhoto,base64:'A'.repeat(410000)}}),413);
+ await code(await f.staff('/plants/withdraw-update',{updateId:update.requestId}),200);
+ await code(await f.staff('/plants/update',update),409,'update_withdrawn');
+ await code(await f.req(url,{actor:f.a}),404);
+ assert.deepEqual((await(await f.req('/api/plants/me',{actor:f.a})).json()).updates,[]);
+});
+test('plant classroom questions and replies stay in the submitting teacher’s active journal',async t=>{
+ const f=await fixture(t),applicationId=await approvePlant(f),requestId=uuid();
+ const body={applicationId,requestId,question:'Where can we see new growth?',consent:true};
+ await code(await f.post('/api/plants/question',body,f.b),403);
+ await code(await f.post('/api/plants/question',{...body,consent:false},f.a),400);
+ await code(await f.post('/api/plants/question',body,f.a),200);await code(await f.post('/api/plants/question',body,f.a),200);
+ await code(await f.staff('/plants/answer',{questionId:requestId,answer:'Look near the tip.'}),200);
+ await code(await f.staff('/plants/answer',{questionId:requestId,answer:'Different.'}),409);
+ assert.deepEqual((await(await f.req('/api/plants/me',{actor:f.b})).json()).questions,[]);
+ const mine=await(await f.req('/api/plants/me',{actor:f.a})).json();
+ assert.equal(mine.questions.length,1);assert.equal(mine.questions[0].answer,'Look near the tip.');
+ const classroom=await(await f.req('/api/plants/classroom',{actor:f.a})).json();
+ assert.deepEqual(classroom,{application:{plantKey:'r1-p7',schoolType:'primary',status:'active'},updates:[]});
+ assert.deepEqual(await(await f.req('/api/plants/classroom',{actor:f.b})).json(),{application:null,updates:[]});
+ // Access follows the verified person even after switching their current workspace.
+ const otherWorkspace=await f.school(f.a.user,{name:'Another approved workspace'}),switched=await f.session(f.a.user,otherWorkspace);
+ assert.equal((await(await f.req('/api/plants/me',{actor:switched})).json()).application.id,applicationId);
+ await f.db.prepare("UPDATE edu_schools SET status='suspended' WHERE id=?").bind(f.a.schoolId).run();
+ assert.equal((await(await f.req('/api/plants/me',{actor:switched})).json()).application,null);
+});
+test('plant staff allowlist bounds farmer identity to field work, strips private application data, and keeps owner functions separate',async t=>{
+ const f=await fixture(t);
+ const {handleAdmin}=await import('../admin-worker.mjs');
+ const uid=await plantApplicationId(f);
+ const env={ACCESS_AUD:'education-test-audience',ADMIN_EMAIL:'owner@example.test',FARMER_EMAILS:'field@example.test',EDUCATION_STAFF_TOKEN:f.env.STAFF_TOKEN,EDUCATION:{fetch:req=>handleEducation(req,f.env)}};
+ const farmer=access('field@example.test');
+ const route=(path,options={},ctx=farmer)=>handleAdmin(adminReq(path,options),env,ctx);
+ const dashboard=await(await route('/api/education/plants/dashboard')).json();assert.equal(dashboard.role,'farmer');assert.deepEqual(dashboard.applications,[]);assert.deepEqual(dashboard.questions,[]);
+ assert.equal((await route('/plants')).status,200);
+ assert.equal((await route('/api/education/plants/verify',{method:'POST',body:{key:'r1-p1',tag:'Verified on fixture'}})).status,200);
+ assert.equal((await route('/api/education/plants/verify',{method:'POST',origin:null,body:{key:'r1-p2',tag:'Second'}})).status,403);
+ assert.equal((await route('/api/education/plants/review',{method:'POST',body:{applicationId:uid,decision:'decline'}})).status,403);
+ for(const path of ['/','/education','/api/education/session','/api/session','/api/editions','/api/education/plants/answer'])assert.equal((await route(path)).status,403,path);
+ assert.equal((await route('/plants',{},access('other@example.test'))).status,403);
+ const owner=await(await route('/api/education/plants/dashboard',{},access())).json();assert.equal(owner.role,'owner');assert.equal(owner.applications[0].id,uid);
+});

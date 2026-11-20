@@ -41,7 +41,7 @@ for path in DIST.rglob('*.html'):
  if not any(d.get('name')=='description' and len(d.get('content',''))>(30 if p.lang.startswith('en') else 15) for d in metas):errors.append(rel+': missing description')
  if not any(t=='link' and d.get('rel')=='canonical' for t,d in p.tags):errors.append(rel+': missing canonical')
  alts=[d.get('hreflang') for t,d in p.tags if t=='link' and d.get('rel')=='alternate']
- education=rel.startswith('teachers/')
+ education=rel.startswith(('teachers/', 'plant-portal/'))
  expected_alts={'en-AU','x-default'} if education else {'en-AU','zh-Hant','ja','x-default'}
  if set(alts)!=expected_alts:errors.append(rel+': incomplete language alternatives')
  if education and p.lang!='en-AU':errors.append(rel+': education pages must be English only')

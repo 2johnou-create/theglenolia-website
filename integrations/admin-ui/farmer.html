@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en-AU"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Farm plant journal | The Glenolia admin</title>
+<link rel="stylesheet" href="/plants/farmer.css"><script src="/plants/farmer.js" defer></script>
+</head><body>
+<a class="skip" href="#main">Skip to farm workspace</a>
+<header><a href="/" aria-label="The Glenolia admin home"><img src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="240"></a><a href="/cdn-cgi/access/logout">Sign out</a></header>
+<main id="main">
+<p class="eyebrow">Farm workspace</p><h1>Plant journal</h1>
+<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Post an update</a><a href="#requests">School requests</a><a href="#register">Plant register</a></nav>
+<div id="notice" role="status" tabindex="-1" aria-live="polite">Loading your farm workspace…</div>
+<button id="retry" type="button" class="quiet" hidden>Retry loading</button>
+<section id="update" aria-labelledby="update-heading" hidden>
+<h2 id="update-heading" tabindex="-1">Post an update</h2>
+<div id="empty-field" class="empty" hidden><h3>Start with a field tag</h3><p>Match one tagged coffee plant to its position. Then add its first observation.</p><a href="#register" class="button">Verify a plant</a></div>
+<form id="update-form" class="columns" hidden>
+<div class="editor">
+<label for="update-plant">Plant</label><select id="update-plant" required></select>
+<fieldset><legend>Plant photo</legend>
+<div class="photo-actions">
+<label class="file-button" for="camera-file"><span aria-hidden="true">＋</span> Take photo<input id="camera-file" type="file" accept="image/*" capture="environment"></label>
+<label class="file-button" for="library-file">Choose photo<input id="library-file" type="file" accept="image/*"></label>
+</div><p class="hint">Photograph the plant. Keep people and identifying details outside the frame.</p></fieldset>
+<label for="update-note">Field note</label><textarea id="update-note" maxlength="1200" rows="3" placeholder="What changed since your last visit?"></textarea>
+<label for="observed-on">Date observed</label><input id="observed-on" type="date" required>
+</div>
+<div class="preview-wrap"><div class="preview-card"><p class="eyebrow">Class journal preview</p><h3 id="preview-plant">Your plant</h3><p id="preview-date" class="hint"></p>
+<img id="preview-photo" alt="Selected field photograph" hidden><p id="preview-note"></p><button class="text" id="remove-photo" type="button" hidden>Remove photo</button>
+</div><button type="submit" id="post-update" class="primary">Post update</button>
+<p class="hint" id="school-visibility"></p></div>
+</form>
+<details id="history" hidden><summary>Previous updates</summary><div id="history-list"></div></details>
+</section>
+<section id="requests" aria-labelledby="requests-heading" hidden>
+<h2 id="requests-heading" tabindex="-1">School requests</h2><p class="intro">Review nearby schools first. The teacher accepts the offer in their portal.</p>
+<div id="applications"></div><h3>Class questions</h3><div id="questions"></div>
+</section>
+<section id="register" aria-labelledby="register-heading" hidden>
+<h2 id="register-heading" tabindex="-1">Plant register</h2>
+<p class="intro">Match a physical tag to its row and position before offering a plant to a school.</p>
+<form id="register-form" class="editor narrow">
+<label for="field-position">Row and position</label><select id="field-position" required></select>
+<p class="field-state" id="register-state"></p>
+<div id="tag-fields"><label for="field-tag">Physical tag</label><input id="field-tag" type="text" autocomplete="off" maxlength="60" placeholder="As written on the plant" required>
+<p class="hint">Verifying this tag makes the plant available for school review.</p>
+<button type="submit">Verify plant</button></div>
+<div id="manage-tag" hidden><p id="tag-description"></p><div class="actions"><button id="field-observe" type="button">Add a field note</button><button id="availability" type="button" class="quiet" hidden></button></div></div>
+</form></section>
+</main></body></html>

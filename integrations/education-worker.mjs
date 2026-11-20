@@ -3,6 +3,7 @@ import {authRoutes} from './education-auth.mjs';
 import {listResources,getResource,pdfResponse,printablePage,printableResource} from './education-resources.mjs';
 import {workspaceRoutes} from './education-workspace.mjs';
 import {staffRoutes} from './education-staff.mjs';
+import {publicPlantMap,teacherPlantRoutes,staffPlantRoutes} from './plant-portal.mjs';
 const CSP="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https://theglenolia.com.au; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 export async function handleEducation(request,env,ctx={}){
  const url=new URL(request.url),path=url.pathname;
@@ -14,12 +15,18 @@ export async function handleEducation(request,env,ctx={}){
   if(path.startsWith('/internal/admin/')){
    if(!env.STAFF_TOKEN||!secureEqual(request.headers.get('Authorization'),'Bearer '+env.STAFF_TOKEN))return json({error:'not_found'},404);
    if(!['GET','POST'].includes(request.method))return json({error:'method'},405);
+   if (path.startsWith('/internal/admin/plants/')) {
+    const limit=path==='/internal/admin/plants/update' ? 420000 : 8192;
+    const body=request.method==='POST' ? await readBody(request,limit) : null;
+    return await staffPlantRoutes(request,env,path.slice('/internal/admin'.length),body);
+   }
    const body=request.method==='POST'?await readBody(request,path.endsWith('/pdf')?3000000:131072):null;
    return await staffRoutes(request,env,path.slice('/internal/admin'.length),body)||json({error:'not_found'},404);
   }
   if(path.startsWith('/api/')){
    if(!env.EDU_DB||!env.SESSION_KEY||!env.APP_ORIGIN)fail(503,'portal_unavailable');
    if(!['GET','POST','HEAD'].includes(request.method))fail(405,'method');
+   if(path==='/api/plants/map'&&request.method==='GET')return await publicPlantMap(request,env);
    const auth=await authRoutes(request,env,path);if(auth)return auth;
    if(path==='/api/resources'&&request.method==='GET'){
     const actor=await loadActor(request,env,{required:false}),headers=request.headers.get('Origin')==='https://theglenolia.com.au'?{'Access-Control-Allow-Origin':'https://theglenolia.com.au','Vary':'Origin'}:{};return json({resources:await listResources(env.EDU_DB,actor),stages:['ES1','S1','S2','S3','S4','S5','S6'],language:'en'},200,headers);
@@ -32,6 +39,7 @@ export async function handleEducation(request,env,ctx={}){
     return json({resource:p});
    }
    const actor=await loadActor(request,env);if(request.method==='POST')requireCSRF(request,actor);const body=request.method==='POST'?await readBody(request):null;
+   if(path.startsWith('/api/plants/'))return await teacherPlantRoutes(request,env,path,actor,body);
    return await workspaceRoutes(request,env,path,actor,body)||json({error:'not_found'},404);
   }
   if(!['GET','HEAD'].includes(request.method))return json({error:'method'},405);

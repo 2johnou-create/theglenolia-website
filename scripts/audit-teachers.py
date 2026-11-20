@@ -109,6 +109,14 @@ check('does not subscribe' in privacy_text,'Teacher account must not imply marke
 
 sitemap=ET.parse(DIST/'sitemap.xml')
 locations=[node.text for node in sitemap.findall('.//{*}loc')]
+portal_route = '/plant-portal/'
+portal_html, portal_doc = read(DIST/'plant-portal/index.html', 'Public Plant Portal')
+check(any(t == 'a' and a.get('href') == BASE + portal_route for t, a in home_doc.tags), 'Plant Portal needs a crawlable link from the homepage')
+check(any(t == 'a' and a.get('href') == BASE + portal_route for t, a in landing_doc.tags), 'Plant Portal needs a link from For Teachers')
+check(locations.count(ORIGIN + portal_route) == 1, 'Plant Portal sitemap entry missing or duplicated')
+check(any(t == 'link' and a.get('rel') == 'canonical' and a.get('href') == ORIGIN + portal_route for t, a in portal_doc.tags), 'Wrong Plant Portal canonical')
+check(any(t == 'a' and a.get('href', '').startswith(PORTAL + '/#plant') for t, a in portal_doc.tags), 'School application must remain reachable without running the selector')
+check(not any(u.startswith(PORTAL) for u in locations), 'Private education account routes do not belong in public sitemap')
 for route in routes:check(locations.count(ORIGIN+route)==1,'English education canonical missing/duplicated in sitemap: '+route)
 check(not any('/zh-hant/teachers/' in u or '/ja/teachers/' in u for u in locations),'Sitemap must not invent translated education routes')
 

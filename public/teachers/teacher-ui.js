@@ -9,6 +9,23 @@ export function stageLabel(stage){return STAGES[stage]||String(stage||'Teacher r
 export function resourceSummary(value){if(!value||typeof value!=='object'||typeof value.id!=='string')return null;return {...value,id:value.id,title:String(value.title||'Learning resource'),stage:String(value.stage||''),summary:String(value.summary||value.description||''),term:Number(value.term)||null,version:Number(value.version||value.publishedVersion||value.published_version)||1,availability:value.availability||'teacher'};}
 export function filterResources(resources,filters={}){const q=String(filters.search||'').trim().toLowerCase();return resources.filter(r=>(!filters.stage||filters.stage==='all'||r.stage===filters.stage)&&(!filters.term||filters.term==='all'||r.term===Number(filters.term))&&(!filters.mode||filters.mode==='all'||[...(Array.isArray(r.modes)?r.modes:[]),r.mode||'',r.classroomAlternative?'classroom':'',r.fieldAlternative?'field':''].some(m=>String(m).toLowerCase().replaceAll(' ','_')===filters.mode))&&(!q||[r.title,r.summary,stageLabel(r.stage),r.question||''].join(' ').toLowerCase().includes(q)));}
 export function safeLink(value,base='https://theglenolia.com.au/'){if(typeof value!=='string'||!(/^(?:https?:\/\/|\/(?!\/))/.test(value)))return null;try{const url=new URL(value,base);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password?url.href:null;}catch{return null;}}
+export function plantPosition(key){
+ const match=/^r([12])-p([1-9]|1[0-9])$/.exec(typeof key==='string'?key:'');
+ return match?'Row '+match[1]+' · Plant '+match[2]:null;
+}
+export function plantPhotoPath(path){
+ return typeof path==='string'&&/^\/api\/plants\/photos\/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(path)?path:null;
+}
+Object.assign(ERRORS,{
+ school_application_exists:'Your registration is already on file. Refresh to see its status.',
+ plant_unavailable:'That plant is unavailable. Choose another preference or select “Any plant”.',
+ application_unavailable:'This registration is no longer available to this account.',
+ offer_unavailable:'This offer has changed. Refresh to see the latest status.',
+ plant_access_required:'Use the educator account that registered this school to open its journal.',
+ question_limit:'Please wait before sending another question.',
+ consent_required:'Confirm the educator statement before continuing.',
+ invalid_email:'Enter a complete school email address.'
+});
 const STORY_ID=/^sl(?:0[1-9]|[12][0-9]|3[0-9]|40)$/;
 const STORY_PLACEMENTS=new Set(['opening','lesson-1','lesson-2','lesson-3','lesson-4','reflection']);
 export function storyImageId(value){const id=String(value||'').replace(/^stories\//,'');return STORY_ID.test(id)?id:null;}
@@ -102,7 +119,7 @@ function start(root){
  const apiBase=(root.dataset.apiBase||'/api').replace(/\/$/,'');
  const staffMode=root.dataset.mode==='staff',artBase=root.dataset.illustrationBase||'https://theglenolia.com.au/assets/education';
  const state={session:{user:null},resources:[],workspace:null,resourceCache:new Map(),staffDashboard:null,staffAuthenticated:false,render:0,filters:{search:'',stage:'all',term:'all',mode:'all',saved:false},guides:true,storyLibrary:null};
- let lastDialogFocus=null;
+ let lastDialogFocus=null,resourcesLoaded=false,identityLoaded=false;
  const motion=createEducationMotion(root,dialog);
  function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(cls)n.className=cls;return n;}
  function append(target,...nodes){for(const n of nodes.flat())if(n)target.append(typeof n==='string'?document.createTextNode(n):n);return target;}
@@ -125,7 +142,7 @@ function start(root){
  async function classroomPage(){const collection=await storyLibrary(),box=el('div');box.append(heading('A little more life in the classroom.','Useful printables for noticing, planning, measuring and working together. Choose the right paper size, check the print instructions and make each tool your own.','THE CLASSROOM TOOLKIT',classroomCollectionLinks()));box.append(guide('classroom','A good tool leaves room for your class’s own ideas.','Milla'));const categories=[...new Set(collection.classroomTools.map(t=>t.category))],filter=select('toolCategory',[['all','All classroom tools'],...categories.map(t=>[t,labelKey(t)])],'all'),filters=el('div',null,'edu-tool-filters'),count=small(''),grid=el('div',null,'edu-tool-grid');filters.append(field('Choose a useful tool',filter));count.setAttribute('role','status');count.setAttribute('aria-live','polite');function paint(){motion.results(grid);const matches=collection.classroomTools.filter(t=>filter.value==='all'||t.category===filter.value);count.textContent=matches.length+' '+(matches.length===1?'classroom tool':'classroom tools');grid.replaceChildren();if(!matches.length){grid.append(empty('The collection is taking a little pause.','Please try another category or return a little later.'));return;}for(const tool of matches){const card=el('article',null,'edu-tool-card'),format=el('div',null,'edu-tool-format');format.append(el('span','PDF'),small([tool.paper,tool.pages?tool.pages+' '+(tool.pages===1?'page':'pages'):null].filter(Boolean).join(' · ')));const preview=el('img',null,'edu-tool-preview');preview.src=classroomToolPath(tool.file).replace(/\.pdf$/,'.webp');preview.alt=tool.title+' — first-page preview';preview.loading='lazy';preview.width=600;preview.height=400;preview.addEventListener('error',()=>preview.remove());card.append(preview);card.append(format,el('p',labelKey(tool.category),'edu-kicker'),el('h2',tool.title),el('p',tool.description));if(tool.printNote)card.append(notice('Before you print',tool.printNote));const download=link('Download classroom PDF',classroomToolPath(tool.file),true);download.setAttribute('download',tool.file);card.append(actions(download));grid.append(card);}}filter.addEventListener('change',paint);paint();box.append(filters,count,grid,notice('A place for participation, not public ranking.','Use group names or classroom-created labels. Keep learner identities, private assessment results and health records in your school’s approved systems.'),small('Free for teacher-led educational use with The Glenolia credit. Calendars are planning tools; add your school’s own dates. Classroom materials do not establish official curriculum completion or grades.'));return box;}
  function errorPanel(error,retry){const n=empty('A little pause.',error.message||'We could not load this information just now.',actions(button('Try again',retry,true),link('Return to the library','#library',true),!state.session.user&&!staffMode?link('Teacher sign in','#signin'):null));n.classList.add('edu-error');return n;}
  function loading(){const n=el('div',null,'edu-loading');n.setAttribute('role','status');n.append(el('span',null,'edu-loading-leaf'),el('p','Gathering the latest information…'));return n;}
- async function api(path,body,options={}){const method=options.method||((body!==undefined)?'POST':'GET'),headers={Accept:'application/json'};if(body!==undefined)headers['Content-Type']='application/json';if(method!=='GET'&&!path.startsWith('/auth/'))headers['X-CSRF']=state.session.csrf||'';const response=await fetch(apiBase+path,{method,credentials:'same-origin',cache:'no-store',headers,body:body!==undefined?JSON.stringify(body):undefined,signal:AbortSignal.timeout(45000)});if(!response.headers.get('Content-Type')?.includes('application/json'))throw Error('Please refresh this page and sign in again. Your unsaved edits remain in this tab.');const data=await response.json();if(!response.ok){if(response.status===401){state.session={user:null};state.workspace=null;state.resourceCache.clear();updateAccount();}const error=Error(ERRORS[data.error]||'This could not be completed just now. Your edits remain in this tab. Please try again.');error.status=response.status;error.code=data.error;throw error;}return data;}
+ async function api(path,body,options={}){const method=options.method||((body!==undefined)?'POST':'GET'),headers={Accept:'application/json'};if(body!==undefined)headers['Content-Type']='application/json';if(method!=='GET'&&!path.startsWith('/auth/'))headers['X-CSRF']=state.session.csrf||'';const response=await fetch(apiBase+path,{method,credentials:'same-origin',cache:'no-store',headers,body:body!==undefined?JSON.stringify(body):undefined,signal:AbortSignal.timeout(45000)});if(!response.headers.get('Content-Type')?.includes('application/json'))throw Error('Please refresh this page and sign in again. Your unsaved edits remain in this tab.');const data=await response.json();if(!response.ok){if(response.status===401)resetIdentity();const error=Error(ERRORS[data.error]||'This could not be completed just now. Your edits remain in this tab. Please try again.');error.status=response.status;error.code=data.error;throw error;}return data;}
  function gateway(path){return apiBase+path;}
  function input(name,{type='text',value='',maxLength,required=false,min,max,rows}={}){const n=el(type==='textarea'?'textarea':'input');if(type!=='textarea')n.type=type;n.name=name;n.value=value??'';if(maxLength)n.maxLength=maxLength;if(required)n.required=true;if(min!==undefined)n.min=min;if(max!==undefined)n.max=max;if(rows)n.rows=rows;return n;}
  function select(name,options,value){const n=el('select');n.name=name;for(const [v,t]of options){const o=el('option',t);o.value=v;n.append(o);}if(value!==undefined)n.value=value;return n;}
@@ -142,9 +159,240 @@ function start(root){
  function closeDialog(){dialog.close();if(lastDialogFocus?.isConnected)lastDialogFocus.focus();}
  $('[data-dialog-close]').addEventListener('click',closeDialog);dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDialog();}});
  $('[data-guide-toggle]').addEventListener('click',()=>{state.guides=!state.guides;root.classList.toggle('hide-guides',!state.guides);$('[data-guide-toggle]').setAttribute('aria-pressed',String(state.guides));$('[data-guide-toggle]').textContent=state.guides?'Hide character prompts':'Show character prompts';});
+ const plantLanding='https://theglenolia.com.au/plant-portal/';
+ let questionDraft=null;
+ const isPlantRoute=route=>route==='plant'||route==='plant-classroom';
+ function clearPlantDraft(){questionDraft=null;}
+ function requiredCheck(label,name){
+  const control=check(label,name);
+  control.querySelector('input').required=true;
+  return control;
+ }
+ function plantShell(route){
+  if(staffMode)return;
+  const mode=route==='plant-classroom'?'classroom':route==='plant'?'teacher':'';
+  root.dataset.plantView=mode;
+  const label=$('.edu-brand-label');
+  label.textContent=mode?'PLANT PORTAL':'LEARNING TOGETHER';
+  if(mode==='classroom'){
+   $('[data-workspace-context]').replaceChildren();
+   $('[data-account-link]').textContent='';
+   tell('');
+  }
+ }
+ function rememberPlantReturn(preference){
+  // Only a map position crosses browser tabs. The education service verifies the
+  // email link and its browser cookie separately before a journal can be read.
+  document.cookie='__Host-glenolia-plant-return='+(plantPosition(preference)?preference:'plant')+'; Max-Age=900; Path=/; Secure; SameSite=Lax';
+ }
+ function takePlantReturn(){
+  const entry=document.cookie.split('; ').find(item=>item.startsWith('__Host-glenolia-plant-return='));
+  if(!entry)return null;
+  document.cookie='__Host-glenolia-plant-return=; Max-Age=0; Path=/; Secure; SameSite=Lax';
+  const value=entry.split('=')[1];
+  return value==='plant'?'plant':plantPosition(value)?'plant?prefer='+value:null;
+ }
+ function plantIntro(){
+  const a=el('a','← Explore the farm rows','edu-back');
+  a.href=plantLanding;
+  return a;
+ }
+ function plantForm(formEl){
+  formEl.className='edu-form-panel plant-form';
+  return formEl;
+ }
+ function plantSignIn(preference){
+  const box=el('div',null,'plant-panel');
+  box.append(plantIntro(),heading('Your school’s coffee plant','Sign in with your school email to register or open your plant journal.','SCHOOL PLANT PORTAL'));
+  if(plantPosition(preference))box.append(small('Your preference: '+plantPosition(preference)));
+  const f=plantForm(form(async values=>{
+   await api('/auth/request',{email:String(values.get('email')).trim(),role:'teacher',intent:'signin',consent:values.get('consent')==='yes'});
+   rememberPlantReturn(preference);
+   f.dataset.dirty='false';
+   const message=notice('Check your school inbox.','Open the sign-in link in this browser within 15 minutes. Then finish registering or open your journal.');
+   message.tabIndex=-1;f.replaceChildren(message);message.focus();
+  }));
+  const email=input('email',{type:'email',required:true,maxLength:254});email.autocomplete='email';
+  const privacy=el('a','Privacy notice');privacy.href='https://theglenolia.com.au/privacy/';
+  addForm(f,field('School email',email),requiredCheck('I am an adult educator using this portal for school learning.','consent'),
+   actions(submit('Email me a sign-in link')),privacy);
+  box.append(f);
+  return box;
+ }
+ function schoolApplication(plants,preference,previous){
+  const box=el('div',null,'plant-panel');
+  box.append(plantIntro(),heading('Register your school','Follow a coffee plant with your class for free. Nearby schools have first priority.','SCHOOL PLANT PORTAL'));
+  const allowed=plants.filter(p=>plantPosition(p.key)&&p.status!=='unavailable');
+  const choices=select('preferredKey',[
+   ['','Any plant the farm can offer'],
+   ...allowed.map(p=>[p.key,plantPosition(p.key)+(p.status==='unverified'?' · awaiting field check':'')])
+  ],allowed.some(p=>p.key===preference)?preference:'');
+  const f=plantForm(form(async (values,current)=>{
+   try{await api('/plants/apply',{
+    schoolName:String(values.get('schoolName')).trim(),suburb:String(values.get('suburb')).trim(),
+    schoolType:String(values.get('schoolType')),preferredKey:String(values.get('preferredKey'))||null,consent:values.get('consent')==='yes'
+   });}catch(error){if(error.code!=='school_application_exists')throw error;}
+   current.dataset.dirty='false';
+   if(current.isConnected){tell('School registration received.');await render();}
+  }));
+  const name=input('schoolName',{maxLength:160,required:true,value:previous?.schoolName||(state.session.school?.kind==='school'?state.session.school.name:'')});
+  name.autocomplete='organization';
+  const suburb=input('suburb',{maxLength:100,required:true,value:previous?.suburb||''});suburb.autocomplete='address-level2';
+  const schoolType=select('schoolType',[['','Choose school level'],['primary','Primary school'],['high','High school'],['combined','Primary and high school'],['other','Other school']],previous?.schoolType||'');schoolType.required=true;
+  const fields=el('div',null,'plant-field-pair');fields.append(field('School suburb',suburb),field('School level',schoolType));
+  addForm(f,field('School name',name),fields,field('Preferred plant',choices,'The farm checks the field tag before offering a place.'),
+   requiredCheck('I am authorised to register this school for educational adoption. The farm keeps and cares for the plant.','consent'),
+   actions(submit('Register my school')),small('School contact: '+state.session.user.email));
+  if(preference&&!allowed.some(p=>p.key===preference)&&plantPosition(preference))
+   box.append(notice('That position is currently unavailable.','Choose another preference or let the farm match your class.'));
+  box.append(f);
+  return box;
+ }
+ function plantStatus(application){
+  const box=el('div',null,'plant-panel'),offered=application.status==='offered',pending=application.status==='pending';
+  box.append(plantIntro(),heading(offered?'Your plant is ready':pending?'School registered':'Application update',application.schoolName,'SCHOOL PLANT PORTAL'));
+  const card=el('section',null,'plant-status');
+  if(offered){
+   card.append(el('h2',plantPosition(application.plantKey)||'Your coffee plant'),el('p','The farm has offered this plant to your class. Accept to open your free journal.'));
+   if(application.preferredKey&&application.plantKey!==application.preferredKey)card.append(small('Your original preference was '+plantPosition(application.preferredKey)+'.'));
+   const f=form(async (_values,current)=>{
+    try{await api('/plants/accept',{applicationId:application.id,plantKey:application.plantKey});}
+    catch(error){
+     if(error.code!=='offer_unavailable')throw error;
+     if(current.isConnected){tell('The offer has changed. Review the current plant before accepting.');await render();}
+     return;
+    }
+    if(current.isConnected){tell('Your plant journal is open.');await render();}
+   });addForm(f,actions(submit('Accept this plant')));card.append(f);
+  }else if(pending){
+   card.append(el('h2','With the farm team'),el('p','We’re reviewing your school’s request. Return here to see your offer.'));
+   if(application.preferredKey)card.append(small('Your preference: '+plantPosition(application.preferredKey)));
+   card.append(actions(button('Check status',()=>render(),true)));
+  }else{
+   card.append(el('h2','A place hasn’t been offered'),el('p','Contact the farm if you’d like to discuss your application.'),actions(link('Register again','#plant?apply=again'),link('Contact the farm','mailto:info@theglenolia.com.au',true)));
+  }
+  box.append(card);return box;
+ }
+ function observedDate(entry){
+  const stamp=String(entry.observedOn||'');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(stamp))return '';
+  return new Intl.DateTimeFormat('en-AU',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(stamp+'T12:00:00Z'));
+ }
+ function observation(entry){
+  const card=el('article',null,'plant-entry'),textBox=el('div',null,'plant-entry-note'),date=observedDate(entry);
+  const photo=plantPhotoPath(entry.photoUrl);
+  if(photo){
+   const figure=el('figure'),img=el('img');img.src=photo;img.alt='Farm photograph of the class plant'+(date?' on '+date:'');img.decoding='async';
+   img.addEventListener('error',()=>figure.replaceChildren(small('This photograph could not be loaded. Refresh to try again.')),{once:true});
+   figure.append(img);card.append(figure);
+  }
+  const time=el('time',date);time.dateTime=entry.observedOn;
+  textBox.append(time);if(entry.note)textBox.append(el('p',entry.note));card.append(textBox);return card;
+ }
+ function classQuestion(app){
+  if(questionDraft?.applicationId!==app.id)questionDraft={applicationId:app.id,text:'',requestId:crypto.randomUUID()};
+  const draft=questionDraft;
+  const f=form(async (values,current)=>{
+   await api('/plants/question',{applicationId:app.id,question:String(values.get('question')).trim(),consent:values.get('consent')==='yes',requestId:draft.requestId});
+   clearPlantDraft();current.dataset.dirty='false';
+   if(current.isConnected&&dialog.open){closeDialog();tell('Question sent privately to the farm.');await render();}
+  });
+  const question=input('question',{type:'textarea',value:draft.text,required:true,maxLength:800,rows:4});
+  question.addEventListener('input',()=>{if(draft.text!==question.value)draft.requestId=crypto.randomUUID();draft.text=question.value;});
+  addForm(f,field('What would your class like to know?',question),requiredCheck('I have checked this question and left out student names and personal details.','consent'),
+   actions(submit('Send to the farm')),small('Only you and the farm team can read this conversation.'));
+  openDialog('Ask the farmer',f);
+  dialog.addEventListener('close',()=>f.remove(),{once:true});
+ }
+ function plantJournal(record,classroom){
+  const {application,updates,questions}=record;
+  const label=plantPosition(application.plantKey)||'Our coffee plant';
+  const box=el('div',null,classroom?'plant-classroom':'plant-panel plant-journal');
+  if(classroom){
+   const exit=el('a','← Exit classroom view','edu-back plant-class-exit');exit.href='#plant';
+   box.append(exit,heading(label,'','CLASSROOM PLANT JOURNAL'));
+   const stage=el('section',null,'plant-class-stage'),slide=el('div'),navigation=actions();
+   let index=0;
+   function showEntry(){
+    slide.replaceChildren(updates.length?observation(updates[index]):notice('First field update to come.','Your farmer will add a dated photograph or observation here.'));
+    if(updates.length>1){
+     const newer=button('Newer update',()=>{index--;showEntry();newerButtonFocus();},true);
+     const older=button('Earlier update',()=>{index++;showEntry();olderButtonFocus();},true);
+     newer.disabled=index===0;older.disabled=index===updates.length-1;
+     navigation.replaceChildren(newer,small((index+1)+' of '+updates.length),older);
+    }
+   }
+   function newerButtonFocus(){const buttons=navigation.querySelectorAll('button');(buttons[0]?.disabled?buttons[1]:buttons[0])?.focus();}
+   function olderButtonFocus(){const buttons=navigation.querySelectorAll('button');(buttons[1]?.disabled?buttons[0]:buttons[1])?.focus();}
+   slide.setAttribute('aria-live','polite');showEntry();stage.append(slide,navigation);
+   const prompt=el('section',null,'plant-prompt');
+   const prompts=application.schoolType==='high'?['What evidence of change can we find?','Which conditions could explain a change?','What would we measure next?']:['What do you notice about this plant?','What looks different since last time?','What would you like to look for next?'];
+   let step=0;const question=el('h2',prompts[0]);question.setAttribute('aria-live','polite');
+   prompt.append(el('p','DISCUSS TOGETHER','edu-kicker'),question,
+    actions(button('Next question',()=>{step=(step+1)%prompts.length;question.textContent=prompts[step];},true),button('Print activity',()=>window.print(),true)));
+   box.append(stage,prompt);return box;
+  }
+  box.append(heading('Our plant',label,'SCHOOL PLANT JOURNAL',actions(link('Open classroom view','#plant-classroom'),button('Ask a question',()=>classQuestion(application),true))));
+  const recent=section('Latest farm update',updates.length?observation(updates[0]):notice('Waiting for the first field note.','The farmer’s dated observations and photos will appear here.'));
+  box.append(recent);
+  if(updates.length>1){
+   const details=el('details',null,'plant-history');details.append(el('summary','Earlier updates ('+(updates.length-1)+')'));
+   details.addEventListener('toggle',()=>{if(details.open&&details.children.length===1)for(const entry of updates.slice(1))details.append(observation(entry));});box.append(details);
+  }
+  if(questions.length){
+   const details=el('details',null,'plant-history');details.append(el('summary','Questions for the farm ('+questions.length+')'));
+   for(const q of questions){
+    const entry=el('article',null,'plant-conversation');
+    entry.append(el('h3','Your class asked'),el('p',q.question),el('strong',q.answer?'Farmer’s reply':'Awaiting a reply'));
+    if(q.answer)entry.append(el('p',q.answer));details.append(entry);
+   }
+   box.append(details);
+  }
+  box.append(actions(button('Refresh journal',()=>render(),true),link('Teacher workspace','#library',true)));return box;
+ }
+ async function plantPage(route,query){
+  const classroom=route==='plant-classroom',preference=query.get('prefer');
+  const closed=()=>empty('Classroom view is closed.','A teacher can open it from an active plant journal.',link('Back to plant portal','#plant',true));
+  if(classroom){
+   try{
+    const record=await api('/plants/classroom');
+    return record.application?.status==='active'?plantJournal(record,true):closed();
+   }catch(error){if(error.status===401||error.status===403)return closed();throw error;}
+  }
+  if(!state.session.user)return plantSignIn(preference);
+  const record=await api('/plants/me');
+  if(record.application?.status==='active')return plantJournal(record,false);
+  const reapplying=record.application?.status==='declined'&&query.get('apply')==='again';
+  if(record.application&&!reapplying)return plantStatus(record.application);
+  const {plants}=await api('/plants/map');
+  return schoolApplication(plants,preference,record.application);
+ }
  function authNeeded(message='Sign in with your work email to save resources and prepare your groups.'){return empty('Your teaching starts here.',message,link('Teacher sign in','#signin'));}
- function updateAccount(){const user=state.session.user,a=$('[data-account-link]');if(staffMode){a.href='#';a.textContent='Open teacher workspace';a.onclick=async event=>{event.preventDefault();try{const result=await api('/owner-workspace',{}),url=new URL(result.url);if(url.origin!=='https://glenolia-education.theglenolia.workers.dev'||url.pathname!=='/auth/verify')throw Error('The teacher workspace link could not be verified.');openDialog('Your teacher workspace.',notice('Open the working teacher portal.','This short-lived link opens your owner account without sending a sign-in email.'));$('[data-dialog-body]').append(actions(link('Open teacher workspace',url.href)));}catch(error){tell(error.message);}};return;}a.href=user?'#profile':'#signin';a.textContent=user?(user.name||user.email):staffMode?'Check staff access':'Teacher sign in';const bar=$('[data-workspace-context]'),school=state.session.school;bar.replaceChildren();bar.hidden=!user;if(user&&school){const text=el('p');text.append(el('strong',school.name||'Private planning workspace'),document.createTextNode(' · '+(school.evidenceEnabled?'School observations enabled':school.kind==='personal'?'Personal planning · no learner records':'Planning access · learner observations not enabled')));bar.append(text);const a=el('a','School and account','#');a.href='#profile';bar.append(a);}}
+ function updateAccount(){const user=state.session.user,a=$('[data-account-link]');if(staffMode){a.href='#';a.textContent='Open teacher workspace';a.onclick=async event=>{event.preventDefault();try{const result=await api('/owner-workspace',{}),url=new URL(result.url);if(url.origin!=='https://glenolia-education.theglenolia.workers.dev'||url.pathname!=='/auth/verify')throw Error('The teacher workspace link could not be verified.');openDialog('Your teacher workspace.',notice('Open the working teacher portal.','This short-lived link opens your owner account without sending a sign-in email.'));$('[data-dialog-body]').append(actions(link('Open teacher workspace',url.href)));}catch(error){tell(error.message);}};return;}a.href=user?'#profile':'#signin';a.textContent=user?(user.name||user.email):staffMode?'Check staff access':'Teacher sign in';const bar=$('[data-workspace-context]'),school=state.session.school;bar.replaceChildren();bar.hidden=!user;if(user&&school){const text=el('p');text.append(el('strong',school.name||'Private planning workspace'),document.createTextNode(' · '+(school.evidenceEnabled?'School observations enabled':school.kind==='personal'?'Personal planning · no learner records':'Planning access · learner observations not enabled')));bar.append(text);const a=el('a','School and account');a.href='#profile';bar.append(a);}}
  async function workspace(force=false){if(!state.session.user)return null;if(!state.workspace||force)state.workspace=await api('/workspace');return state.workspace;}
+ function resetIdentity(){
+  state.session={user:null};state.workspace=null;state.resourceCache.clear();state.resources=[];resourcesLoaded=false;clearPlantDraft();
+  if(dialog.open)closeDialog();
+  $('[data-dialog-body]').replaceChildren();updateAccount();
+  const {route,query}=currentRoute();
+  if(!staffMode&&isPlantRoute(route)){
+   plantShell(route);
+   main.replaceChildren(route==='plant'?plantSignIn(query.get('prefer')):loading());
+  }
+ }
+ if(!staffMode){
+  window.addEventListener('storage',event=>{
+   if(event.key!=='glenolia-educator-signout')return;
+   resetIdentity();tell('You have signed out.');render();
+  });
+  // A restored page must establish the current session before showing a journal.
+  window.addEventListener('pageshow',event=>{
+   if(event.persisted&&isPlantRoute(currentRoute().route)){resetIdentity();main.replaceChildren(loading());initialise();}
+  });
+  window.addEventListener('pagehide',()=>{
+   if(isPlantRoute(currentRoute().route)){main.replaceChildren(loading());$('[data-dialog-body]').replaceChildren();}
+  });
+ }
  function currentRoute(){const raw=location.hash.replace(/^#/,'')|| (staffMode?'staff-schools':'library'),[route,query]=raw.split('?');return {route,query:new URLSearchParams(query||'')};}
  function routeTo(route){location.hash=route;}
  function isDirty(){return [...root.querySelectorAll('form[data-dirty=true]')].some(f=>f.isConnected);}
@@ -177,8 +425,15 @@ function start(root){
  function localDownloadURL(value){try{const u=new URL(value,location.href);return u.origin===location.origin&&u.pathname.startsWith(apiBase+'/')?u.href:null;}catch{return null;}}
  async function reportsPage(){if(!state.session.user)return authNeeded();const ws=await workspace(true),box=el('div');box.append(heading('Tell the learning story carefully.','Create a teacher-reviewed group or learner summary from the observations in an approved school workspace.'));if(!state.session.school?.evidenceEnabled||!state.session.school?.canAssess){box.append(evidenceGate());return box;}const groups=ws.groups||[];if(!groups.length)box.append(empty('A group comes first.','Create a group and record relevant learning observations before preparing a report.',link('Go to My groups','#groups',true)));else{const listEl=el('ul',null,'edu-list');for(const g of groups){const li=el('li');li.append(el('strong',g.name),small(stageLabel(g.stage)),actions(link('Review observations','#group/'+g.id,true),button('Review group report',()=>createReport(g.id))));listEl.append(li);}box.append(listEl);}box.append(notice('Teacher judgement stays with the school.','These summaries support programme learning. They do not create NESA grades, credentials, diagnoses or automated assessment decisions.'));return box;}
  async function visitPage(){const box=el('div');box.append(heading('A future visit starts with a question.','Tell us what your class is exploring. We can discuss a future learning experience as school and site readiness take shape.'),guide('community','Some good conversations start with “What if we tried…?”','Milla'));box.append(notice('An expression of interest, not a booking.','School visits are in preparation. Dates, access, facilities, programme fit and school approvals need to be confirmed before any visit is agreed.'));if(!state.session.user){box.append(authNeeded('Sign in with your work email to send a school learning enquiry. No student details are needed.'));return box;}const f=form(async data=>{await api('/interests',{stage:String(data.get('stage')),mode:String(data.get('mode')),preferredTerm:String(data.get('preferredTerm')),approximateCount:Number(data.get('approximateCount')),message:String(data.get('message')||'')});f.dataset.dirty='false';f.replaceChildren(notice('Thank you for sharing your idea.','Your enquiry is saved for the Glenolia team. This is not a booking confirmation. We will discuss the next practical step with your school.'));});f.className='edu-form-panel';addForm(f,field('Learning stage',select('stage',Object.entries(STAGES))),field('Preferred learning setting',select('mode',[['field','Future farm visit'],['indoor','Indoor learning workshop'],['classroom','Classroom resources / conversation']])),field('Preferred term or period',input('preferredTerm',{maxLength:80,required:true}),'For example, “Term 4, 2027”. Availability is subject to confirmation.'),field('Approximate learner count',input('approximateCount',{type:'number',min:1,max:500,required:true})),field('What would make the learning useful?',input('message',{type:'textarea',rows:5,maxLength:2000}),'Please leave out learner names, health information and other personal records.'),actions(submit('Send learning enquiry')));box.append(f);return box;}
- async function profilePage(){if(!state.session.user)return authNeeded();const u=state.session.user,school=state.session.school,box=el('div');box.append(heading('Your place in the learning.','Manage your adult teacher account and see the status of your school workspace.'));const profile=el('div',null,'edu-form-panel');profile.append(el('h2',u.name||'Teacher account'),el('p',u.email),small('Work email verified · Adult teaching account'));if(school)profile.append(notice(school.name,school.kind==='personal'?'This is your private planning workspace. It does not hold learner records.':school.evidenceEnabled?'Your school has learner observations enabled. Use only school-approved alias-based records.':'Your school planning workspace is available. Learner observations remain off until its agreement and access are approved.'));if(state.session.memberships?.length>1){const selector=select('schoolId',state.session.memberships.map(m=>[m.id,m.name]),school?.id),switchForm=form(async value=>{state.session=await api('/school/select',{schoolId:String(value.get('schoolId'))});state.workspace=null;state.resourceCache.clear();const latest=await api('/resources');state.resources=normalisedResources(latest.resources);switchForm.dataset.dirty='false';updateAccount();tell('Workspace changed. Only the selected school’s records are available.');await render();});addForm(switchForm,field('Active school or planning workspace',selector),actions(submit('Switch workspace')));profile.append(switchForm);}profile.append(actions(link('Export my account data',gateway('/profile/export'),true),button('Sign out',async()=>{try{await api('/logout',{});state.session={user:null};state.workspace=null;state.resourceCache.clear();updateAccount();tell('You have signed out.');routeTo('library');}catch(error){tell(error.message);}},true)),small('Portal messages serve your account and enquiries. A teacher account does not subscribe you to marketing.'));box.append(profile);return box;}
- async function render(){motion.cancel();const token=++state.render,{route,query}=currentRoute();main.replaceChildren(loading());for(const a of root.querySelectorAll('[data-edu-route]')){const active=route===a.dataset.eduRoute||(route.startsWith('resource/')&&a.dataset.eduRoute==='library')||(route.startsWith('group/')&&a.dataset.eduRoute==='groups');if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}motion.selection();try{let page;if(route==='library')page=await libraryPage(query);else if(route==='stories'&&!staffMode)page=await storiesPage(query);else if(route==='classroom'&&!staffMode)page=await classroomPage();else if(route.startsWith('resource/'))page=await detailPage(decodeURIComponent(route.slice(9)),query);else if(route==='signin')page=await signInPage();else if(route==='groups')page=await groupsPage();else if(route.startsWith('group/'))page=await groupPage(decodeURIComponent(route.slice(6)));else if(route==='reports')page=await reportsPage();else if(route==='visit')page=await visitPage();else if(route==='profile')page=await profilePage();else if(route.startsWith('staff-'))page=await staffPage(route);else page=await libraryPage(query);if(token!==state.render)return;main.replaceChildren(page);motion.enter(page);document.title=(main.querySelector('h1')?.textContent||'Teacher workspace')+' | The Glenolia';main.focus({preventScroll:true});}catch(error){if(token!==state.render)return;main.replaceChildren(errorPanel(error,render));}}
+ async function profilePage(){if(!state.session.user)return authNeeded();const u=state.session.user,school=state.session.school,box=el('div');box.append(heading('Your place in the learning.','Manage your adult teacher account and see the status of your school workspace.'));const profile=el('div',null,'edu-form-panel');profile.append(el('h2',u.name||'Teacher account'),el('p',u.email),small('Work email verified · Adult teaching account'));if(school)profile.append(notice(school.name,school.kind==='personal'?'This is your private planning workspace. It does not hold learner records.':school.evidenceEnabled?'Your school has learner observations enabled. Use only school-approved alias-based records.':'Your school planning workspace is available. Learner observations remain off until its agreement and access are approved.'));if(state.session.memberships?.length>1){const selector=select('schoolId',state.session.memberships.map(m=>[m.id,m.name]),school?.id),switchForm=form(async value=>{state.session=await api('/school/select',{schoolId:String(value.get('schoolId'))});state.workspace=null;state.resourceCache.clear();const latest=await api('/resources');state.resources=normalisedResources(latest.resources);switchForm.dataset.dirty='false';updateAccount();tell('Workspace changed. Only the selected school’s records are available.');await render();});addForm(switchForm,field('Active school or planning workspace',selector),actions(submit('Switch workspace')));profile.append(switchForm);}profile.append(actions(link('Export my account data',gateway('/profile/export'),true),button('Sign out',async()=>{try{await api('/logout',{});resetIdentity();try{localStorage.setItem('glenolia-educator-signout',String(Date.now()));}catch{}tell('You have signed out.');routeTo('library');}catch(error){tell(error.message);}},true)),small('Portal messages serve your account and enquiries. A teacher account does not subscribe you to marketing.'));box.append(profile);return box;}
+ async function render(){motion.cancel();const token=++state.render,{route,query}=currentRoute();if(!staffMode){updateAccount();plantShell(route);}main.replaceChildren(loading());for(const a of root.querySelectorAll('[data-edu-route]')){const active=route===a.dataset.eduRoute||(route==='plant-classroom'&&a.dataset.eduRoute==='plant')||(route.startsWith('resource/')&&a.dataset.eduRoute==='library')||(route.startsWith('group/')&&a.dataset.eduRoute==='groups');if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}motion.selection();try{
+  if(!staffMode&&route!=='plant-classroom'&&!identityLoaded){
+   const session=await api('/session');if(token!==state.render)return;state.session=session;identityLoaded=true;updateAccount();
+  }
+  if(!staffMode&&!isPlantRoute(route)&&!resourcesLoaded){
+   const result=await api('/resources');if(token!==state.render)return;state.resources=normalisedResources(result.resources);resourcesLoaded=true;
+  }
+  let page;if(!staffMode&&isPlantRoute(route))page=await plantPage(route,query);else if(route==='library')page=await libraryPage(query);else if(route==='stories'&&!staffMode)page=await storiesPage(query);else if(route==='classroom'&&!staffMode)page=await classroomPage();else if(route.startsWith('resource/'))page=await detailPage(decodeURIComponent(route.slice(9)),query);else if(route==='signin')page=await signInPage();else if(route==='groups')page=await groupsPage();else if(route.startsWith('group/'))page=await groupPage(decodeURIComponent(route.slice(6)));else if(route==='reports')page=await reportsPage();else if(route==='visit')page=await visitPage();else if(route==='profile')page=await profilePage();else if(route.startsWith('staff-'))page=await staffPage(route);else page=await libraryPage(query);if(token!==state.render)return;main.replaceChildren(page);motion.enter(page);document.title=(main.querySelector('h1')?.textContent||'Teacher workspace')+' | The Glenolia';main.focus({preventScroll:true});}catch(error){if(token!==state.render)return;main.replaceChildren(errorPanel(error,render));}}
  async function dashboard(force=false){if(!staffMode)throw Error('Staff access is required.');if(!state.staffDashboard||force)state.staffDashboard=await api('/dashboard');return state.staffDashboard;}
  function staffTable(headers,rows){const wrap=el('div',null,'edu-table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',headers.join(', '));const table=el('table',null,'edu-table'),head=el('thead'),tr=el('tr');for(const text of headers){const th=el('th',text);th.scope='col';tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');for(const row of rows){const tr=el('tr');for(const value of row){const td=el('td');append(td,value);tr.append(td);}body.append(tr);}table.append(body);wrap.append(table);return wrap;}
  async function schoolDialog(school=null){const data=await dashboard();if(!school){const teachers=(data.teachers||[]).filter(u=>!u.disabled),f=form(async value=>{await api('/schools',{name:String(value.get('name')||''),ownerEmail:String(value.get('ownerEmail')||'')});state.staffDashboard=null;f.dataset.dirty='false';closeDialog();tell('School created with planning access. Learner observations remain off.');render();});addForm(f,field('School name',input('name',{required:true,maxLength:160})),field('Verified school coordinator',select('ownerEmail',teachers.map(u=>[u.email,(u.name||u.email)+' · '+u.email]))),small('The adult coordinator must sign in once before a school can be created. Verify their school authority before granting access. Creating a school does not enable learner records.'),actions(submit('Create school planning workspace')));openDialog('A school to learn with.',f);return;}
@@ -205,6 +460,15 @@ function start(root){
   else if(route==='staff-enquiries'){box.append(heading('Conversations about future learning.','Review teacher enquiries and record the next contact step. These requests do not reserve dates or create bookings.','OWNER EDUCATION TOOLS'));const interests=data.interests||[];if(!interests.length)box.append(empty('No learning enquiries yet.','Teacher expressions of interest appear here after submission.'));else{const items=el('ul',null,'edu-list');for(const interest of interests){const li=el('li');li.append(el('h2',(interest.teacher_name||'Teacher')+' · '+(interest.school_name||'Planning workspace')),el('p',interest.email),small(stageLabel(interest.stage)+' · '+(MODES[interest.mode]||interest.mode)+' · '+interest.preferred_term+' · Approx. '+interest.approximate_count+' learners'));if(interest.message)li.append(el('p',interest.message));const f=form(async value=>{await api('/interests/'+interest.id,{status:String(value.get('status'))});f.dataset.dirty='false';state.staffDashboard=null;tell('Enquiry status saved.');render();});addForm(f,field('Follow-up status',select('status',[['new','New'],['contacted','Contacted'],['closed','Closed']],interest.status)),actions(submit('Save status')));li.append(f);items.append(li);}box.append(items);}}
   else return staffPage('staff-schools');return box;
  }
- async function initialise(){try{if(staffMode){state.staffDashboard=await api('/dashboard');state.staffAuthenticated=true;state.resources=normalisedResources(state.staffDashboard.resources);updateAccount();await render();return;}const token=new URLSearchParams(location.hash.slice(1)).get('token');if(token&&location.pathname.includes('/auth/verify')){history.replaceState(null,'',location.pathname+'#library');state.session=await api('/auth/verify',{token});tell('Your work email is verified. Welcome to the learning workspace.');}else state.session=await api('/session');const result=await api('/resources');state.resources=normalisedResources(result.resources);updateAccount();await render();}catch(error){main.replaceChildren(errorPanel(error,initialise));}}
+ async function initialise(){try{if(staffMode){state.staffDashboard=await api('/dashboard');state.staffAuthenticated=true;state.resources=normalisedResources(state.staffDashboard.resources);updateAccount();await render();return;}const token=new URLSearchParams(location.hash.slice(1)).get('token');
+  if(token&&location.pathname.includes('/auth/verify')){
+   const destination=takePlantReturn()||'library';
+   history.replaceState(null,'','/#'+destination);
+   try{state.session=await api('/auth/verify',{token});identityLoaded=true;}
+   catch(error){if(isPlantRoute(currentRoute().route)){plantShell(currentRoute().route);tell(error.message);main.replaceChildren(plantSignIn(currentRoute().query.get('prefer')));return;}throw error;}
+   tell('Your work email is verified.');
+  }else identityLoaded=false;
+  updateAccount();await render();}catch(error){main.replaceChildren(errorPanel(error,initialise));}}
+ if(!staffMode)plantShell(currentRoute().route);
  initialise();
 }

@@ -110,3 +110,40 @@ limit, bounded object-stream inflation, object/depth/page limits and rejects
 active, encrypted or malformed structures. It permits ordinary static image
 streams containing coincidental reserved-looking bytes. This narrow profile
 is not malware scanning or PDF accessibility certification.
+
+## School Plant Portal
+
+The public programme and two-row selector are at `/plant-portal/` on the main
+site. The signed-in teacher opens `/#plant` on the education service. A
+row-qualified preference, such as `/#plant?prefer=r2-p7`, follows the teacher
+to the application. A free school application can also be submitted without
+choosing a plant. The programme owner checks the school's authority and reviews nearby
+schools first. The teacher returns to the portal to accept the offer. Students
+follow the journal together in the teacher's classroom view.
+
+Open `/plants` on the protected admin service to work in the field.
+
+1. Under **Plant register**, match a physical tag to its row and position.
+2. The owner opens **School requests** to review the school and offer a verified plant.
+3. Under **Post an update**, select the tagged plant and observation date. Write
+   a note, take a photo with the rear camera, or choose one from the phone.
+   Check the journal preview and post. Photograph the plant without people or
+   identifying information.
+4. Reopen the plant's previous updates to check the entry. Use the classroom
+   view in the teacher workspace to discuss observations with the students.
+
+`plant-schema.sql` is an additive, repeatable migration for the existing
+**education** D1 database. Apply it before deploying the education service,
+then deploy protected admin, then publish the public site. For a fresh setup,
+apply `education-schema.sql` first. The plant migration creates no field
+records. A position becomes available after staff verify its tag. Each
+confirmed pairing ties a dated journal to the assigned teacher account.
+Photographs use the private education data service. Public crawlers can index
+the programme invitation and row guide.
+
+The classroom endpoint omits teacher details and private questions. Private photo
+responses are authenticated and use no-store caching.
+
+Farm work opens at `/plants` on the existing Cloudflare Access admin service. The existing owner can verify tags, post or withdraw observations, review school applications and answer class questions. For a named additional farmer, configure their exact sign-in email in the admin Worker's optional comma-separated `FARMER_EMAILS` variable and allow that same identity in the existing Cloudflare Access application. Register only identities authorised by the owner. Both checks are required. A farmer can read the map and plant journals, verify tags, change availability, post photos/notes and withdraw an erroneous entry. School applications, questions, education administration and campaign data stay owner-only. Passwords, service tokens and personal email lists belong in private configuration.
+
+The admin normalises a phone image before submitting an update. The Worker accepts a single metadata-free JPEG or WebP of up to 300 KiB and 1,600 pixels on its longest edge. Note and photo share one atomic database write. Reusing the same update ID after a network interruption returns the previous successful result. The staff member can withdraw an erroneous update and its photo. Educators see dated records for their assigned plant only.

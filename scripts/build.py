@@ -6,6 +6,7 @@ from urllib.parse import quote
 import progress_markup as world_markup
 import programme_markup
 import teachers_markup
+import plant_portal_markup
 from coffee_gallery import render_gallery as coffee_gallery
 import export_website_content
 
@@ -57,13 +58,20 @@ def button(href, text, cls='button'):
 def label(text): return f'<p class="eyebrow">{e(text)}</p>'
 
 def teachers_callout():
-    return '<section class="section teacher-callout" aria-labelledby="teacher-callout-title">'+label('FOR TEACHERS')+'<h2 id="teacher-callout-title">A growing place for curious minds.</h2><p>Bring plants, places and people into your classroom with free, teacher-led learning resources. Start with a sample, then build a collection for your class.</p>'+button('/teachers/','Explore learning with The Glenolia','text-link')+'<p class="small">English resources · Kindergarten to Year 10 · No visit or student account required</p></section>'
+    return ('<section class="section teacher-callout" aria-labelledby="teacher-callout-title">'
+            + label('FOR TEACHERS')
+            + '<h2 id="teacher-callout-title">Grow a coffee plant with your class.</h2>'
+            + '<p>Apply for a free school plant partnership in Glenorie. Your class can follow one plant through dated photos and notes from the farmer.</p>'
+            + '<div class="edu-entry-actions">' + button('/plant-portal/', 'Explore the school Plant Portal')
+            + button('/teachers/', 'Explore learning with The Glenolia', 'text-link') + '</div></section>')
+
 
 def education_privacy():
     return '''<section id="education-privacy" lang="en-AU"><h2>Teacher accounts and learning records</h2>
 <p>The English learning portal is a separate service at <a href="https://glenolia-education.theglenolia.workers.dev">glenolia-education.theglenolia.workers.dev</a>. Public samples need no account. An adult teacher account stores your email address, chosen name and school label, favourites, private planning notes, groups and selected resource editions. Email verification confirms access to that email; it does not certify a person’s employment or a school’s approval.</p>
 <p>The portal and its API use the same service origin, running on Cloudflare Workers with a separate Cloudflare D1 education database. These records are kept separate from the website newsletter database. Brevo delivers transactional sign-in messages; creating a teacher account does not subscribe you or your school to marketing. A secure session cookie supports sign-in, with a maximum session of eight hours and expiry after 30 minutes without activity. Sign out on a shared computer.</p>
 <p>Teachers’ private planning notes are accessed through their own authenticated account. Approved school members can access the school groups permitted to them; authorised Glenolia staff manage school access, content permissions and support. Personal teacher workspaces cannot store learner records. School learner observations are off by default: they require an approved school processing agreement and a staff-enabled permission for the teacher. The school decides what evidence is necessary and remains responsible for its teaching and assessment decisions.</p>
+<p>When you apply for the school Plant Portal, the farm records the school and suburb, school stage, your preferred position and the status of your application. Authorised staff review the request before offering a field-verified plant. Your teacher account can open the assigned plant journal and display farmer photos and notes to your class. Questions submitted by the teacher are private to the teacher and farm staff. Please use collective class questions without student details. The public row guide shows only position and availability information.</p>
 <p>There are no student accounts or student file uploads. Use short learner codes, keeping the identity key at school; do not enter pupil names, contact details, birth dates, health information, photographs or identifying stories in group names, notes, observations or feedback. Codes are pseudonyms, not anonymous data: a school may still be able to identify a learner. Do not use a personal planning note to bypass the school approval requirement.</p>
 <p>By default, learner codes, observations and generated reports are deleted 90 days after a group is closed; an approved school agreement may set another recorded period. Group plans and adult account information follow their separate purposes and are not all erased by closing a group. Security audit records are retained for up to one year. Downloaded or printed reports are controlled by the school and are not removed when online records expire.</p>
 <p>For access, correction, account closure, deletion requests or questions about the school agreement and processing arrangements, email <a href="mailto:info@theglenolia.com.au">info@theglenolia.com.au</a>. Ask the school about its learner records and retained exports. Send no learner details in an initial enquiry.</p></section>'''
@@ -111,8 +119,9 @@ def signup(c, form=False):
     return f'''<section class="register-layout section"><div>{label(c['signupLabel'])}<h1>{e(c['signupTitle'])}</h1><p class="lead">{e(c['signupIntro'])}</p><p>{e(c['signupNote'])}</p><div class="register-art">{image('shoot.webp',c['directions'][1]['alt'])}</div><p class="small">{e(c['conceptNote'])}</p></div><div class="form-panel"><form id="newsletter-form" data-endpoint="{e(CONFIG['newsletterEndpoint'])}" data-success="{e(c['success'])}" data-error="{e(c['error'])}" data-sending="{e(c['sending'])}" data-email-error="{e(c['emailError'])}" data-consent-error="{e(c['consentError'])}" data-unconnected="{e(c['unconnected'])}" novalidate><fieldset{disabled}><legend class="sr-only">{e(c['register'])}</legend><div class="field"><label for="email">{e(c['email'])}</label><input id="email" name="email" type="email" autocomplete="email" placeholder="{e(c['emailPlaceholder'])}" required maxlength="254"></div><div class="field"><label for="first-name">{e(c['firstName'])}</label><input id="first-name" name="firstName" autocomplete="given-name" maxlength="80"></div><fieldset class="interests"><legend>{e(c['interests'])}</legend>{checks}</fieldset><div class="honeypot" aria-hidden="true"><label for="website">Website</label><input id="website" name="website" tabindex="-1" autocomplete="off"></div><label class="consent"><input type="checkbox" id="consent" name="consent" required><span>{e(c['consent'])}</span></label><a class="privacy-link" href="{url(c,'privacy')}">{e(c['privacyLink'])}</a><button type="submit" class="button">{e(c['submit'])}<span aria-hidden="true">↗</span></button></fieldset><p class="form-status" role="status" tabindex="-1">{'' if CONFIG['newsletterReady'] else e(c['unconnected'])}</p><input type="hidden" name="language" value="{c['lang']}"></form></div></section>'''
 
 def footer(c):
+    portal_label = {'en-AU': 'School Plant Portal', 'zh-Hant': '學校植株計畫（英文）', 'ja': '学校向けコーヒー栽培プログラム（英語）'}[c['lang']]
     contact=f'<a href="mailto:{e(CONFIG["contactEmail"])}">{e(CONFIG["contactEmail"])}</a>' if CONFIG['contactEmail'] else f'<span>{e(c["contactPending"])}</span>'
-    return f'''<footer class="footer"><div class="footer-brand"><a href="{url(c,'home')}"><img class="footer-logo-full" src="/assets/logos/logo-{'zh' if c['lang']=='zh-Hant' else 'en'}-web.svg" alt="THE GLENOLIA — {e(c['tagline'] if c['lang']=='zh-Hant' else 'A place to grow and gather.')}" width="660" height="390" loading="lazy"><img class="footer-logo-compact" src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="660" height="335" loading="lazy"></a><p>{e(c['footerLine'])}</p></div><div class="footer-info"><p>{e(c['location'])}</p><p>{e(c['footerStatus'])}</p><p>{e(c['target'])}</p>{contact}<nav aria-label="{e(c['privacy'])}"><a href="{url(c,'privacy')}">{e(c['privacy'])}</a><button data-motion-toggle data-off="{e(c['motionOff'])}" data-on="{e(c['motionOn'])}" type="button">{e(c['motionOff'])}</button><a href="#top">{e(c['top'])} ↑</a><a href="{url(c,'admin')}">{e(c['adminLabel'])}</a></nav><p class="small">© 2026 THE GLENOLIA</p></div></footer>'''
+    return f'''<footer class="footer"><div class="footer-brand"><a href="{url(c,'home')}"><img class="footer-logo-full" src="/assets/logos/logo-{'zh' if c['lang']=='zh-Hant' else 'en'}-web.svg" alt="THE GLENOLIA — {e(c['tagline'] if c['lang']=='zh-Hant' else 'A place to grow and gather.')}" width="660" height="390" loading="lazy"><img class="footer-logo-compact" src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="660" height="335" loading="lazy"></a><p>{e(c['footerLine'])}</p></div><div class="footer-info"><p>{e(c['location'])}</p><p>{e(c['footerStatus'])}</p><p>{e(c['target'])}</p>{contact}<nav aria-label="{e(c['privacy'])}"><a href="{url(c,'privacy')}">{e(c['privacy'])}</a><button data-motion-toggle data-off="{e(c['motionOff'])}" data-on="{e(c['motionOn'])}" type="button">{e(c['motionOff'])}</button><a href="#top">{e(c['top'])} ↑</a><a href="/plant-portal/" hreflang="en-AU">{e(portal_label)}</a><a href="{url(c,'admin')}">{e(c['adminLabel'])}</a></nav><p class="small">© 2026 THE GLENOLIA</p></div></footer>'''
 
 def build_page(key, page, resource=None):
     c=CONTENT[key]
@@ -137,7 +146,7 @@ def build_page(key, page, resource=None):
         languages=''.join(f'<a href="{url(v,page)}" lang="{v["lang"]}" hreflang="{v["lang"]}" {"aria-current=\"true\"" if v==c else ""}>{v["name"]}</a>' for v in CONTENT.values())
     nav=''.join(f'<a href="{url(c,p)}" {"aria-current=\"page\"" if (page==p or (p=='progress' and page=='programmes')) else ""}>{e(c["nav"][i])}</a>' for i,p in enumerate(['about','making','progress']))
     if key=='en':
-        nav+=f'<a href="/teachers/" {"aria-current=\"page\"" if education_page else ""}>For teachers</a>'
+        nav+=f'<a href="/teachers/" {"aria-current=\"page\"" if education_page else ""}>For teachers</a><a href="/plant-portal/">Plant Portal</a>'
     header=f'''<a class="skip-link" href="#main">{e(c['skip'])}</a><header class="site-header" id="top"><a class="brand" href="{url(c,'home')}" aria-label="THE GLENOLIA · {e(c['home'])}"><img src="/assets/logos/logo-compact-web.svg" width="660" height="335" alt="THE GLENOLIA"></a><div class="header-tools"><nav class="languages" aria-label="Language / 語言 / 言語">{languages}</nav><button class="menu-toggle" aria-expanded="false" aria-controls="main-nav" data-close="{e(c['close'])}" data-open="{e(c['menu'])}">{e(c['menu'])}<span aria-hidden="true">☰</span></button></div><nav class="main-nav" id="main-nav" aria-label="{e(c['menu'])}">{nav}{button(url(c,'register'),c['register'],'button button-small')}</nav></header>'''
     if page=='home':
         h=''.join(f'<span>{e(x)}</span>' for x in c['hero'])
@@ -201,7 +210,17 @@ for key in CONTENT:
 urls.append(build_page('en','teachers'))
 for sample in PUBLIC_SAMPLES:
     urls.append(build_page('en','teacher-sample',sample))
-(DIST/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+u+'</loc><lastmod>'+CONFIG['updated']+'</lastmod></url>' for u in urls)+'</urlset>')
+portal = DIST / 'plant-portal' / 'index.html'
+portal.parent.mkdir(exist_ok=True)
+portal.write_text(plant_portal_markup.render(ORIGIN, BASE_PATH, teachers_markup.APP_URL))
+urls.append(ORIGIN + '/plant-portal/')
+portal_release_pages = {ORIGIN + path for path in ['/', '/teachers/', '/privacy/', '/plant-portal/']}
+sitemap_entries = []
+for page_url in urls:
+    lastmod = '2026-11-21' if page_url in portal_release_pages else CONFIG['updated']
+    sitemap_entries.append(f'<url><loc>{e(page_url)}</loc><lastmod>{lastmod}</lastmod></url>')
+(DIST / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                                 + ''.join(sitemap_entries) + '</urlset>')
 (DIST/'robots.txt').write_text('User-agent: *\nAllow: /\n'+('' if BASE_PATH else 'Sitemap: '+ORIGIN+'/sitemap.xml\n'))
 (DIST/'CNAME').write_text('theglenolia.com.au\n')
 (DIST/'.nojekyll').write_text('')
@@ -213,7 +232,7 @@ if BASE_PATH:
     (DIST/'404.html').write_text(error_page)
 error_page=(DIST/'404.html').read_text().replace('logo-compact.svg" width="300" height="80"','logo-compact-web.svg" width="285" height="145"')
 (DIST/'404.html').write_text(error_page)
-print(f'Built {len(CONTENT)*len(ROUTES)} localized brochure pages and 3 English education pages in {DIST}')
+print(f'Built {len(CONTENT)*len(ROUTES)} localized brochure pages and 4 English education pages in {DIST}')
 if BASE_PATH:
     css=(DIST/'style.css').read_text().replace("url('/",f"url('{BASE_PATH}/")
     (DIST/'style.css').write_text(css)

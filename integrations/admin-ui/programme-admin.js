@@ -1,3 +1,4 @@
+import {prepareFieldPhoto as optimiseImage} from './photo-preparation.js';
 (() => {
  const $=id=>document.getElementById(id),ids=['cafe','coffee','workshops','local'],langs=['en','zh','ja'];
  const names={cafe:'Café & farm experiences',coffee:'Coffee growing',workshops:'Hands-on workshops',local:'Local connections'};
@@ -121,28 +122,6 @@
    }
    content.append(actions);row.append(content);target.append(row);
   }
- }
- async function optimiseImage(file){
-  if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>20*1024*1024)throw Error('Choose a JPEG, PNG or WebP image under 20 MB. Your notes remain in the editor.');
-  const url=URL.createObjectURL(file),image=new Image();
-  try{
-   image.src=url;await image.decode();const width=image.naturalWidth,height=image.naturalHeight;
-   if(!width||!height||width*height>60000000)throw Error('Choose an image smaller than 60 megapixels. Your notes remain in the editor.');
-   const scale=Math.min(1,1600/Math.max(width,height)),canvas=document.createElement('canvas');let edgeScale=scale;
-   for(let pass=0;pass<5;pass++){
-    canvas.width=Math.max(1,Math.round(width*edgeScale));canvas.height=Math.max(1,Math.round(height*edgeScale));
-    const context=canvas.getContext('2d',{alpha:false});if(!context)throw Error('Image preparation is unavailable in this browser. Try a different browser.');
-    context.fillStyle='#F5F1E8';context.fillRect(0,0,canvas.width,canvas.height);context.drawImage(image,0,0,canvas.width,canvas.height);
-    for(const quality of [.84,.72,.6,.48]){
-     let blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
-     if(blob?.type!=='image/webp')blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
-     if(blob&&['image/webp','image/jpeg'].includes(blob.type)&&blob.size<=307200)return blob;
-    }
-    edgeScale*=.78;
-   }
-   throw Error('This image could not be reduced below 300 KB. Choose a simpler or smaller image. Your notes remain in the editor.');
-  }catch(error){if(error.name==='EncodingError')throw Error('This image could not be opened. Choose a different JPEG, PNG or WebP image. Your notes remain in the editor.');throw error;}
-  finally{URL.revokeObjectURL(url);}
  }
  async function uploadImage(blob,department){
   let response;try{response=await fetch('/api/programme/images/upload?department='+encodeURIComponent(department),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':blob.type},body:blob,signal:AbortSignal.timeout(25000)});}catch(error){if(['TimeoutError','AbortError'].includes(error.name))throw Error('The image upload took too long. Your notes remain in the editor. Please try adding the image again.');throw error;}

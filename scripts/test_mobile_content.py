@@ -513,7 +513,7 @@ class MobileContentTests(unittest.TestCase):
     def test_build_hook_regenerates_feed_after_cleaning_dist_and_preserves_routes(self):
         scripts = self.website / "scripts"
         scripts.mkdir()
-        for name in ("build.py", "progress_markup.py", "programme_markup.py", "teachers_markup.py", "coffee_gallery.py", EXPORTER.name, "mobile-content-v1.schema.json"):
+        for name in ("build.py", "progress_markup.py", "programme_markup.py", "teachers_markup.py", "plant_portal_markup.py", "coffee_gallery.py", EXPORTER.name, "mobile-content-v1.schema.json"):
             shutil.copyfile(ROOT / "scripts" / name, scripts / name)
         # Education pages consume the public summary-only catalogue, never the
         # separate full teaching pack sources provisioned to the Worker.
@@ -521,6 +521,9 @@ class MobileContentTests(unittest.TestCase):
         shutil.copyfile(ROOT / "progress-content.json", self.website / "progress-content.json")
         shutil.copyfile(ROOT / "weather-game-content.json", self.website / "weather-game-content.json")
         public = self.website / "public"
+        (public / "assets/plant-portal").mkdir(parents=True)
+        for name in ("portal.css", "portal.js"):
+            shutil.copyfile(ROOT / "public/assets/plant-portal" / name, public / "assets/plant-portal" / name)
         (public / "assets/progress").mkdir(parents=True)
         for name in ("progress.css", "programme.css"):
             shutil.copyfile(ROOT / "public/assets/progress" / name, public / "assets/progress" / name)
@@ -542,8 +545,9 @@ class MobileContentTests(unittest.TestCase):
             self.assertFalse((dist / "stale-private-marker.txt").exists())
             self.assertFalse((dist / "api/v1/programme.snapshot.json").exists())
             self.assertTrue((dist / "api/v1/content.schema.json").is_file())
-            self.assertEqual(len(list(dist.rglob("*.html"))), 34)
+            self.assertEqual(len(list(dist.rglob("*.html"))), 35)
             self.assertTrue((dist / "teachers/index.html").is_file())
+            self.assertTrue((dist / "plant-portal/index.html").is_file())
             self.assertFalse((dist / "education-catalogue.json").exists())
             for _, prefix in LOCALES.values():
                 for route in ("", "privacy/", "register/", "progress/", "progress/programmes/"):

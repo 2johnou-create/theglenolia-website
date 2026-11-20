@@ -40,3 +40,5 @@ html[data-reduce-motion=true]{scroll-behavior:auto}html[data-reduce-motion=true]
 /* Published Paraíso photos: uncropped and separate from compact status snapshots. */
 .coffee-gallery{padding-top:20px;padding-bottom:64px}.coffee-gallery h2{font-size:clamp(28px,3vw,40px);margin-bottom:30px;max-width:30ch}.coffee-gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}.coffee-gallery figure{min-width:0}.coffee-gallery img{width:100%;height:220px;object-fit:contain;background:var(--sage)}.coffee-gallery figcaption{margin-top:14px;font-size:13px;line-height:1.8;overflow-wrap:anywhere}.coffee-gallery figcaption time{display:block;margin-top:6px;font-size:11px;color:var(--green)}
 @media(max-width:650px){.coffee-gallery{padding-top:12px;padding-bottom:46px}.coffee-gallery h2{margin-bottom:24px}.coffee-gallery-grid{grid-template-columns:minmax(0,1fr);gap:26px}.coffee-gallery img{height:180px}.coffee-gallery figcaption{font-size:13px}}
+
+.edu-entry-actions{display:flex;align-items:center;flex-wrap:wrap;gap:1rem 1.75rem}

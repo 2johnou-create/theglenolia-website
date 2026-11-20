@@ -4,7 +4,7 @@ import {translateDepartmentNotes,translateSnapshotNotes} from './programme-trans
 import {uploadProgrammeImage,fetchProgrammeImage,programmeImageResponse} from './programme-media.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
-import {html,css,js,programmeJs,educationHtml,educationJs,educationCss} from './admin-assets.mjs';
+import {html,css,js,programmeJs,educationHtml,educationJs,educationCss,farmerHtml,farmerJs,farmerCss} from './admin-assets.mjs';
 import {runOwnerNotifications} from './owner-notifications.mjs';
 const localeKeys={'en-AU':'EN','zh-Hant':'ZH',ja:'JA'};
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
@@ -88,14 +88,23 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(!env.ACCESS_AUD||!ctx?.access||ctx.access.aud!==env.ACCESS_AUD)return json(403,{error:'access_required'});
  let identity;try{identity=await ctx.access.getIdentity();}catch{return json(403,{error:'access_required'});}
  const configuredOwner=env.ADMIN_EMAIL,identityEmail=identity?.email;
- if(typeof configuredOwner!=='string'||!configuredOwner.trim()||typeof identityEmail!=='string'||!identityEmail.trim()||identityEmail.toLowerCase()!==configuredOwner.toLowerCase())return json(403,{error:'owner_required'});
+ if(typeof configuredOwner!=='string'||!configuredOwner.trim()||typeof identityEmail!=='string'||!identityEmail.trim())return json(403,{error:'owner_required'});
  const url=new URL(request.url),path=url.pathname;
+ const owner=identityEmail.toLowerCase()===configuredOwner.toLowerCase();
+ const farmerPages=['/plants','/plants/','/plants/farmer.js','/plants/farmer.css','/assets/logos/logo-compact-web.svg','/assets/fonts/en-sans.woff2','/assets/fonts/en-serif.woff2'];
+ const farmerAPI=/^\/api\/education\/plants\/(?:dashboard|journal|verify|availability|update|withdraw-update|photos\/[a-f0-9-]{36})$/;
+ const permittedFarmer=typeof env.FARMER_EMAILS==='string'&&env.FARMER_EMAILS.toLowerCase().split(',').map(email=>email.trim()).includes(identityEmail.toLowerCase());
+ if(!owner&&!(permittedFarmer&&(farmerPages.includes(path)||farmerAPI.test(path))))return json(403,{error:'owner_required'});
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
  // Education remains behind the same runtime-verified, exact-owner Access gate.
  // A service binding carries the private staff credential; it is never sent to
  // the browser and caller-supplied identity headers are not forwarded.
+ if(request.method==='GET'&&['/plants','/plants/','/plants/farmer.js','/plants/farmer.css'].includes(path)){
+  const script=path.endsWith('.js'),style=path.endsWith('.css');
+  return new Response(script?farmerJs:style?farmerCss:farmerHtml,{headers:{...headers,'Content-Type':script?'text/javascript; charset=utf-8':style?'text/css; charset=utf-8':'text/html; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au',"font-src 'self' https://theglenolia.com.au"),'X-Robots-Tag':'noindex, nofollow','Permissions-Policy':'camera=(self), microphone=(), geolocation=()'}});
+ }
  if(request.method==='GET'&&(path==='/education'||path==='/education/'))return new Response(educationHtml,{headers:{...headers,'Content-Type':'text/html; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au','font-src \'self\'')}});
  if(request.method==='GET'&&['/education-assets/teacher-ui.js','/education-assets/teacher-ui.css'].includes(path))return new Response(path.endsWith('.js')?educationJs:educationCss,{headers:{...headers,'Content-Type':path.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8','Content-Security-Policy':csp.replace('font-src https://theglenolia.com.au',"font-src 'self'")}});
  if(path.startsWith('/api/education/')){
@@ -103,7 +112,7 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
   if(path==='/api/education/session'&&request.method==='GET')return json(200,{user:{email:identity.email,name:'John Ou'},owner:true});
   const target=new URL('https://education/internal/admin/'+path.slice('/api/education/'.length));
   target.search=url.search;
-  const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
+  const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN,...(path.startsWith('/api/education/plants/')?{'X-Glenolia-Plant-Role':owner?'owner':'farmer'}:{})},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
   try{const response=await env.EDUCATION.fetch(upstream);return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':response.headers.get('Content-Type')||'application/json'}});}catch{return json(503,{error:'education_unavailable'});}
  }
  if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/education\/stories\/sl(?:0[1-9]|[12][0-9]|3[0-9]|40)\.(?:webp|jpg)$/.test(path)||path==='/teachers/story-library.json'||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){
