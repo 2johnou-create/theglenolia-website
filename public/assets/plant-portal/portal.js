@@ -44,12 +44,6 @@ function savePreference(value) {
     else sessionStorage.removeItem(preferenceKey);
   } catch { /* The map also works when browser storage is unavailable. */ }
 }
-function setBaseArt() {
-  byId('estate-art').setAttribute('href', assets + (smallArt.matches ? '/estate-atlas-mobile.webp' : '/estate-atlas.webp'));
-}
-setBaseArt();
-smallArt.addEventListener('change', setBaseArt);
-
 let register = new Map();
 let rows = [];
 let markers = new Map();
@@ -66,6 +60,49 @@ let dismissedAt = null;
 let restoringFocus = false;
 let lastDrawn = null;
 let fetching = false;
+const frame = byId('atlas-frame');
+const picture = byId('estate-art');
+const mobileSource = byId('mobile-art');
+let artCheck = 0;
+
+function showArtState(state) {
+  frame.dataset.artState = state;
+  byId('art-notice').hidden = state === 'ready';
+  byId('retry-art').hidden = state !== 'error';
+  byId('art-message').textContent = state === 'error'
+    ? 'The orchard illustration could not be loaded. You can still explore positions in the plant list.'
+    : 'Loading the orchard illustration…';
+  jumpList.disabled = !rows.length || state !== 'ready';
+  if (active) positionCard();
+}
+async function checkArtwork() {
+  const check = ++artCheck;
+  if (!picture.complete || !picture.currentSrc) { showArtState('loading'); return; }
+  if (!picture.naturalWidth) { showArtState('error'); return; }
+  // A cached earlier candidate can briefly survive a viewport change.
+  const file = smallArt.matches ? mobileSource.getAttribute('srcset') : picture.getAttribute('src');
+  if (picture.currentSrc !== new URL(file,document.baseURI).href) { showArtState('loading'); return; }
+  try {
+    await picture.decode();
+    if (check === artCheck) showArtState('ready');
+  } catch {
+    if (check === artCheck) showArtState('error');
+  }
+}
+picture.addEventListener('load',checkArtwork);
+picture.addEventListener('error',() => { ++artCheck; showArtState('error'); });
+smallArt.addEventListener('change',() => {
+  ++artCheck; showArtState('loading');
+  requestAnimationFrame(checkArtwork);
+});
+byId('retry-art').onclick = () => {
+  ++artCheck; showArtState('loading');
+  const source = smallArt.matches ? mobileSource : picture;
+  const attr = smallArt.matches ? 'srcset' : 'src';
+  const url = new URL(source.getAttribute(attr),document.baseURI);
+  url.searchParams.set('retry',String(Date.now()));
+  source.setAttribute(attr,url.href);
+};
 
 function label(plant) { return 'P' + ((plant.row - 1) * 19 + plant.position); }
 function describe(plant) {
@@ -94,8 +131,9 @@ function setRow(row) {
   jumpList.value = String(row);
 }
 function jump(row, worldY = rowLabelPoint(row)[1]) {
-  const box = map.getBoundingClientRect();
   explicitRow = row;
+  if (frame.dataset.artState !== 'ready') { setRow(row); return; }
+  const box = map.getBoundingClientRect();
   const toolbar = explorer.querySelector('.atlas-tools').offsetHeight;
   const readingLine = toolbar + (innerHeight - toolbar) * .35;
   window.scrollTo({top:Math.max(0, scrollY + box.top + worldY * box.height / 2380 - readingLine), behavior:'instant'});
@@ -104,7 +142,7 @@ function jump(row, worldY = rowLabelPoint(row)[1]) {
 function readScroll() {
   pendingScroll = false;
   const bounds = map.getBoundingClientRect();
-  if (!rows.length || !bounds.height) return;
+  if (!rows.length || !bounds.height || frame.dataset.artState !== 'ready') return;
   if (explicitRow === null) {
     const line = (innerHeight * .36 - bounds.top) * 2380 / bounds.height;
     let nearest = rows[0].row, distance = Infinity;
@@ -161,7 +199,7 @@ function positionCard() {
   if (!active || mobileCard.matches) return;
   const marker = markers.get(active.key);
   if (!marker) return;
-  const box = marker.getBoundingClientRect();
+  const box = (frame.dataset.artState === 'ready' ? marker : byId('plant-list')).getBoundingClientRect();
   const left = box.right + card.offsetWidth + 12 <= innerWidth ? box.right + 5 : box.left - card.offsetWidth - 5;
   card.style.left = Math.max(8, Math.min(left,innerWidth - card.offsetWidth - 8)) + 'px';
   const bar = explorer.querySelector('.atlas-tools').getBoundingClientRect();
@@ -409,10 +447,10 @@ async function refresh() {
     for (const link of main.querySelectorAll('a.hero-marker[data-preview]')) link.setAttribute('aria-label','Explore the estate atlas');
     updatePreference(); byId('plant-list').disabled=true;
     notice('The planting register could not be loaded. You can still register your school without a preference.',true);
-  } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length; }
+  } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length || frame.dataset.artState !== 'ready'; }
 }
 byId('retry-map').onclick = refresh;
-jumpList.disabled=true; explorer.hidden=false; refresh();
+jumpList.disabled=true; explorer.hidden=false; checkArtwork(); refresh();
 window.addEventListener('pageshow',refresh);
 window.addEventListener('focus',refresh);
 document.addEventListener('visibilitychange',()=>{ if (!document.hidden) refresh(); });

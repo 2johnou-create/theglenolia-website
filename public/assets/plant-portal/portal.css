@@ -82,7 +82,12 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 .map-notice button,.list-body select,#plant-dialog button,.plain-apply{min-height:44px}
 .map-notice button,#plant-dialog button,.list-body select{background:var(--ivory);border:1px solid var(--border);color:var(--green);border-radius:4px}
 .atlas-sheet{margin:.6rem 0 0}
-#estate-map{display:block;width:100%;height:auto;background:#ecdfbf;outline:1px solid #c2b392;touch-action:pan-y pinch-zoom}
+#atlas-frame{position:relative;width:100%;aspect-ratio:1000/2380;background:#ecdfbf;outline:1px solid #c2b392}
+#atlas-frame picture,#estate-art,#estate-map{position:absolute;inset:0;display:block;width:100%;height:100%}
+#estate-art{object-fit:fill}
+#estate-map{touch-action:pan-y pinch-zoom}
+#atlas-frame:not([data-art-state="ready"]) #estate-map{visibility:hidden}
+#atlas-frame[data-art-state="error"]{display:none}
 .atlas-sheet figcaption{display:flex;justify-content:space-between;gap:1rem;font-size:.75rem;color:#525749;padding:.75rem 0}
 #atlas-row-labels{pointer-events:none}.atlas-label,.atlas-state,.plant-id{paint-order:stroke fill;stroke:#f8ecd1;stroke-linejoin:round}
 .atlas-label{font:italic 17px Georgia,serif;fill:#353d2f;stroke-width:3px}
