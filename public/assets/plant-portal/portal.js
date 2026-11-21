@@ -1,6 +1,7 @@
 import { installFarmWeather } from './farm-weather.js';
 import { STAGE_NAMES } from './stages.js';
-import { setPlantIllustration, stageIllustrationFile } from './plant-illustration.js';
+import { setPlantIllustration } from './plant-illustration.js';
+import { mountGrowthGuide } from './growth-guide.js';
 
 const byId = id => document.getElementById(id);
 const main = byId('main');
@@ -22,23 +23,7 @@ const svg = (name, attributes, value) => {
   return node;
 };
 const canRequest = plant => plant && !plant.adoptionStatus && plant.stage !== 1 && ['available','unverified'].includes(plant.status);
-function showIllustrationSet() {
-  const list = byId('stage-plates');
-  const choice = byId('stage-set').value;
-  if (!byId('stage-guide').open || list.dataset.set === choice) return;
-  list.replaceChildren(...STAGE_NAMES.map((name,index) => {
-    const li = document.createElement('li');
-    const drawing = new Image(70,79);
-    drawing.alt = ''; drawing.src = assets + '/stages/' + stageIllustrationFile(index+1, Number(choice));
-    const caption = document.createElement('span');
-    caption.textContent = (index+1) + '. ' + name;
-    li.append(drawing,caption);
-    return li;
-  }));
-  list.dataset.set = choice;
-}
-byId('stage-guide').addEventListener('toggle',showIllustrationSet);
-byId('stage-set').addEventListener('change',showIllustrationSet);
+mountGrowthGuide({guide:byId('stage-guide'),list:byId('stage-plates'),details:byId('stage-detail'),assets});
 function readPreference() {
   try { return sessionStorage.getItem(preferenceKey); } catch { return null; }
 }

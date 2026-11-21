@@ -54,9 +54,13 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
 <p>Explore the coffee plants among the established magnolias. Choose an open plant for your school or see which organisations are already growing with us.</p></div>
 <div id="row-app" hidden>
-<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary><p>The farmer sets each plant’s stage. The tiny seedling is drawn at about 10 cm.</p>
-<label for="stage-set">Illustration set</label> <select id="stage-set" aria-controls="stage-plates"><option value="1">A</option><option value="2">B</option><option value="3">C</option><option value="4">D</option><option value="5">E</option></select>
-<ol id="stage-plates"></ol></details>
+<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary>
+<p>Choose a stage to explore what happens as a coffee plant grows.</p>
+<ol id="stage-plates" aria-label="Coffee growth stages"></ol>
+<div class="stage-detail" id="stage-detail" aria-live="polite"></div>
+<p class="stage-guide-note">Timing is a general guide and varies with variety, weather and growing conditions. The farmer records each plant’s actual stage and observations.</p>
+<p class="stage-sources">Learn more from <a href="https://agrifutures.com.au/product/australian-coffee-growers-manual/" target="_blank" rel="noopener noreferrer">the Australian Coffee Growers’ Manual</a>, <a href="https://varieties.worldcoffeeresearch.org/varieties/paraiso" target="_blank" rel="noopener noreferrer">World Coffee Research</a> and <a href="https://apps.cals.arizona.edu/arboretum/taxon.aspx?id=972" target="_blank" rel="noopener noreferrer">University of Arizona</a> and <a href="https://ucanr.edu/sites/default/files/2020-07/329593.pdf" target="_blank" rel="noopener noreferrer">University of California Agriculture and Natural Resources</a>.</p>
+</details>
 <div class="atlas-tools"><label for="row-jump"><span class="wide-label">Jump to </span>row</label><select id="row-jump" aria-label="Jump to row"></select>
 <span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button>
 <div class="farm-clock" aria-label="Glenorie local time"><span class="clock-face" aria-hidden="true"><i id="clock-hour"></i><i id="clock-minute"></i></span><div><span class="clock-place">Glenorie farm time</span><time id="farm-time">Sydney time</time></div></div></div>
