@@ -1,4 +1,4 @@
-import { mountEstateExplorer } from './estate-explorer.js';
+import { mountEstateExplorer } from './estate-explorer.js?v=painted-estate-2';
 import { installFarmWeather } from './farm-weather.js';
 import { STAGE_NAMES } from './stages.js';
 import { setPlantIllustration } from './plant-illustration.js';

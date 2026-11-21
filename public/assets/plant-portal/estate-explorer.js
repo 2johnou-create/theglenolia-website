@@ -1,8 +1,13 @@
+import { positionsPerView } from './atlas-framing.js';
+
 // The directory and the illustrated map remain usable while WebGL and its textures load.
 export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready, attribution}){
   const by=id=>document.getElementById(id), app=by('row-app'),scroll=by('world-scroll'),surface=by('world-surface');
   const pins=by('world-pins'),list=by('directory-rows'),card=by('plant-card'),originalParent=card.parentElement;
   const thin=()=>surface.clientWidth<670;
+  const scaleButton=by('world-scale');
+  let wholeField=!scaleButton;
+  const pageSize=()=>positionsPerView(surface.clientWidth,wholeField);
   const step=144;
   let rows=[],records=new Map(),row=1,page=0,focused=null,preference=null,renderer=null,loading=false,requested=false,userFlat=false;
   let paused=matchMedia('(prefers-reduced-motion: reduce)').matches, near=false,available=false,positions=new Map(),keyboardKey=null;
@@ -11,7 +16,7 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
   function showWorld(){
     scroll.hidden=false;app.dataset.world='ready';by('world-card-slot').append(card);
     available=true;by('world-fallback').hidden=true;by('view-toggle').hidden=false;by('view-toggle').textContent='Use illustrated map';
-    scroll.scrollTop=(row-1)*step;renderer.data(records);renderer.navigate(row,page,focused,true);directory();ready();
+    scroll.scrollTop=(row-1)*step;renderer.data(records);renderer.navigate(row,page,focused,true,wholeField);directory();ready();
   }
   function showFlat(failed){
     available=false;scroll.hidden=true;delete app.dataset.world;originalParent.append(card);
@@ -22,7 +27,7 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     if(!near||!rows.length||requested||loading||userFlat)return;
     requested=true;loading=true;
     try{
-      const module=await import(assets+'/estate-world.js');
+      const module=await import(assets+'/estate-world.js?v=painted-estate-2');
       renderer=await module.createAtlasWorld({assets,canvas:by('world-canvas'),project,contextLost(){
         renderer?.destroy();renderer=null;leave();showFlat(true);
       }});
@@ -48,8 +53,9 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
       const values=[...records.values()].filter(p=>p.row===plant.row),i=values.findIndex(p=>p.key===plant.key);
       const next=values[i+(e.key==='ArrowLeft'?-1:1)];
       if(!next)return;e.preventDefault();keyboardKey=next.key;
-      if(thin())page=Math.floor((next.position-1)/6);
-      renderer.navigate(row,page,null,true);navigation();requestAnimationFrame(()=>positions.get(next.key)?.focus({preventScroll:true}));
+      if(next.row!==row)jump(next.row);
+      page=Math.floor((next.position-1)/pageSize());
+      renderer.navigate(row,page,null,true,wholeField);navigation();requestAnimationFrame(()=>positions.get(next.key)?.focus({preventScroll:true}));
     });
     return btn;
   }
@@ -61,7 +67,7 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
       let sign=rowSigns.get(r.row);
       if(!sign){sign=document.createElement('span');sign.className='field-row-sign';sign.textContent='Row '+r.row;rowSigns.set(r.row,sign);surface.append(sign);}
       sign.hidden=r.x<2||r.x>width-35||r.y<3||r.y>height-16;
-      sign.style.left=r.x+'px';sign.style.top=r.y+'px';
+      sign.style.left=Math.max(3,r.x-29)+'px';sign.style.top=(r.y-11)+'px';
     }
     const visible=new Set();
     for(const {key,x,y,focused:close} of coords){
@@ -80,9 +86,14 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     by('world-area').textContent=row<=2?'School pilot':'Autumn 2027 plan';
     by('world-row').textContent='Row '+row;
     by('world-back').hidden=!focused;
-    by('world-pan').hidden=!available||!thin()||!!focused||count<=6;
-    by('world-range').textContent=(page*6+1)+'–'+Math.min(count,page*6+6);
-    by('world-prev').disabled=page===0;by('world-next').disabled=(page+1)*6>=count;
+    const per=pageSize();
+    if(scaleButton){
+      scaleButton.hidden=!available||thin()||!!focused;
+      scaleButton.textContent=wholeField?'Closer view':'Whole field';
+    }
+    by('world-pan').hidden=!available||!!focused||count<=per;
+    by('world-range').textContent=(page*per+1)+'–'+Math.min(count,(page+1)*per);
+    by('world-prev').disabled=page===0;by('world-next').disabled=(page+1)*per>=count;
     by('world-pause').setAttribute('aria-label',paused?'Play farm animation':'Pause farm animation');
     by('world-pause').textContent=paused?'▷':'Ⅱ';
   }
@@ -109,23 +120,23 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     for(const [key,p] of records){const el=pin(p);el.hidden=true;positions.set(key,el);frag.append(el);}
     pins.replaceChildren(frag);
     if(!records.has(focused))focused=null;
-    page=Math.min(page,Math.max(0,Math.ceil((rows.find(r=>r.row===row)?.enabledCount||0)/6)-1));
-    renderer?.data(records);renderer?.navigate(row,page,focused,true);directory();load();
+    page=Math.min(page,Math.max(0,Math.ceil((rows.find(r=>r.row===row)?.enabledCount||0)/pageSize())-1));
+    renderer?.data(records);renderer?.navigate(row,page,focused,true,wholeField);directory();load();
   }
   function setRow(next){
     if(next!==row){row=next;page=0;focused=null;directory();}
     if(available&&Math.round(scroll.scrollTop/step)+1!==next)scroll.scrollTop=(next-1)*step;
-    renderer?.navigate(row,page,focused);
+    renderer?.navigate(row,page,focused,false,wholeField);
   }
   function visit(next){
     if(!rows.length)return;
     userScrollUntil=0;leave();jump(next);setRow(next);
   }
   function select(p){
-    focused=p.key;row=p.row;keyboardKey=p.key;page=thin()?Math.floor((p.position-1)/6):0;
-    renderer?.navigate(row,page,focused);directory();
+    focused=p.key;row=p.row;keyboardKey=p.key;page=Math.floor((p.position-1)/pageSize());
+    renderer?.navigate(row,page,focused,false,wholeField);directory();
   }
-  function unselect(){if(focused){focused=null;renderer?.navigate(row,page,null);navigation();}}
+  function unselect(){if(focused){focused=null;renderer?.navigate(row,page,null,false,wholeField);navigation();}}
   function prefer(key){preference=key;for(const [k,b] of positions)b.setAttribute('aria-pressed',String(k===key));}
   let userScrollUntil=0;
   function markScroll(){userScrollUntil=performance.now()+1100;}
@@ -140,13 +151,26 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
       leave();jump(next);
     }
   },{passive:true});
-  by('world-prev').onclick=()=>{page--;renderer.navigate(row,page,null,true);navigation();};
-  by('world-next').onclick=()=>{page++;renderer.navigate(row,page,null,true);navigation();};
+  by('world-prev').onclick=()=>{page--;renderer.navigate(row,page,null,true,wholeField);navigation();};
+  by('world-next').onclick=()=>{page++;renderer.navigate(row,page,null,true,wholeField);navigation();};
   by('world-back').onclick=()=>{leave();by('row-jump').focus({preventScroll:true});};
   by('world-pause').onclick=()=>{paused=!paused;renderer?.pause(paused);navigation();};
   by('future-invite').onclick=()=>visit(3);
   by('pilot-area').onclick=()=>visit(1);by('planned-area').onclick=()=>visit(3);
   by('view-toggle').onclick=()=>{leave();userFlat=available;if(userFlat)showFlat(false);else if(renderer)showWorld();else load();};
-  new ResizeObserver(navigation).observe(surface);
+  scaleButton?.addEventListener('click',()=>{
+    wholeField=!wholeField;page=0;renderer.navigate(row,page,null,true,wholeField);navigation();
+  });
+  let lastSize=0;
+  new ResizeObserver(()=>{
+    if(!surface.clientWidth)return;
+    const per=pageSize();
+    if(lastSize&&per!==lastSize){
+      const position=records.get(focused)?.position||page*lastSize+1;
+      page=Math.floor((position-1)/per);
+      renderer?.navigate(row,page,focused,true,wholeField);
+    }
+    lastSize=per; navigation();
+  }).observe(surface);
   return {data,setRow,select,unselect,prefer,get enabled(){return available;},restore(key){positions.get(key)?.focus({preventScroll:true});}};
 }

@@ -1,103 +1,121 @@
 import * as T from 'three';
 import { seeded } from './models.js';
+import { paintedMaterial, placeRelief, reliefGeometry } from './relief.js';
 
 export const pitch = 7;
-export const rowZ = row => (2-row)*pitch;
-export const plantX = position => -20 + (position-1)*2.28;
-export const groundWidth = 54;
+// The illustrated sheet starts at the far side. Positive Z is nearer the reader.
+export const rowZ = row => (row - 2) * pitch;
+export const plantX = position => -20 + (position - 1) * 2.28;
+const groundWidth = 54;
 
-function fieldTexture() {
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;
-  const ctx=canvas.getContext('2d'), random=seeded(374);
-  ctx.fillStyle='#c6d29e';ctx.fillRect(0,0,512,512);
-  for(let i=0;i<28000;i++){
-    ctx.fillStyle=i%3?'rgba(72,103,48,.08)':'rgba(255,251,194,.31)';
-    ctx.fillRect(random()*512,random()*512,random()*1.7+.6,random()*1.6+.4);
-  }
-  for(let i=0;i<135;i++){
-    const x=random()*512,y=random()*512;
-    ctx.strokeStyle=i%3?'#9cad78':'#b5c38b';ctx.lineWidth=.8;
-    ctx.beginPath();ctx.moveTo(x-2,y-2);ctx.lineTo(x,y+1);ctx.lineTo(x+1,y-4);ctx.moveTo(x,y+1);ctx.lineTo(x+4,y-2);ctx.stroke();
-  }
-  const tex=new T.CanvasTexture(canvas);tex.colorSpace=T.SRGBColorSpace;tex.wrapS=tex.wrapT=T.RepeatWrapping;
-  return tex;
+function shadowTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 96;
+  const ctx = canvas.getContext('2d'), fade = ctx.createRadialGradient(48,48,6,48,48,46);
+  fade.addColorStop(0,'rgba(55,69,38,.40)');
+  fade.addColorStop(.52,'rgba(62,83,43,.22)');
+  fade.addColorStop(1,'rgba(75,95,47,0)');
+  ctx.fillStyle = fade; ctx.fillRect(0,0,96,96);
+  return new T.CanvasTexture(canvas);
 }
-function shadowTexture(){
-  const canvas=document.createElement('canvas');canvas.width=canvas.height=96;
-  const c=canvas.getContext('2d'),g=c.createRadialGradient(48,48,7,48,48,45);
-  g.addColorStop(0,'rgba(54,76,55,.54)');g.addColorStop(.65,'rgba(71,91,61,.38)');g.addColorStop(1,'rgba(71,91,61,0)');
-  c.fillStyle=g;c.fillRect(0,0,96,96);return new T.CanvasTexture(canvas);
-}
-function reliefCrown(){
-  // Bend the painted surface in depth so its limbs and crown have parallax in a close pass.
-  const g=new T.PlaneGeometry(1,1,18,20),pos=g.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const x=pos.getX(i),y=pos.getY(i)+.5;
-    const canopy=Math.max(0,Math.sin(Math.PI*Math.max(0,(y-.18)/.82)));
-    pos.setZ(i,Math.max(0,1-4*x*x)*canopy*.20 + .02*Math.sin(x*19+y*8)*canopy);
-    pos.setY(i,y);
-  }
-  g.computeVertexNormals();return g;
-}
+
 export async function createOrchard(assetPath) {
-  const loader=new T.TextureLoader(),textures=await Promise.all([1,2,3,4].map(i=>loader.loadAsync(assetPath+'/world/magnolia-'+i+'.webp')));
-  const crowns=textures.map(tex=>{tex.colorSpace=T.SRGBColorSpace;return new T.MeshBasicMaterial({map:tex,alphaTest:.38,side:T.DoubleSide});});
-  const relief=reliefCrown(),flat=new T.PlaneGeometry(1,1),cube=new T.BoxGeometry(),turf=fieldTexture();
-  turf.repeat.set(7.5,1);
-  const grass=new T.MeshBasicMaterial({color:0xffffff,map:turf});
-  const shadowMap=shadowTexture();
-  const shade=new T.MeshBasicMaterial({map:shadowMap,transparent:true,depthWrite:false});
-  const contact=new T.ShadowMaterial({opacity:.20,depthWrite:false});
-  const materialCache=new Map();
-  function material(colour){if(!materialCache.has(colour))materialCache.set(colour,new T.MeshLambertMaterial({color:colour}));return materialCache.get(colour);}
-  function box(parent,x,y,z,w,h,d,colour){
-    const mesh=new T.Mesh(cube,material(colour));mesh.position.set(x,y,z);mesh.scale.set(w,h,d);parent.add(mesh);return mesh;
+  const loader = new T.TextureLoader();
+  const names = ['magnolia-ink-1','magnolia-ink-2','magnolia-ink-3','magnolia-ink-4','pasture-ink','headland-ink','meadow-detail','meadow-tuft'];
+  const textures = await Promise.all(names.map(name => loader.loadAsync(assetPath+'/world/'+name+'.webp')));
+  const [grassMap, gravelMap, meadowMap, tuftMap] = textures.slice(4);
+  const crowns = textures.slice(0,4).map(paintedMaterial);
+  const relief = reliefGeometry(), flat = new T.PlaneGeometry(1,1), cube = new T.BoxGeometry();
+  const meadowPlane=new T.PlaneGeometry(1,1).translate(0,.5,0);
+  const shadowMap = shadowTexture(), meadow = paintedMaterial(meadowMap), tuft = paintedMaterial(tuftMap);
+  for (const map of [grassMap,gravelMap]) {
+    map.colorSpace = T.SRGBColorSpace;
+    map.wrapS = map.wrapT = T.RepeatWrapping;
+    map.anisotropy = 4;
   }
-  function groundPlane(parent,x,y,z,w,d,mat){const mesh=new T.Mesh(flat,mat);mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.scale.set(w,d,1);parent.add(mesh);return mesh;}
-  const base='#ddcfaf';
-  const pathTexture=fieldTexture();pathTexture.repeat.set(1.0,1.9);
-  const gravel=new T.MeshBasicMaterial({color:'#efc2a6',map:pathTexture});
-  // Desaturate the turf texture to retain its paper grain on the headland.
-  const ctx=pathTexture.image.getContext('2d');
-  const flecks=ctx.getImageData(0,0,512,512);
-  for(let i=0;i<flecks.data.length;i+=4){
-    const grey=Math.min(255,27+flecks.data[i+1]);flecks.data[i]=flecks.data[i+1]=flecks.data[i+2]=grey;
+  grassMap.repeat.set(11, 2);
+  gravelMap.repeat.set(2.3, 4.1);
+  const grass = new T.MeshBasicMaterial({map:grassMap});
+  const gravel = new T.MeshBasicMaterial({map:gravelMap});
+  const shade = new T.MeshBasicMaterial({map:shadowMap,transparent:true,depthWrite:false});
+  const contact = new T.ShadowMaterial({opacity:.27,depthWrite:false});
+  const materialCache = new Map(), irrigationParts = [];
+  function material(colour) {
+    if (!materialCache.has(colour)) materialCache.set(colour,new T.MeshBasicMaterial({color:colour}));
+    return materialCache.get(colour);
   }
-  ctx.putImageData(flecks,0,0);pathTexture.needsUpdate=true;
-  function lane(row){
-    const g=new T.Group();g.position.z=rowZ(row);
-    box(g,0,-.17,0,groundWidth,.34,pitch,base);
+  function box(parent,x,y,z,w,h,d,colour) {
+    const mesh = new T.Mesh(cube,material(colour));
+    mesh.position.set(x,y,z); mesh.scale.set(w,h,d); parent.add(mesh);
+    return mesh;
+  }
+  function groundPlane(parent,x,y,z,w,d,mat) {
+    const mesh = new T.Mesh(flat,mat);
+    mesh.rotation.x=-Math.PI/2; mesh.position.set(x,y,z); mesh.scale.set(w,d,1); parent.add(mesh);
+    return mesh;
+  }
+  function lane(row) {
+    const g = new T.Group(); g.position.z = rowZ(row);
+    box(g,0,-.26,0,groundWidth,.52,pitch,'#82785e');
+    box(g,0,-.235,0,groundWidth+.007,.405,pitch+.001,'#d2bd96');
+    box(g,0,-.04,0,groundWidth+.009,.068,pitch+.002,'#e7d9b1');
     groundPlane(g,0,.009,0,groundWidth,pitch,grass);
-    for(const x of [-24.8,24.8])groundPlane(g,x,.04,0,4.35,pitch,gravel);
-    groundPlane(g,0,.047,0,groundWidth,pitch,contact).receiveShadow=true;
-    // A planned lane has grass and mature magnolias. Irrigation is drawn with the enabled positions.
+    for (const x of [-24.78,24.78]) {
+      groundPlane(g,x,.03,0,4.42,pitch,gravel);
+      const verge=x<0?x+2.21:x-2.21;
+      box(g,verge,.026,0,.032,.018,pitch,'#a39968');
+    }
+    groundPlane(g,0,.045,0,groundWidth,pitch,contact).receiveShadow=true;
+
+    const rand=seeded(4804+row*127), count=46;
+    const stamp = new T.Object3D();
+    for (const [coating,n] of [[meadow,14],[tuft,count]]) {
+      const flowers = new T.InstancedMesh(meadowPlane,coating,n);
+      const ratio = coating.map.image.width/coating.map.image.height;
+      for (let i=0;i<n;i++) {
+        const x=(rand()-.5)*44.5, z=(rand()<.5?-1:1)*(.78+rand()*2.5);
+        const size=.18+rand()*.4;
+        placeRelief(stamp,x,z,(rand()<.5?-1:1)*size,size/ratio,.22);
+        flowers.setMatrixAt(i,stamp.matrix);
+      }
+      flowers.computeBoundingSphere(); g.add(flowers);
+    }
     return g;
   }
   function boundary(index) {
-    const g=new T.Group();g.position.z=rowZ(index)+pitch/2;const rand=seeded(530+index*377);
+    const g = new T.Group(), rand=seeded(530+index*377);
+    g.position.z = rowZ(index)-pitch/2;
     const specimens=[];
-    for(let x=-20.8;x<22;x+=5.2+rand()*2.4){
-      const kind=Math.floor(rand()*4),width=2.4+rand()*2.3,z=(rand()-.5)*.61,height=width*(kind===1?1.32:1.07);
-      const tree=new T.Mesh(relief,crowns[kind]);tree.position.set(x,.03,z);
-      tree.rotation.y=-.30;tree.scale.set((rand()<.45?-1:1)*width,height,width);
-      tree.castShadow=true;g.add(tree);
-      groundPlane(g,x+.43,.051,z-.26,width*1.25,width*.77,shade);
+    for (let x=-20.9+rand()*.85;x<22;x+=5.7+rand()*2.5) {
+      const kind=Math.floor(rand()*4), width=2.8+rand()*2.65, z=(rand()-.5)*.85;
+      const ratio=textures[kind].image.width/textures[kind].image.height;
+      const tree=new T.Mesh(relief,crowns[kind]);
+      placeRelief(tree,x,z,(rand()<.46?-1:1)*width,width/ratio,width*1.1);
+      tree.castShadow=true; g.add(tree);
+      groundPlane(g,x+.32,.046,z-.13,width*.76,width*.52,shade);
       specimens.push({tree,x,z});
     }
     return {g,specimens};
   }
   function irrigation() {
     const g=new T.Group();
-    const pipe=new T.Mesh(new T.CylinderGeometry(.036,.036,44.2,9),material('#536d63'));
-    pipe.rotation.z=Math.PI/2;pipe.position.set(0,.075,-.53);g.add(pipe);
-    for(let p=1;p<=19;p++){
-      const x=plantX(p),emitter=new T.Mesh(new T.CylinderGeometry(.058,.072,.098,9),material('#6b7870'));
-      emitter.position.set(x,.109,-.53);g.add(emitter);
-      const collar=new T.Mesh(new T.CylinderGeometry(.050,.050,.080,8),material('#445a54'));collar.rotation.z=Math.PI/2;collar.position.set(x+.13,.075,-.53);g.add(collar);
-      box(g,x,.167,-.53,.084,.021,.066,'#c68d61');
+    const pipeGeometry=new T.CylinderGeometry(.031,.031,44.2,8);
+    const pipe=new T.Mesh(pipeGeometry,material('#626e68'));
+    pipe.rotation.z=Math.PI/2; pipe.position.set(0,.075,-.53); g.add(pipe);
+    const emitterShape = new T.CylinderGeometry(.055,.061,.085,8);
+    const collarShape = new T.CylinderGeometry(.045,.045,.075,8);
+    irrigationParts.push(pipeGeometry,emitterShape,collarShape);
+    const drops=new T.InstancedMesh(emitterShape,material('#50615b'),19);
+    const joins=new T.InstancedMesh(collarShape,material('#485750'),19);
+    const o=new T.Object3D();
+    for (let p=1;p<=19;p++) {
+      o.rotation.set(0,0,0); o.position.set(plantX(p),.1,-.53); o.updateMatrix(); drops.setMatrixAt(p-1,o.matrix);
+      o.rotation.z=Math.PI/2; o.position.set(plantX(p)+.13,.075,-.53); o.updateMatrix(); joins.setMatrixAt(p-1,o.matrix);
     }
-    return g;
+    g.add(drops,joins); return g;
   }
-  function dispose(){for(const p of [relief,flat,cube,contact,turf,shadowMap,pathTexture,grass,gravel,shade,...textures,...crowns,...materialCache.values()])p.dispose();}
+  function dispose() {
+    for(const part of [relief,meadowPlane,flat,cube,contact,shadowMap,grass,gravel,shade,meadow,tuft,...textures,...crowns,...irrigationParts,...materialCache.values()]) part.dispose();
+  }
   return {lane,boundary,irrigation,dispose};
 }

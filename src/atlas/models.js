@@ -113,6 +113,16 @@ const grassBlade=new THREE.BufferGeometry();
 grassBlade.setAttribute('position',new THREE.Float32BufferAttribute([0,0,-.05,0,0,.05,.44,.65,.01],3));
 grassBlade.computeVertexNormals();
 const soilSurface=new THREE.PlaneGeometry(1.25,1.25,8,8);soilSurface.rotateX(-Math.PI/2);
+// The slightly uneven lip is modelled in earth rather than drawn into the grass.
+const earthRim=new THREE.TorusGeometry(.54,.026,6,54);
+earthRim.rotateX(Math.PI/2);
+const rimPoints=earthRim.attributes.position;
+for(let i=0;i<rimPoints.count;i++){
+  const x=rimPoints.getX(i), z=rimPoints.getZ(i), angle=Math.atan2(z,x);
+  const irregular=1+.015*Math.sin(5*angle)+.012*Math.sin(9*angle+.7);
+  rimPoints.setXYZ(i,x*irregular,rimPoints.getY(i)*.68,z*irregular);
+}
+earthRim.computeVertexNormals();
 const coffeeModels=new Map();
 export function coffeeModel(stage,variant) {
   const key=stage+'/'+variant;
@@ -125,6 +135,10 @@ export function coffeeModel(stage,variant) {
   }
   const soil=part(root,soilSurface,'#f7eddd',0,.049,0);soil.userData.coating=soilPaint;
   soil.rotation.y=turn;
+  const outerLip=part(root,earthRim,'#997756',0,.063,0,1.03,1,1.03);
+  outerLip.rotation.y=turn;
+  const sandRim=part(root,earthRim,'#d7ae77',0,.077,0,.992,1,.992);
+  sandRim.rotation.y=turn;
   for(let i=0;i<12;i++){
     const a=random()*Math.PI*2,r=.56+random()*.6,x=Math.cos(a)*r,z=Math.sin(a)*r;
     for(let j=0;j<3;j++){
@@ -166,120 +180,34 @@ export function coffeeModel(stage,variant) {
   const model=bake(root);coffeeModels.set(key,model);return model.clone();
 }
 
-function fence(parent, x, z, bays) {
-  for (let i = 0; i <= bays; i++) {
-    const post = x + i * 1.6;
-    box(parent, post, .44, z, .12, .86, .12, '#ab9271');
-    if (i < bays) {
-      for (const height of [.31, .64]) box(parent, post + .8, height, z, 1.61, .074, .07, '#d3be92');
+// The foreground gate uses real rails, slats, hardware and post end-grain.
+export function timberGate() {
+  const g=new THREE.Group(), z=10.28, left=-26.55;
+  const gateWidth=3.65, spans=[gateWidth,2.35,2.35,2.35,2.35];
+  let x=left;
+  for (let i=0;i<=spans.length;i++) {
+    box(g,x,.55,z,.23,1.12,.24,'#97764e');
+    box(g,x-.046,.57,z+.122,.064,1.03,.014,'#d3ac75');
+    box(g,x,.995,z+.14,.23,.038,.035,'#786247');
+    box(g,x,1.126,z,.232,.047,.24,'#ebca92');
+    if(i===spans.length)break;
+    const width=spans[i];
+    for (const y of [.30,.78]) {
+      box(g,x+width/2,y,z-.023,width,.126,.106,'#b18b61');
+      box(g,x+width/2,y+.047,z+.036,width*.98,.02,.015,'#e5c693');
+      box(g,x+width/2,y-.058,z+.033,width*.99,.017,.012,'#806b51');
+      for(const end of [.17,width-.17])ell(g,x+end,y,z+.059,.024,.024,.014,'#625b50');
     }
+    x+=width;
   }
-}
-
-function wheel(parent, x, y, z, radius) {
-  const tyre = cylinder(parent, x, y, z, radius, radius, .22, '#5c6262', 16);
-  tyre.rotation.x = Math.PI / 2;
-  const hub = cylinder(parent, x, y, z + (z > 0 ? .125 : -.125), radius * .54, radius * .54, .045, '#c09964', 14);
-  hub.rotation.x = Math.PI / 2;
-  for (let i = 0; i < 11; i++) {
-    const angle = i * Math.PI * 2 / 11;
-    const tread = box(parent, x + radius * .98 * Math.cos(angle), y + radius * .98 * Math.sin(angle), z,
-      .12, .065, .23, '#616767');
-    tread.rotation.z = angle + Math.PI / 2;
+  for (const px of [left+.18,left+gateWidth-.18]) box(g,px,.54,z,.125,.85,.137,'#ac8558');
+  const diagonal=box(g,left+gateWidth/2,.53,z-.094,gateWidth-.27,.138,.10,'#ae8658');
+  diagonal.rotation.z=.155;
+  for (const y of [.30,.78]) {
+    box(g,left+.29,y,z+.11,.51,.07,.032,'#727776');
+    box(g,left+.12,y,z+.12,.063,.14,.063,'#474d49');
+    ell(g,left+.46,y,z+.136,.023,.022,.012,'#48483e');
   }
-}
-
-function hoop(parent, x, y, z, radius, tube, colour) {
-  return part(parent, new THREE.TorusGeometry(radius, tube, 6, 20), colour, x, y, z);
-}
-
-function tractor(parent) {
-  const body = group(parent, -24.35, .05, 3.4);
-  body.rotation.y = .22;
-  body.scale.setScalar(1.07);
-  for (const side of [-1, 1]) {
-    wheel(body, -.60, .57, side * .55, .56);
-    wheel(body, .85, .34, side * .46, .33);
-    box(body, -.55, 1.02, side * .53, .9, .07, .34, '#80a99a');
-    ell(body, 1.075, 1.10, side * .26, .085, .064, .072, '#ffebb0');
-  }
-  box(body, .08, .58, 0, 2, .20, .60, '#6a796b');
-  box(body, .49, .90, 0, 1.15, .56, .69, '#80a99a');
-  box(body, 1.07, .91, 0, .06, .40, .55, '#a7beb1');
-  for (let i = -2; i <= 2; i++) box(body, 1.109, .90, i * .089, .032, .29, .021, '#536b62');
-  box(body, -.46, 1.04, 0, .42, .11, .38, '#74695e');
-  box(body, -.68, 1.2, 0, .07, .28, .38, '#74695e');
-  rod(body, [-.07,.97,0], [-.19,1.29,0], .032, '#5c726c');
-  hoop(body, -.20, 1.31, 0, .15, .025, '#5b6562').rotation.y = 1;
-  cylinder(body, .64, 1.40, -.16, .042, .055, .50, '#66776d');
-}
-
-function workerAndBarrow() {
-  const worker = new THREE.Group();
-  worker.position.set(-23.63, .04, 7.18);
-  cylinder(worker, 0, .76, 0, .17, .14, .50, '#b98568', 8);
-  ell(worker, 0, 1.13, 0, .122, .156, .115, '#b98f72');
-  cylinder(worker, 0, 1.25, 0, .27, .27, .035, '#c8af79');
-  cylinder(worker, 0, 1.30, 0, .14, .17, .12, '#d5c08c');
-  for (const side of [-1, 1]) {
-    rod(worker, [side*.101,.52,0], [side*.14,.10,side*.07], .072, '#718695');
-    box(worker, side*.14, .08, side*.07+.04, .15, .12, .22, '#786e5a');
-    rod(worker, [side*.16,.94,0], [side*.23,.62,.14], .047, '#c19376');
-  }
-  const barrow = new THREE.Group();
-  barrow.position.set(-22.82,.05,6.8);
-  barrow.rotation.y = .42;
-  box(barrow, 0, .54, 0, .76, .24, .47, '#b47d65');
-  wheel(barrow, .37, .23, 0, .21);
-  for (const z of [-.18,.18]) {
-    rod(barrow, [-.77,.61,z], [.25,.39,z], .027, '#807560');
-    rod(barrow, [-.25,.41,z], [-.32,.04,z], .024, '#807560');
-  }
-  return {worker:bake(worker), barrow:bake(barrow)};
-}
-
-function waterTank(parent) {
-  const tank = group(parent, -24.7,.04,-7.5);
-  cylinder(tank, 0, .77, 0, .88, .89, 1.53, '#9cb3ad', 32);
-  for (let i=0;i<10;i++) hoop(tank,0,.13+i*.14,0,.88,.022,'#879f97').rotation.x=Math.PI/2;
-  cylinder(tank, 0, 1.62, 0, .38, .91, .21, '#b9c7b9', 32);
-  cylinder(tank, .13, 1.74, 0, .22, .22, .06, '#7d8e80', 24);
-  rod(tank, [.86,.31,0], [1.14,.31,0], .051, '#8e9b98');
-  rod(tank, [1.13,.31,0], [1.13,.12,0], .054, '#8e9b98');
-  box(tank, 1.13, .42, 0, .24, .04, .04, '#b98165');
-}
-
-function workbench(parent) {
-  const bench = group(parent,-24.8,0,-2.35);
-  bench.rotation.y=-.23;
-  for (const x of [-.85,.85]) for (const z of [-.31,.31]) box(bench,x,.46,z,.085,.90,.085,'#ae9276');
-  for (let j=0;j<4;j++) box(bench,0,.91,-.32+j*.20,2.06,.11,.18,'#c0a581');
-  for (let j=0;j<3;j++) {
-    cylinder(bench,-.59+j*.32,1.1,0,.14,.08,.27,'#c58a71');
-    cylinder(bench,-.59+j*.32,1.245,0,.113,.113,.008,'#756e58');
-  }
-  for (const x of [.40,.62]) {
-    rod(bench,[x,.06,.68],[x+.21,1.45,.15],.023,'#ae9276');
-    box(bench,x,.11,.67,.11,.15,.044,'#798982');
-  }
-}
-
-export function farmEquipment() {
-  const root=new THREE.Group();
-  fence(root,-26.2,10.18,6);
-  fence(root,15.9,-10.1,6);
-  tractor(root);
-  waterTank(root);
-  workbench(root);
-  for (let i=0;i<4;i++) hoop(root,-25.15,.065+i*.031,7.5,.46-i*.055,.035,'#82998a').rotation.x=Math.PI/2;
-  for (let i=0;i<3;i++) {
-    const crate=group(root,24,.07,1.1+i*1.1);
-    crate.rotation.y=.2;
-    for(const x of [-.56,.56]) for(const z of [-.31,.31]) box(crate,x,.21,z,.067,.42,.067,'#8b7969');
-    for(let j=0;j<3;j++) {
-      for(const z of [-.32,.32]) box(crate,0,.09+j*.13,z,1.15,.09,.05,'#bc9c78');
-      box(crate,0,.05,-.2+j*.2,1.13,.06,.18,'#ae9276');
-    }
-  }
-  return {equipment:bake(root), ...workerAndBarrow()};
+  box(g,left+gateWidth-.04,.67,z+.15,.39,.052,.036,'#606460');
+  return bake(g);
 }
