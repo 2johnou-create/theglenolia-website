@@ -42,14 +42,20 @@ async function stopPath(env,userId,kind){
  return '/email/stop/'+kind+'/'+userId+'/'+await stopToken(env,userId,kind);
 }
 export async function unsubscribeRoute(request,env,path){
- const match=/^\/email\/stop\/(immediate|monthly)\/([a-f0-9-]{36})\/([a-f0-9]{64})$/.exec(path);
+ const match=/^\/email\/stop\/(immediate|monthly|thread\/[a-f0-9-]{36})\/([a-f0-9-]{36})\/([a-f0-9]{64})$/.exec(path);
  if(!match||!env.SESSION_KEY||!secureEqual(match[3],await stopToken(env,match[2],match[1])))return json({error:'not_found'},404);
  const [,kind,uid]=match;
- const description=kind==='monthly'?'monthly plant summaries':'farmer update emails';
+ const threadId=kind.startsWith('thread/')?kind.slice(7):null;
+ const description=threadId?'emails about this conversation':kind==='monthly'?'monthly plant summaries':'farmer update emails';
  if(!['GET','HEAD','POST'].includes(request.method))fail(405,'method');
  const posted=request.method==='POST';
  if(posted){
-  await env.EDU_DB.prepare("UPDATE edu_teacher_preferences SET "+kind+"=0,source='email_unsubscribe',updated_at=? WHERE user_id=? AND "+kind+"=1").bind(nowISO(),uid).run();
+  if(threadId){
+   await env.EDU_DB.prepare('UPDATE edu_plant_thread_follows SET following=0,changed_at=? WHERE thread_id=? AND user_id=? AND following=1')
+    .bind(nowISO(),threadId,uid).run();
+  }else{
+   await env.EDU_DB.prepare("UPDATE edu_teacher_preferences SET "+kind+"=0,source='email_unsubscribe',updated_at=? WHERE user_id=? AND "+kind+"=1").bind(nowISO(),uid).run();
+  }
  }
  const title=posted?'Your preference is saved':'Stop '+description+'?';
  const content=posted?'You have unsubscribed from '+description+'. You can manage your other choices in the teacher portal.':
@@ -88,6 +94,18 @@ function displayPlant(key){
  const [,r,n]=/^r(\d+)-p(\d+)$/.exec(key);
  return 'P'+((Number(r)-1)*19+Number(n));
 }
+async function replyPayload(env,job,now){
+ const row=await env.EDU_DB.prepare(`SELECT u.email,o.id AS orgId,a.plant_key AS plantKey,q.id AS threadId
+  ${activeMembers} JOIN edu_plant_questions q ON q.application_id=a.id
+  JOIN edu_plant_thread_messages r ON r.thread_id=q.id AND r.side='farm'
+  JOIN edu_plant_thread_follows f ON f.thread_id=q.id AND f.user_id=u.id AND f.following=1
+  WHERE u.id=? AND a.id=? AND r.id=? AND (a.status='active' OR (a.status='cooling' AND a.release_at>?))
+  AND ${enabledMember} AND ${terms}`)
+  .bind(job.user_id,job.application_id,job.reference,new Date(now).toISOString(),PRIVACY_VERSION,EDUCATION_VERSION).first();
+ if(!row)return null;
+ return {kind:'reply',email:row.email,plant:displayPlant(row.plantKey),orgId:row.orgId,applicationId:job.application_id,
+  threadId:row.threadId,unsubscribePath:await stopPath(env,job.user_id,'thread/'+row.threadId)};
+}
 async function payload(env,job,now){
  const db=env.EDU_DB;
  if(job.kind==='invite'){
@@ -119,19 +137,18 @@ async function payload(env,job,now){
  return {...data,unsubscribePath:await stopPath(env,job.user_id,pref)};
 }
 
-export async function processPlantMail(env,now=Date.now()){
+async function drainMailQueue(env,now,table,makePayload){
  const db=env.EDU_DB,seconds=Math.floor(now/1000);
- await enqueueMonthly(db,now);
  // After a crash the provider might already have accepted a message. Retain its record for review.
- const stale=await db.prepare("UPDATE edu_plant_mail_outbox SET state='review',changed_at=? WHERE state='sending' AND changed_at<?").bind(seconds,seconds-900).run();
+ const stale=await db.prepare(`UPDATE ${table} SET state='review',changed_at=? WHERE state='sending' AND changed_at<?`).bind(seconds,seconds-900).run();
  if(stale.meta?.changes)console.warn('Plant email delivery needs reconciliation');
- const due=await all(db.prepare("SELECT * FROM edu_plant_mail_outbox WHERE state='pending' AND run_after<=? ORDER BY run_after,id LIMIT 4").bind(seconds));
+ const due=await all(db.prepare(`SELECT * FROM ${table} WHERE state='pending' AND run_after<=? ORDER BY run_after,id LIMIT 4`).bind(seconds));
  for(const job of due){
-  const claim=await db.prepare("UPDATE edu_plant_mail_outbox SET state='sending',attempts=attempts+1,changed_at=? WHERE id=? AND state='pending' AND run_after<=?").bind(seconds,job.id,seconds).run();
+  const claim=await db.prepare(`UPDATE ${table} SET state='sending',attempts=attempts+1,changed_at=? WHERE id=? AND state='pending' AND run_after<=?`).bind(seconds,job.id,seconds).run();
   if(!claim.meta?.changes)continue;
   let state='review',next=seconds;
   try{
-   const message=await payload(env,job,now);
+   const message=await makePayload(env,job,now);
    if(!message)state='cancelled';
    else if(!env.MAILER || !env.MAIL_SECRET){state='pending';next+=900;}
    else {
@@ -142,8 +159,15 @@ export async function processPlantMail(env,now=Date.now()){
     else if(response.status===429 && job.attempts<7){state='pending';next+=Math.min(3600,300*2**job.attempts);}
    }
   }catch{ /* Network ambiguity is retained for operator review. */ }
-  await db.prepare("UPDATE edu_plant_mail_outbox SET state=?,changed_at=?,run_after=? WHERE id=? AND state='sending'").bind(state,seconds,next,job.id).run();
-  if(state==='review')console.warn('Plant email needs delivery review',job.kind);
+  await db.prepare(`UPDATE ${table} SET state=?,changed_at=?,run_after=? WHERE id=? AND state='sending'`).bind(state,seconds,next,job.id).run();
+  if(state==='review')console.warn('Plant email needs delivery review',job.kind||'reply');
  }
  return due.length;
+}
+
+export async function processPlantMail(env,now=Date.now()){
+ await enqueueMonthly(env.EDU_DB,now);
+ const standard=await drainMailQueue(env,now,'edu_plant_mail_outbox',payload);
+ const replies=await drainMailQueue(env,now,'edu_plant_thread_mail_outbox',replyPayload);
+ return standard+replies;
 }

@@ -11,7 +11,7 @@ const origin='https://glenolia-education.theglenolia.workers.dev';
 const relayEnv={EDUCATION_MAIL_SECRET:'test-mail-secret',BREVO_API_KEY:'test-only',EDUCATION_ORIGIN:origin};
 function setup(t){
  const sql=new DatabaseSync(':memory:'); t.after(()=>sql.close());
- for(const name of ['education-schema','plant-schema','plant-atlas-schema','plant-adoption-schema','plant-notifications-schema'])
+ for(const name of ['education-schema','plant-schema','plant-atlas-schema','plant-adoption-schema','plant-notifications-schema','plant-threads-schema','plant-thread-mail-schema'])
   sql.exec('BEGIN;'+readFileSync(new URL('../'+name+'.sql',import.meta.url),'utf8')+';COMMIT;');
  const db={prepare(query){
   return {query,args:[],bind(...args){return {...this,args};},async first(){return sql.prepare(query).get(...this.args)||null;},
@@ -116,4 +116,72 @@ test('retry definite rate rejection with same job key and retain uncertain outco
  assert.equal(f.sql.prepare('SELECT state FROM edu_plant_mail_outbox WHERE reference=?').get(first).state,'sent');
  const next=f.update('r1-p7','2026-11-21');status=503;await processPlantMail(f.env,now+311000);await processPlantMail(f.env,now+3600000);
  assert.equal(attempts.length,3);assert.equal(f.sql.prepare('SELECT state FROM edu_plant_mail_outbox WHERE reference=?').get(next).state,'review');
+});
+
+function conversation(f,applicationId){
+ const threadId=f.uid(),at=new Date().toISOString();
+ f.sql.prepare('INSERT INTO edu_plant_questions(id,application_id,question,created_at,submitted_by) VALUES(?,?,?,?,?)')
+  .run(threadId,applicationId,'Private question text',at,f.alice.id);
+ const follow=(teacher,on=true)=>f.sql.prepare(`INSERT INTO edu_plant_thread_follows(thread_id,user_id,following,changed_at) VALUES(?,?,?,?)
+  ON CONFLICT(thread_id,user_id) DO UPDATE SET following=excluded.following,changed_at=excluded.changed_at`).run(threadId,teacher.id,+on,new Date().toISOString());
+ const post=(side='farm')=>{
+  const id=f.uid();
+  f.sql.prepare('INSERT INTO edu_plant_thread_messages(id,thread_id,side,body,actor_id,created_at) VALUES(?,?,?,?,?,?)')
+   .run(id,threadId,side,'Private reply text',side==='farm'?'farmer@example.test':f.alice.id,new Date().toISOString());
+  return id;
+ };
+ return {threadId,follow,post};
+}
+test('farmer replies notify only followers of the original active adoption, separately from general emails, without exporting private messages',async t=>{
+ const f=setup(t),app=f.accept('r1-p7');
+ f.prefs(f.alice,false,false);f.prefs(f.ben,true,true);f.prefs(f.charlie,false,false);
+ const c=conversation(f,app),other=conversation(f,app);
+ c.follow(f.alice);other.follow(f.charlie);
+ c.post('school');const reply=c.post();
+ const q=f.sql.prepare('SELECT user_id,reference FROM edu_plant_thread_mail_outbox').all();
+ assert.deepEqual(q.map(x=>[x.user_id,x.reference]),[[f.alice.id,reply]]);
+ const now=Date.now()+1000;
+ await Promise.all([processPlantMail(f.env,now),processPlantMail(f.env,now)]);
+ const sent=f.emails.filter(x=>x.kind==='reply');assert.equal(sent.length,1);assert.equal(sent[0].email,f.alice.email);
+ assert.equal(sent[0].threadId,c.threadId);
+ const email=f.transport.find(x=>x.subject.includes('replied about P7'));assert.ok(email);
+ assert.ok(email.textContent.includes('/#plant?orgId='+f.org+'&applicationId='+app+'&thread='+c.threadId));
+ assert.ok(email.headers['List-Unsubscribe-Post']);assert.ok(!JSON.stringify(email).includes('Private reply'));assert.ok(!JSON.stringify(email).includes('Private question'));assert.ok(!JSON.stringify(email).includes('farmer@example.test'));
+ const migration=readFileSync(new URL('../plant-thread-mail-schema.sql',import.meta.url),'utf8');
+ f.sql.exec(migration);await processPlantMail(f.env,now+1000);
+ assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM edu_plant_thread_mail_outbox WHERE state='sent'").get().n,1);
+});
+test('signed per-thread unsubscribe confirms on GET and cancels only that follower and conversation, including pending jobs',async t=>{
+ const f=setup(t),app=f.accept('r2-p2'),c=conversation(f,app),other=conversation(f,app);
+ f.prefs(f.alice,true,true);f.prefs(f.ben,false,false);c.follow(f.alice);other.follow(f.alice);c.follow(f.ben);
+ c.post();const now=Date.now()+1000;await processPlantMail(f.env,now);
+ const stop=f.emails.find(x=>x.kind==='reply'&&x.email===f.alice.email).unsubscribePath;
+ const shown=await unsubscribeRoute(new Request(origin+stop),f.env,stop);assert.equal(shown.status,200);assert.match(await shown.text(),/<form/);
+ assert.equal((await unsubscribeRoute(new Request(origin+stop.replace(c.threadId,other.threadId)),f.env,stop.replace(c.threadId,other.threadId))).status,404);
+ const next=c.post(),nextOther=other.post();
+ assert.equal((await unsubscribeRoute(new Request(origin+stop,{method:'POST'}),f.env,stop)).status,200);
+ assert.equal(f.sql.prepare('SELECT state FROM edu_plant_thread_mail_outbox WHERE reference=? AND user_id=?').get(next,f.alice.id).state,'cancelled');
+ assert.equal(f.sql.prepare('SELECT state FROM edu_plant_thread_mail_outbox WHERE reference=? AND user_id=?').get(next,f.ben.id).state,'pending');
+ assert.equal(f.sql.prepare('SELECT state FROM edu_plant_thread_mail_outbox WHERE reference=? AND user_id=?').get(nextOther,f.alice.id).state,'pending');
+ assert.equal((await teacherPreferences(f.db,f.alice.id)).immediate,true);assert.equal((await teacherPreferences(f.db,f.alice.id)).monthly,true);
+ c.post();await processPlantMail(f.env,now+2000);
+ assert.equal(f.emails.filter(x=>x.email===f.alice.email&&x.threadId===c.threadId).length,1);
+ assert.equal(f.emails.filter(x=>x.email===f.alice.email&&x.threadId===other.threadId).length,1);
+});
+test('withdrawal, revoked membership, disabled user and changed consent are rechecked before farmer-reply dispatch',async t=>{
+ const f=setup(t),app=f.accept('r1-p7'),c=conversation(f,app);
+ for(const u of [f.alice,f.ben,f.charlie]){f.prefs(u,false,false);c.follow(u);}
+ const now=Date.now()+1500;
+ f.sql.prepare("UPDATE edu_plant_applications SET status='cooling',withdrawal_reason='Test reason',release_at=? WHERE id=?").run(new Date(now+600000).toISOString(),app);
+ const pending=c.post();
+ f.sql.prepare('UPDATE edu_users SET disabled=1 WHERE id=?').run(f.ben.id);
+ f.sql.prepare("UPDATE edu_teacher_preferences SET privacy_version='old' WHERE user_id=?").run(f.charlie.id);
+ await processPlantMail(f.env,now);
+ assert.deepEqual(f.emails.filter(x=>x.kind==='reply').map(x=>x.email),[f.alice.email]);
+ assert.equal(f.sql.prepare("SELECT COUNT(*) n FROM edu_plant_thread_mail_outbox WHERE reference=? AND state='cancelled'").get(pending).n,2);
+ const later=c.post();f.sql.prepare('DELETE FROM edu_plant_members WHERE user_id=? AND org_id=?').run(f.alice.id,f.org);
+ await processPlantMail(f.env,now+1000);assert.equal(f.sql.prepare('SELECT state FROM edu_plant_thread_mail_outbox WHERE reference=?').get(later).state,'cancelled');
+ f.sql.prepare('INSERT INTO edu_plant_members VALUES(?,?,?)').run(f.org,f.alice.id,new Date().toISOString());
+ const last=c.post();await processPlantMail(f.env,now+650000);
+ assert.equal(f.sql.prepare('SELECT state FROM edu_plant_thread_mail_outbox WHERE reference=?').get(last).state,'cancelled');
 });

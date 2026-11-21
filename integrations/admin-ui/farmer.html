@@ -8,7 +8,7 @@
 <header><a href="/" aria-label="The Glenolia admin home"><img src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="240"></a><a href="/cdn-cgi/access/logout">Sign out</a></header>
 <main id="main">
 <div class="workspace-title"><h1>Farm journal</h1></div>
-<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Field updates</a><a href="#atlas">Estate atlas</a><a href="#register">Plant register</a><a href="#requests">School requests</a></nav>
+<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Field updates</a><a href="#atlas">Estate atlas</a><a href="#register">Plant register</a><a href="#messages">Class messages</a><a href="#school-files">School files</a><a href="#requests">School requests</a></nav>
 <div id="notice" role="status" tabindex="-1" aria-live="polite">Loading your farm workspace…</div>
 <button id="retry" type="button" class="quiet" hidden>Retry loading</button>
 <section id="update" aria-labelledby="update-heading" hidden>
@@ -45,6 +45,25 @@
 <select id="field-stage"></select><p class="hint">Changes the illustration on the map. Post a field note to tell the class what you saw.</p>
 <button type="submit" id="save-field-stage" class="quiet">Save stage</button><p id="field-stage-result" class="save-result" role="status"></p></form></details>
 <details id="history" hidden><summary>Previous updates</summary><div id="history-list"></div></details></div>
+<details id="agronomy" class="field-tool"><summary>Growing conditions &amp; fertiliser</summary>
+<div class="agronomy-body"><label for="ag-scope">Record for</label><select id="ag-scope"><option value="farm">Whole farm</option></select>
+<p class="hint" id="ag-scope-hint"></p><p id="ag-result" role="status" aria-live="polite"></p>
+<button type="button" id="ag-reload" class="quiet" hidden>Load saved records</button>
+<fieldset id="ag-controls" disabled><legend class="ag-sr">Field records</legend>
+<details id="ag-profile" open><summary>Growing conditions</summary>
+<form id="ag-profile-form"><div class="ag-fields">
+<label>Coffee variety<input id="ag-variety" maxlength="120" autocomplete="off"></label>
+<label>Planting date<input id="ag-plantedOn" type="date"></label>
+<label>Soil description<textarea rows="2" id="ag-soil" maxlength="500"></textarea></label>
+<label>Measured soil pH<input id="ag-soilPh" type="number" min="0" max="14" step="any" inputmode="decimal"></label>
+<label>Current condition<textarea rows="2" id="ag-condition" maxlength="500"></textarea></label>
+<label>What the class can look for<textarea rows="2" id="ag-growerFocus" maxlength="500"></textarea></label>
+</div><p id="ag-inherited" class="hint"></p><button type="submit" id="ag-save">Save growing conditions</button></form></details>
+<details id="ag-feeding"><summary>Fertiliser log</summary><form id="ag-feed-form">
+<label for="ag-feed-date">Date applied</label><input id="ag-feed-date" type="date" required>
+<label for="ag-feed-note">What was applied?</label><textarea id="ag-feed-note" rows="2" maxlength="500" required></textarea>
+<button id="ag-feed-save" type="submit">Record fertiliser</button></form>
+<div id="ag-feed-history"></div></details></fieldset></div></details>
 </section>
 <section id="atlas" aria-labelledby="atlas-heading" hidden>
 <h2 id="atlas-heading" tabindex="-1">Estate atlas</h2>
@@ -72,9 +91,11 @@
 </form>
 </div></div>
 </section>
+<section id="school-files" aria-labelledby="school-files-heading" hidden><h2 id="school-files-heading" tabindex="-1">School files</h2><label for="school-files-search">Find a school or plant</label><input id="school-files-search" type="search" placeholder="School name or P number"><div id="school-files-list" aria-live="polite"></div></section>
+<section id="messages" aria-labelledby="messages-heading" hidden><h2 id="messages-heading" tabindex="-1">Class messages</h2><div id="farmer-threads"></div></section>
 <section id="requests" aria-labelledby="requests-heading" hidden>
 <h2 id="requests-heading" tabindex="-1">School requests</h2><p class="intro">Review nearby schools first. The teacher accepts the offer in their portal.</p>
-<div id="applications"></div><details id="adoption-history"><summary>Recent account and adoption history</summary><ol id="adoption-events"></ol></details><h3>Class questions</h3><div id="questions"></div>
+<div id="applications"></div><details id="adoption-history"><summary>Recent account and adoption history</summary><ol id="adoption-events"></ol></details><a href="#messages">Open class messages</a>
 </section>
 <section id="register" aria-labelledby="register-heading" hidden>
 <h2 id="register-heading" tabindex="-1">Plant register</h2>

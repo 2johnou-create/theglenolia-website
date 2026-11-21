@@ -39,7 +39,26 @@ function specimenCard(plant,stage,detail){
  const {file}=plantIllustration(STAGE_NAMES.indexOf(stage)+1,{row:Math.floor(n/19)+1,position:n%19+1});
  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:10px 0;background:#F5F1E8"><tr><td width="86" align="center" style="padding:8px"><img alt="" width="64" height="72" src="https://theglenolia.com.au/assets/plant-portal/stages/${file}"></td><td style="padding:10px 14px 10px 0"><strong style="color:#2F4A3C">${plant} · ${encode(stage)}</strong><br><span style="font-size:14px">${encode(detail)}</span></td></tr></table>`;
 }
+function replyMessage(body){
+ keys(body,['email','kind','jobId','origin','orgId','applicationId','threadId','plant','unsubscribePath']);
+ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+ if(![body.orgId,body.applicationId,body.threadId].every(id=>typeof id==='string'&&uuid.test(id)))throw Error('invalid');
+ const identity=text(body.jobId,100),[kind,messageId,userId]=identity.split(':');
+ if(kind!=='reply'||!uuid.test(messageId)||!uuid.test(userId)||identity!=='reply:'+messageId+':'+userId)throw Error('invalid');
+ const stopPrefix='/email/stop/thread/'+body.threadId+'/'+userId+'/';
+ if(typeof body.unsubscribePath!=='string'||!body.unsubscribePath.startsWith(stopPrefix)||!secretFormat.test(body.unsubscribePath.slice(stopPrefix.length)))throw Error('invalid');
+ const email=emailValue(body.email),plant=plantNumber(body.plant);
+ const unsubscribe=origin+body.unsubscribePath;
+ const portal=origin+'/#plant?orgId='+body.orgId+'&applicationId='+body.applicationId+'&thread='+body.threadId;
+ const title='The farmer replied about '+plant;
+ const copy='There is a new reply in the conversation you follow about '+plant+'. Sign in to your school journal to read it or ask a follow-up question.';
+ const footer='You followed this conversation in your plant journal. <a style="color:#2F4A3C" href="'+encode(unsubscribe)+'">Stop emails for this conversation</a>.';
+ return {email,identity,subject:title+' · The Glenolia',unsubscribe,
+  htmlContent:frame(title,'FROM THE FARMER','<p>'+copy+'</p>'+button('Read the reply',portal),footer),
+  textContent:title+'\n\n'+copy+'\n\nRead the reply: '+portal+'\nStop emails for this conversation: '+unsubscribe+'\n\nThe Glenolia · '+office+' · '+help};
+}
 function plantMessage(body){
+ if(body.kind==='reply')return replyMessage(body);
  const base=['email','kind','organisation','jobId','origin'];
  const kinds={invite:[],update:['plant','stage','observedOn','unsubscribePath','orgId','applicationId'],monthly:['plants','period','unsubscribePath','orgId']};
  if(!Object.hasOwn(kinds,body.kind))throw Error('invalid');

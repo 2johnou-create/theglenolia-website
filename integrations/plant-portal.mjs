@@ -1,3 +1,6 @@
+import {recognitionRoute} from './plant-recognition.mjs';
+import {plantThreadRoute} from './plant-threads.mjs';
+import {teacherFieldReport,staffFieldReport} from './plant-field-report.mjs';
 import {snapshotForUpdate} from './plant-weather.mjs';
 import { all, dateValue, digest, fail, id, json, keys, nowISO, rate, revision, SECURITY, text } from './education-common.mjs';
 import {orgDetails,orgMember,masterWhere,openStates,longReason,orgRoutes,saveOrgLogo,loadLogo,releaseDueAdoptions} from './plant-organisation.mjs';
@@ -173,9 +176,12 @@ async function question(db,actor,body) {
   return ok();
 }
 export async function teacherPlantRoutes(request,env,path,actor,body) {
+  if(path==='/api/plants/recognition'||path.startsWith('/api/plants/recognition/'))return recognitionRoute(request,env,path,actor);
   const db=env.EDU_DB;
+  if(path==='/api/plants/threads'||path.startsWith('/api/plants/threads/'))return plantThreadRoute(request,db,path.slice('/api/plants'.length),{userId:actor.id},body);
   if (request.method==='GET') {
     const url=new URL(request.url);
+    if(path==='/api/plants/field-report')return teacherFieldReport(db,actor,url.searchParams.get('applicationId'));
     if(path==='/api/plants/learning')return json(plantLearning);
     if(path==='/api/plants/me')return myPlant(db,actor,url);
     if(path.startsWith('/api/plants/organisation/logo/'))return loadLogo(db,path.split('/').at(-1),actor.id);
@@ -362,7 +368,10 @@ async function answer(db,body,staffId) {
 
 // Only the Access-verified admin service creates the role header on its signed binding request.
 export async function staffPlantRoutes(request,env,path,body) {
+  if(path==='/plants/recognition'||path.startsWith('/plants/recognition/'))return recognitionRoute(request,env,path);
+  if(path==='/plants/field-report'||path==='/plants/fertiliser')return staffFieldReport(request,env.EDU_DB,path,body);
   const db=env.EDU_DB,farmer=request.headers.get('X-Glenolia-Plant-Role')==='farmer';
+  if(path==='/plants/threads'||path.startsWith('/plants/threads/'))return plantThreadRoute(request,db,path.slice('/plants'.length),{staffId:request.headers.get('X-Glenolia-Staff-Email')||'farm_staff'},body);
   if (request.method==='GET') {
     if(path.startsWith('/plants/organisation-logo/')){
       if(farmer)fail(403,'owner_required');

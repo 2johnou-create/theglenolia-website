@@ -1,3 +1,5 @@
+import {fieldHero,fieldFacts,farmWeather,workshopShelf,schoolAward,companionPrompt} from './plant-field-home.js';
+import {plantThreadsPanel} from './plant-threads-ui.js';
 /* Teacher-managed education. Private content is requested only from authorised APIs. */
 const STAGES={ES1:'Early Stage 1 · Kindergarten',S1:'Stage 1 · Years 1–2',S2:'Stage 2 · Years 3–4',S3:'Stage 3 · Years 5–6',S4:'Stage 4 · Years 7–8',S5:'Stage 5 · Years 9–10',S6:'Senior extension · Year 11'};
 const MODES={classroom:'Classroom',school_grounds:'School grounds',field:'Farm fieldwork',indoor:'Indoor workshop',home:'Optional home activity'};
@@ -223,9 +225,7 @@ function start(root){
  $('[data-dialog-close]').addEventListener('click',closeDialog);dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)closeDialog();}});
  $('[data-guide-toggle]').addEventListener('click',()=>{state.guides=!state.guides;root.classList.toggle('hide-guides',!state.guides);$('[data-guide-toggle]').setAttribute('aria-pressed',String(state.guides));$('[data-guide-toggle]').textContent=state.guides?'Hide character prompts':'Show character prompts';});
  const plantLanding='https://theglenolia.com.au/plant-portal/';
- let questionDraft=null;
  const isPlantRoute=route=>['plant','plant-classroom','plant-settings','plant-preferences'].includes(route);
- function clearPlantDraft(){questionDraft=null;}
  function requiredCheck(label,name){
   const control=check(label,name);
   control.querySelector('input').required=true;
@@ -248,7 +248,7 @@ function start(root){
   const [route,raw='']=String(value).split('?');
   if(!['plant','plant-settings','plant-preferences'].includes(route))return null;
   const params=new URLSearchParams(raw),allowed=new URLSearchParams();
-  for(const key of ['orgId','applicationId'])if(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(params.get(key)||''))allowed.set(key,params.get(key));
+  for(const key of ['orgId','applicationId','thread'])if(/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(params.get(key)||''))allowed.set(key,params.get(key));
   if(plantPosition(params.get('prefer')))allowed.set('prefer',params.get('prefer'));
   return route+(allowed.size?'?'+allowed:'');
  }
@@ -583,23 +583,8 @@ function start(root){
   const time=el('time',date);time.dateTime=entry.observedOn;
   textBox.append(time);if(entry.note)textBox.append(el('p',entry.note));append(textBox,fieldConditions(entry.weather));card.append(textBox);return card;
  }
- function classQuestion(app){
-  if(questionDraft?.applicationId!==app.id)questionDraft={applicationId:app.id,text:'',requestId:crypto.randomUUID()};
-  const draft=questionDraft;
-  const f=form(async (values,current)=>{
-   await api('/plants/question',{applicationId:app.id,question:String(values.get('question')).trim(),consent:values.get('consent')==='yes',requestId:draft.requestId});
-   clearPlantDraft();current.dataset.dirty='false';
-   if(current.isConnected&&dialog.open){closeDialog();tell('Question sent privately to the farm.');await render();}
-  });
-  const question=input('question',{type:'textarea',value:draft.text,required:true,maxLength:800,rows:4});
-  question.addEventListener('input',()=>{if(draft.text!==question.value)draft.requestId=crypto.randomUUID();draft.text=question.value;});
-  addForm(f,field('What would your class like to know?',question),requiredCheck('I have checked this question and left out student names and personal details.','consent'),
-   actions(submit('Send to the farm')),small('Teachers sharing this adoption and the farm team can read this conversation.'));
-  openDialog('Ask the farmer',f);
-  dialog.addEventListener('close',()=>f.remove(),{once:true});
- }
- function plantJournal(record,classroom,guide,orgId){
-  const {application,updates=[],questions=[]}=record;
+ function plantJournal(record,classroom,guide,orgId,report=null,threadId=null){
+  const {application,updates=[]}=record;
   const label=plantPosition(application.plantKey)||'Our coffee plant';
   const box=el('div',null,classroom?'plant-classroom':'plant-panel plant-journal');
   if(classroom){
@@ -626,23 +611,31 @@ function start(root){
     actions(button('Next question',()=>{step=(step+1)%prompts.length;question.textContent=prompts[step];},true),button('Print activity',()=>window.print(),true)));
    box.append(stage,prompt);append(box,learningCard(guide,application.schoolType));return box;
   }
-  box.append(heading('Our plant',label,'SCHOOL PLANT JOURNAL',actions(link('Open classroom view',plantRoute('plant-classroom',orgId,application.id)),button('Ask a question',()=>classQuestion(application),true))));
-  const recent=section('Latest farm update',updates.length?observation(updates[0]):notice('Waiting for the first field note.','The farmer’s dated observations and photos will appear here.'));
+  const threads=plantThreadsPanel({applicationId:application.id,api,threadId});
+  const jump=target=>{
+   target.scrollIntoView({block:'start'});
+   const title=target.querySelector('h2');
+   if(title){title.tabIndex=-1;title.focus({preventScroll:true});}
+  };
+  const reportHeader=el('header',null,'plant-report-header');
+  reportHeader.append(fieldHero({application,updates,report,classroomHref:plantRoute('plant-classroom',orgId,application.id),onMessage:()=>jump(threads)}));
+  box.append(reportHeader);
   if(application.status==='cooling')box.append(notice('Withdrawal requested','This plant is reserved until '+localPlantTime(application.releaseAt)+' Sydney time. The primary teacher can cancel in School settings.'));
-  box.append(recent);append(box,learningCard(guide,application.schoolType));
+  const latest=section('Farmer journal',updates.length?observation(updates[0]):notice('Waiting for the first field note.','The farmer’s dated observations and photos will appear here.'));
   if(updates.length>1){
-   const details=el('details',null,'plant-history');details.append(el('summary','Earlier updates ('+(updates.length-1)+')'));
-   details.addEventListener('toggle',()=>{if(details.open&&details.children.length===1)for(const entry of updates.slice(1))details.append(observation(entry));});box.append(details);
+   const history=el('details',null,'plant-history');history.append(el('summary','Earlier updates ('+(updates.length-1)+')'));
+   history.addEventListener('toggle',()=>{if(history.open&&history.children.length===1)for(const entry of updates.slice(1))history.append(observation(entry));});latest.append(history);
   }
-  if(questions.length){
-   const details=el('details',null,'plant-history');details.append(el('summary','Questions for the farm ('+questions.length+')'));
-   for(const q of questions){
-    const entry=el('article',null,'plant-conversation');
-    entry.append(el('h3','Your class asked'),el('p',q.question),el('strong',q.answer?'Farmer’s reply':'Awaiting a reply'));
-    if(q.answer)entry.append(el('p',q.answer));details.append(entry);
-   }
-   box.append(details);
+  const facts=el('div',null,'field-context-grid');facts.append(fieldFacts(report),farmWeather(api));
+  reportHeader.append(facts);
+  const workshops=workshopShelf(api),award=schoolAward(api,application.id);
+  const nav=el('nav',null,'field-shortcuts');nav.setAttribute('aria-label','On this plant page');
+  for(const [label,section] of [['Farmer journal',latest],['Workshops & sheets',workshops],['Certificate & media kit',award]]){
+   const control=el('button',label);control.type='button';control.addEventListener('click',()=>jump(section));nav.append(control);
   }
+  reportHeader.append(nav);box.append(latest,threads,companionPrompt(artBase,guide?.item?.question));
+  append(box,learningCard(guide,application.schoolType));
+  const files=el('div',null,'field-download-grid');files.append(workshops,award);box.append(files);
   box.append(actions(button('Refresh journal',()=>render(),true),link('Teacher workspace','#library',true)));return box;
  }
  async function plantPage(route,query){
@@ -668,7 +661,11 @@ function start(root){
   const additional=org&&['another','again'].includes(query.get('apply'))&&org.isMaster&&active.length>0&&active.length<3;
   let page;
   if(!additional&&['active','cooling'].includes(app?.status)){
-   page=plantJournal(record,false,await learningForPlant(app.stage),org?.id);
+   const [guide,report]=await Promise.all([learningForPlant(app.stage),api('/plants/field-report?applicationId='+encodeURIComponent(app.id)).catch(error=>{
+    if([401,403,404].includes(error.status))throw error;
+    return null;
+   })]);
+   page=plantJournal(record,false,guide,org?.id,report,query.get('thread'));
   }else if(!additional&&app&&['pending','offered','declined','released'].includes(app.status)&&!applyAgain){
    page=plantStatus(app,org,active.length);
   }else if(!org&&invitations&&query.get('apply')!=='new'){
@@ -680,7 +677,11 @@ function start(root){
    const map=await api('/plants/map');
    page=schoolApplication(map,pref,app,{organisation:org,additional});
   }
-  if(org){page.prepend(organisationNav(record,'plant'));const nav=applicationNav(record);if(nav.childElementCount&&!additional)page.insertBefore(nav,page.querySelector('.edu-page-heading')||null);}
+  if(org){page.prepend(organisationNav(record,'plant'));const nav=applicationNav(record);if(nav.childElementCount&&!additional){
+   if(page.classList.contains('plant-journal')&&!nav.querySelector('select'))page.append(nav);
+   else page.insertBefore(nav,page.querySelector('.plant-report-header,.edu-page-heading')||null);
+  }}
+  if(!page.classList.contains('plant-journal'))page.append(workshopShelf(api));
   if(invitations)page.prepend(invitations);
   return page;
  }
@@ -732,13 +733,14 @@ function start(root){
  function updateAccount(){const user=state.session.user,a=$('[data-account-link]');if(staffMode){a.href='#';a.textContent='Open teacher workspace';a.onclick=async event=>{event.preventDefault();try{const result=await api('/owner-workspace',{}),url=new URL(result.url);if(url.origin!=='https://glenolia-education.theglenolia.workers.dev'||url.pathname!=='/auth/verify')throw Error('The teacher workspace link could not be verified.');openDialog('Your teacher workspace.',notice('Open the working teacher portal.','This short-lived link opens your owner account without sending a sign-in email.'));$('[data-dialog-body]').append(actions(link('Open teacher workspace',url.href)));}catch(error){tell(error.message);}};return;}a.href=user?'#profile':'#signin';a.textContent=user?(user.name||user.email):staffMode?'Check staff access':'Teacher sign in';const bar=$('[data-workspace-context]'),school=state.session.school;bar.replaceChildren();bar.hidden=!user;if(user&&school){const text=el('p');text.append(el('strong',school.name||'Private planning workspace'),document.createTextNode(' · '+(school.evidenceEnabled?'School observations enabled':school.kind==='personal'?'Personal planning · no learner records':'Planning access · learner observations not enabled')));bar.append(text);const a=el('a','School and account');a.href='#profile';bar.append(a);}}
  async function workspace(force=false){if(!state.session.user)return null;if(!state.workspace||force)state.workspace=await api('/workspace');return state.workspace;}
  function resetIdentity(){
-  state.session={user:null};teacherPrefs=null;pendingCode(null);state.workspace=null;state.resourceCache.clear();state.resources=[];resourcesLoaded=false;clearPlantDraft();
+  state.session={user:null};teacherPrefs=null;pendingCode(null);state.workspace=null;state.resourceCache.clear();state.resources=[];resourcesLoaded=false;
   if(dialog.open)closeDialog();
   $('[data-dialog-body]').replaceChildren();updateAccount();
   const {route,query}=currentRoute();
   if(!staffMode&&isPlantRoute(route)){
+   state.render++;
    plantShell(route);
-   main.replaceChildren(route==='plant'?plantSignIn(query.get('prefer')):loading());
+   main.replaceChildren(route==='plant-classroom'?empty('Classroom view is closed.','Sign in with your teacher account to reopen this journal.',link('Back to plant portal','#plant',true)):plantSignIn(query.get('prefer')));
   }
  }
  if(!staffMode){

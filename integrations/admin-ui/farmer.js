@@ -1,4 +1,7 @@
+import {mountRecognitionFiles} from './recognition-files.js';
+import {plantThreadsPanel} from '../../public/teachers/plant-threads-ui.js';
 import {prepareFieldPhoto} from './photo-preparation.js';
+import {mountFieldReport} from './field-report.js';
 import {mountFarmAtlas} from './farm-atlas.js';
 import {STAGE_NAMES} from '../../public/assets/plant-portal/stages.js';
 import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illustration.js';
@@ -13,6 +16,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
   let treeKey = new URL(location.href).searchParams.get('plant') || '';
   let dashboard = null, journalVersion = 0, reading = false, writing = false;
   const atlas = mountFarmAtlas({api,run,reload});
+  const fieldReport = mountFieldReport({api,run,today});
 
   function message(text, focus = false) {
     $('notice').textContent = text;
@@ -47,10 +51,11 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     if (d.url) URL.revokeObjectURL(d.url);
     d.url = ''; d.blob = null; d.requestId = null;
   }
-  function dirty() { return atlas.hasChanges() || fieldStageDrafts.size > 0 || [...drafts.values()].some(d => d.note.trim() || d.blob); }
+  function dirty() { return fieldReport.hasChanges() || atlas.hasChanges() || fieldStageDrafts.size > 0 || [...drafts.values()].some(d => d.note.trim() || d.blob); }
   window.addEventListener('beforeunload', event => { if (dirty()) { event.preventDefault(); event.returnValue = ''; } });
 
   const knownErrors = {
+    field_report_changed:'Another farmer changed these growing conditions. Load saved records to review the latest version.', invalid_soil_ph:'Enter a measured pH between 0 and 14.',
     atlas_changed:'Another staff member changed the atlas. Refresh the farm workspace and check the latest values.',
     row_in_use:'A position in this range is offered or assigned to a school. Keep that position visible.',
     position_hidden:'This position is now hidden. Refresh the farm workspace and choose a visible position.',
@@ -81,13 +86,18 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     return data;
   }
 
+  const openSchoolFiles=mountRecognitionFiles(api);
   function showTab(focus = false) {
     let tab = location.hash.slice(1);
-    if (!['register','requests','update','atlas'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
-    for (const id of ['update','requests','register','atlas']) $(id).hidden = !dashboard || id !== tab;
+    if (!['register','requests','update','atlas','messages','school-files'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
+    for (const id of ['update','requests','register','atlas','messages','school-files']) $(id).hidden = !dashboard || id !== tab;
     for (const link of document.querySelectorAll('nav a')) {
       if (link.hash === '#' + tab) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
       link.hidden = link.hash === '#requests' && dashboard?.role === 'farmer';
+    }
+    if (dashboard && tab==='school-files') openSchoolFiles();
+    if (dashboard && tab==='messages' && !$('farmer-threads').firstElementChild) {
+      $('farmer-threads').append(plantThreadsPanel({staff:true,api:(path,body)=>api(path.slice('/plants'.length),body)}));
     }
     if (focus && dashboard) $(tab + '-heading').focus();
   }
@@ -153,6 +163,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
 
   function renderTree() {
     const p = selected();
+    fieldReport.selectTree(p);
     $('update-plant').value = p?.key || '';
     $('tree-work').hidden = !p; $('tree-picker').open = !p;
     $('picker-label').textContent = p ? 'Change tree' : 'Choose a tree';
@@ -298,8 +309,8 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     }
   }
   function renderRequests() {
-    const cards = [], inbox = [];
-    if (dashboard.role === 'farmer') { $('adoption-events').replaceChildren(); $('questions').replaceChildren(); $('applications').replaceChildren(); return; }
+    const cards = [];
+    if (dashboard.role === 'farmer') { $('adoption-events').replaceChildren(); $('applications').replaceChildren(); return; }
     const available = dashboard.plants.filter(item => item.status === 'available' && item.stage !== 1);
     for (const application of dashboard.applications) {
       const box = element('article',null,'request'), assigned = plant(application.plantKey);
@@ -347,23 +358,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     });
     $('adoption-history').hidden = !events.length;
     $('adoption-events').replaceChildren(...events);
-    for (const item of dashboard.questions) {
-      const box = element('article',null,'request'), app = dashboard.applications.find(a => a.id === item.applicationId);
-      box.append(element('p',app?.schoolName || 'School question','eyebrow'),element('p',item.question));
-      if (item.answer) box.append(element('p','Farm reply · ' + item.answer,'hint'));
-      else {
-        const form = element('form'), field = element('textarea'); field.id = 'answer-' + item.id; field.required = true; field.maxLength = 800; field.rows = 2;
-        const button = element('button','Send private reply'); button.type = 'submit';
-        form.append(formLabel('Private reply to the class',field),field,button);
-        form.addEventListener('submit',e => { e.preventDefault();
-          if (!field.value.trim()) { field.focus(); return; }
-          run(async () => { await api('/answer',{questionId:item.id,answer:field.value.trim()}); await reload('Reply saved in the class portal.'); });
-        }); box.append(form);
-      }
-      inbox.push(box);
-    }
     $('applications').replaceChildren(...(cards.length ? cards : [element('p','No school applications yet.','quiet-state')]));
-    $('questions').replaceChildren(...(inbox.length ? inbox : [element('p','No class questions yet.','quiet-state')]));
   }
 
   $('register-form').addEventListener('submit',event => {

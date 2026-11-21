@@ -107,3 +107,94 @@
 .plant-activity{border-top:1px solid #9eac99;margin-top:.8rem}.plant-weather{margin:.65rem 0 0}.plant-source-links{font-size:.85rem}
 .plant-classroom>.plant-learning{grid-column:1/-1}
 @media(max-width:540px){.plant-org-nav{display:block}.plant-org-links{gap:.5rem 1rem}.plant-tree-switch{display:grid}.plant-member-list .edu-actions{align-items:stretch}}
+
+.plant-message-panel{margin:1.5rem 0;padding:clamp(1rem,3vw,1.75rem);background:#fffdf7;border:1px solid #d9dfd0;border-radius:.8rem;color:#3b332d}
+.plant-message-panel h2,.plant-message-panel h3{color:#2f4a3c}.plant-message-panel p{max-width:68ch}
+.thread-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;margin:.7rem 0}
+.thread-list{list-style:none;margin:1rem 0;padding:0}.thread-list li{display:grid;justify-items:start;gap:.2rem;padding:.65rem 0;border-top:1px solid #d9dfd0}
+.thread-list li button{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+.plant-message-panel .thread-check{display:flex;align-items:center;gap:.6rem;min-height:44px;cursor:pointer;font-weight:400}
+.plant-message-panel .thread-check input{margin:0;width:1.15rem;height:1.15rem;min-height:0;flex:none;accent-color:#2f4a3c}
+.thread-form{margin:1rem 0}.thread-form>label:first-child,.thread-form textarea{display:block;width:100%}.thread-form textarea{margin:.35rem 0}
+.thread-body{white-space:pre-wrap;overflow-wrap:anywhere}.thread-message{border-left:3px solid #9cae95;padding:.65rem 1rem;margin:.85rem 0;background:#f5f1e8}.thread-message.from-farm{border-color:#2f4a3c;background:#e8ece2}
+.thread-message small{display:block}.thread-status:empty{display:none}
+
+/* Signed-in class plant field report. */
+.plant-journal{max-width:1120px}
+.plant-journal h2,.field-download-grid h2,.plant-workshop-shelf h2{font-family:var(--edu-serif);font-weight:400;line-height:1.12}
+.plant-journal .plant-tree-switch{margin:.4rem 0 .85rem}
+.field-cover{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(10rem,.7fr);background:var(--edu-green);color:var(--edu-ivory);border:1px solid var(--edu-green);border-radius:1rem;overflow:hidden}
+.field-cover-photo{grid-template-columns:minmax(260px,1.25fr) minmax(9rem,.54fr) minmax(0,1.22fr)}
+.field-cover-intro{padding:clamp(1.25rem,3vw,2.4rem);align-self:center;min-width:0}
+.field-cover-intro .edu-kicker{color:var(--edu-sage);margin:0 0 .3rem}
+.field-cover-intro h1{font:400 clamp(3.6rem,7vw,6.4rem)/1 var(--edu-serif);letter-spacing:-.055em;margin:0;color:var(--edu-ivory)}
+.field-stage-name{font-weight:700;color:var(--edu-sage);font-size:.96rem;margin:.65rem 0}
+.field-current-condition{font-size:1.02rem;line-height:1.45;margin:.3rem 0;overflow-wrap:anywhere}
+.field-condition-byline{font-size:.78rem;color:var(--edu-sage);margin:0}
+.field-cover .edu-actions{margin:1rem 0 0}
+.field-cover .edu-button{border-color:var(--edu-ivory);background:var(--edu-ivory);color:var(--edu-green)!important}
+.field-cover .edu-button-secondary{background:transparent;color:var(--edu-ivory)!important}
+.field-cover .edu-button:hover{background:var(--edu-sage);color:var(--edu-green)!important}
+.field-cover .edu-button:focus-visible{outline:3px solid white;outline-offset:3px}
+.field-stage-plate,.field-cover-camera{margin:0;min-width:0;background:#ecebda;color:var(--edu-green)}
+.field-stage-plate{display:grid;align-content:center;justify-items:center;padding:1rem clamp(.7rem,2vw,1.3rem);text-align:center}
+.field-stage-plate svg{display:block;width:100%;max-width:220px;height:clamp(140px,18vw,210px)}
+.field-stage-plate figcaption,.field-cover-camera figcaption{font-size:.72rem;font-weight:700;line-height:1.4}
+.field-photo-pending{font-size:.75rem;margin:.2rem 0 0}
+.field-cover-camera{display:flex;flex-direction:column;justify-content:center;background:var(--edu-ivory);border-left:1px solid var(--edu-sage)}
+.field-cover-camera img{display:block;width:100%;height:clamp(160px,20vw,250px);object-fit:contain}
+.field-cover-camera figcaption{padding:.45rem .65rem;border-top:1px solid var(--edu-sage)}
+.field-context-grid,.field-download-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:clamp(.9rem,2vw,1.4rem);margin:1.1rem 0 1.5rem}
+.field-context-grid>section,.field-download-grid>section,.plant-panel>.plant-workshop-shelf{margin:0;min-width:0;border:1px solid var(--edu-sage);border-radius:.8rem;padding:clamp(1rem,2vw,1.6rem)}
+.plant-panel>.plant-workshop-shelf{margin:1.25rem 0}
+.field-context-grid h2,.field-download-grid h2,.plant-workshop-shelf h2{font-size:clamp(1.5rem,2.5vw,2rem);margin:0 0 1rem}
+.field-facts,.field-weather-readings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1.1rem;margin:0}
+.field-fact{border-top:1px solid var(--edu-sage);padding-top:.4rem;min-width:0}
+.field-fact dt{font-size:.74rem;color:var(--edu-green);font-weight:700}
+.field-fact dd{margin:.15rem 0 0}
+.field-fact .field-fact-source{font-size:.76rem;color:#435747}
+.field-weather-panel{background:#eef0e8}
+.field-weather-readings dd{font:400 clamp(1.2rem,2vw,1.65rem)/1.3 var(--edu-serif)}
+.field-weather-content>.edu-small,.field-weather-content>div>.edu-small{margin:.7rem 0 0}
+.field-weather-content a,.field-text-action{color:var(--edu-green);text-decoration:underline;text-underline-offset:.14em}
+.field-text-action{background:transparent;border:0;min-height:44px;font:inherit;cursor:pointer}
+.field-download-list{list-style:none;margin:0;padding:0}
+.field-download-list li{border-top:1px solid var(--edu-sage);padding:.25rem 0;min-width:0}
+.field-download-list .edu-small{margin:0 0 .45rem}
+.field-download{display:flex;justify-content:space-between;align-items:center;gap:1rem;min-height:44px;color:var(--edu-green);text-decoration:underline;text-underline-offset:.2rem;font-weight:700}
+.field-file-meta{font-size:.77rem;font-weight:400;white-space:normal;text-align:right}
+.plant-field-companions{display:grid;grid-template-columns:minmax(130px,235px) minmax(0,1fr);align-items:center;gap:clamp(1rem,3vw,2.5rem);background:#f9f6ee;border:1px solid var(--edu-sage);border-radius:.8rem;overflow:hidden;margin:1.5rem 0}
+.plant-field-companions img{width:100%;height:auto;object-fit:contain}
+.plant-field-companions>div{padding:.8rem 1.2rem .8rem 0}
+.plant-field-companions h2{margin:.1rem 0 .35rem;font-size:clamp(1.5rem,2.5vw,2.1rem)}
+.plant-field-companions p{margin:.2rem 0}
+@media(max-width:760px){
+ .field-cover-photo{grid-template-columns:minmax(0,1.35fr) minmax(6rem,.65fr)}
+ .field-cover-camera{grid-column:1/-1;border:0}
+ .field-cover-camera img{height:clamp(135px,40vw,240px)}
+ .field-context-grid,.field-download-grid{grid-template-columns:1fr}
+ .field-facts,.field-weather-readings{gap:.55rem 1rem}
+ .field-cover .edu-actions{flex-direction:column;align-items:stretch;max-width:14rem}
+ .field-cover .edu-button{text-align:center;justify-content:center}
+ .field-cover-intro{padding:1rem}
+ .field-cover{grid-template-columns:minmax(0,1.5fr) minmax(6rem,.7fr)}
+ .field-stage-plate svg{height:110px}
+ .plant-field-companions{grid-template-columns:minmax(90px,.7fr) minmax(0,1.3fr);gap:.7rem}
+ .plant-field-companions>div{padding:.8rem .6rem .8rem 0}
+}
+.field-shortcuts{display:flex;align-items:center;flex-wrap:wrap;gap:0 1.15rem;padding:0 .15rem;border-bottom:1px solid var(--edu-sage)}
+.field-shortcuts button{border:0;border-radius:0;background:none;color:var(--edu-green);font:600 .86rem var(--edu-sans);text-decoration:underline;text-underline-offset:.23em;min-height:44px;padding:.4rem .1rem;cursor:pointer}
+@media(max-width:540px){.field-shortcuts{gap:0 .75rem}.field-shortcuts button{font-size:.79rem}}
+
+[data-plant-view="teacher"] .edu-app-header{padding-block:.65rem}
+[data-plant-view="teacher"] .edu-brand{width:155px}
+[data-plant-view="teacher"] .edu-app-main{padding-top:1.2rem}
+.plant-journal .plant-org-nav{margin-bottom:.8rem;padding:.3rem 0}
+@media(max-width:640px){
+ [data-plant-view="teacher"] .edu-app-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem}
+ [data-plant-view="teacher"] .edu-brand{width:120px;margin:0}
+ [data-plant-view="teacher"] .edu-account-tools{margin:0;max-width:45vw;overflow-wrap:anywhere;font-size:.85rem}
+ [data-plant-view="teacher"] .edu-app-main{padding-top:.65rem}
+ .plant-journal .plant-org-nav{margin-bottom:.55rem;padding:.15rem 0}
+ .plant-journal .plant-org-nav a{display:inline-flex;align-items:center;padding:.2rem 0;min-height:44px}
+}

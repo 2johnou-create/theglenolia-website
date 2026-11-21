@@ -92,9 +92,10 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  const url=new URL(request.url),path=url.pathname;
  const owner=identityEmail.toLowerCase()===configuredOwner.toLowerCase();
  const farmerPages=['/plants','/plants/','/plants/farmer.js','/plants/farmer.css','/assets/logos/logo-compact-web.svg','/assets/fonts/en-sans.woff2','/assets/fonts/en-serif.woff2'];
- const farmerAPI=/^\/api\/education\/plants\/(?:dashboard|journal|row|stage|verify|availability|update|withdraw-update|photos\/[a-f0-9-]{36})$/;
+ const farmerAPI=/^\/api\/education\/plants\/(?:dashboard|journal|row|stage|verify|availability|update|withdraw-update|field-report|fertiliser|threads(?:\/reply)?|photos\/[a-f0-9-]{36})$/;
+ const schoolFileRoute=/^\/api\/education\/plants\/recognition(?:\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\/(?:certificate\.pdf|feed\.png|story\.png|landscape\.png|captions\.txt))?$/.test(path);
  const permittedFarmer=typeof env.FARMER_EMAILS==='string'&&env.FARMER_EMAILS.toLowerCase().split(',').map(email=>email.trim()).includes(identityEmail.toLowerCase());
- if(!owner&&!(permittedFarmer&&(farmerPages.includes(path)||farmerAPI.test(path))))return json(403,{error:'owner_required'});
+ if(!owner&&!(permittedFarmer&&(farmerPages.includes(path)||farmerAPI.test(path)||(request.method==='GET'&&schoolFileRoute))))return json(403,{error:'owner_required'});
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
@@ -115,7 +116,15 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
   const target=new URL('https://education/internal/admin/'+path.slice('/api/education/'.length));
   target.search=url.search;
   const upstream=new Request(target,{method:request.method,headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.EDUCATION_STAFF_TOKEN,...(path.startsWith('/api/education/plants/')?{'X-Glenolia-Plant-Role':owner?'owner':'farmer','X-Glenolia-Staff-Email':identityEmail}:{})},...(request.method==='POST'?{body:request.body,duplex:'half'}:{})});
-  try{const response=await env.EDUCATION.fetch(upstream);return new Response(response.body,{status:response.status,headers:{...headers,'Content-Type':response.headers.get('Content-Type')||'application/json'}});}catch{return json(503,{error:'education_unavailable'});}
+  try {
+   const response=await env.EDUCATION.fetch(upstream);
+   const proxyHeaders=new Headers(headers);
+   proxyHeaders.set('Content-Type',response.headers.get('Content-Type')||'application/json');
+   if(schoolFileRoute && response.ok && response.headers.has('Content-Disposition')) {
+    proxyHeaders.set('Content-Disposition',response.headers.get('Content-Disposition'));
+   }
+   return new Response(response.body,{status:response.status,headers:proxyHeaders});
+  } catch {return json(503,{error:'education_unavailable'});}
  }
  if(request.method==='GET'&&(/^\/education-assets\/teacher-ui\.(?:js|css)$/.test(path)||/^\/assets\/education\/[a-z-]+\.webp$/.test(path)||/^\/assets\/education\/stories\/sl(?:0[1-9]|[12][0-9]|3[0-9]|40)\.(?:webp|jpg)$/.test(path)||path==='/teachers/story-library.json'||/^\/assets\/fonts\/en-(?:sans|serif)\.woff2$/.test(path)||path==='/assets/logos/logo-compact-web.svg')){
   if(!env.EDUCATION)return json(503,{error:'education_unavailable'});

@@ -238,6 +238,42 @@ the private education service.
 The classroom endpoint omits teacher details and private questions. Private photo
 responses are authenticated and use no-store caching.
 
-Farm work opens at `/plants` on the existing Cloudflare Access admin service. The existing owner can verify tags, post or withdraw observations, review school applications and answer class questions. For a named additional farmer, configure their exact sign-in email in the admin Worker's optional comma-separated `FARMER_EMAILS` variable and allow that same identity in the existing Cloudflare Access application. Register only identities authorised by the owner. Both checks are required. A farmer can read the map and plant journals, verify tags, change availability, post photos/notes and withdraw an erroneous entry. School applications, questions, education administration and campaign data stay owner-only. Passwords, service tokens and personal email lists belong in private configuration.
+Farm work opens at `/plants` on the existing Cloudflare Access admin service. The existing owner can verify tags, post or withdraw observations, review school applications and answer class questions. For a named additional farmer, configure their exact sign-in email in the admin Worker's optional comma-separated `FARMER_EMAILS` variable and allow that same identity in the existing Cloudflare Access application. Register only identities authorised by the owner. Both checks are required. A farmer can read the map and plant journals, verify tags, change availability, post photos/notes and withdraw an erroneous entry. Application decisions, education administration and campaigns stay owner-only. Approved farmers receive the class conversation and the tree and school identifiers used for educational recognition files. Passwords, service tokens and personal email lists belong in private configuration.
 
 The admin normalises a phone image before submitting an update. The Worker accepts a single metadata-free JPEG or WebP of up to 300 KiB and 1,600 pixels on its longest edge. Note and photo share one atomic database write. Reusing the same update ID after a network interruption returns the previous successful result. The staff member can withdraw an erroneous update and its photo. Educators see dated records for their assigned plant only.
+
+
+## Field reports, private conversations and classroom materials
+
+The signed-in Plant Portal opens on the selected adoption. A dated grower photograph
+and a stage illustration are separate views. The report uses records for its
+permanent tree ID. In **Field updates**, farmers open **Growing conditions & fertiliser**,
+then select **Whole farm** or the individual tree. A blank per-tree field inherits
+the farm entry. Fields without either source remain visibly unrecorded. The
+fertiliser history records a date and whether the entry applied to the farm or
+one tree. Weather is regional and carries its source and timestamps.
+
+Each school conversation belongs to the adoption. Authorised teachers can
+start a question, add replies and choose whether they personally follow it
+by email. Farmers open **Class messages** in their workspace to answer. The email link
+opens the teacher portal, and recipients can stop following that conversation.
+Classroom projection excludes private conversations. The next school cannot
+read the outgoing school's messages.
+
+Three protected classroom workshops provide print worksheets and teacher
+notes. The private classroom asset directory must be staged before publishing
+the education Worker. Serve files through the authenticated workshop routes.
+The recognition archive issues a certificate and school social files based on
+the accepted school/tree record. Each school chooses whether to share its
+copies. Farmers can search **School files** by school name or plant number. Staff copies of the templates and
+fictional examples are maintained separately from school records.
+
+For existing production databases, apply `plant-field-report-schema.sql`,
+`plant-threads-schema.sql`, `plant-thread-mail-schema.sql` and
+`plant-recognition-schema.sql` after the education, plant, atlas, organisation,
+weather and notification baseline. Save a D1 recovery bookmark and compare
+the record totals before and after the migration. Deploy the newsletter relay
+before the education service so it recognises thread-reply notices. Bundle
+both teacher and farmer entry points with their module dependencies and stage
+the private workshop and recognition assets. The admin proxy forwards download
+filenames only on the protected recognition routes.

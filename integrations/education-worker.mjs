@@ -1,3 +1,4 @@
+import {plantWorkshopManifest,servePlantWorkshop} from './plant-workshops.mjs';
 import {publicPlantWeather} from './plant-weather.mjs';
 import {EducationError,json,fail,readBody,loadActor,requireCSRF,secureEqual,SECURITY,all,nowISO} from './education-common.mjs';
 import {authRoutes} from './education-auth.mjs';
@@ -47,6 +48,9 @@ export async function handleEducation(request,env,ctx={}){
    if(path==='/api/teacher/preferences')return await preferencesRoute(request,env,actor,body);
    if(path.startsWith('/api/plants/')){
     await requireTeacherConsent(env.EDU_DB,actor.id);
+    if(path==='/api/plants/workshops' && request.method==='GET') return json({workshops:plantWorkshopManifest});
+    const workshop=path.match(/^\/api\/plants\/workshops\/([a-z0-9-]+)\.pdf$/);
+    if(workshop && ['GET','HEAD'].includes(request.method)) return await servePlantWorkshop(request,env,workshop[1]);
     return await teacherPlantRoutes(request,env,path,actor,body);
    }
    return await workspaceRoutes(request,env,path,actor,body)||json({error:'not_found'},404);

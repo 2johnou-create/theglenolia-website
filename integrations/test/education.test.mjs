@@ -61,7 +61,7 @@ const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.met
 function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
-  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql'])
+  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql'])
    this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
  }
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
@@ -455,4 +455,129 @@ test('withdrawal protects the held tree, then releases it while distinct school 
  assert.equal((await me(f.b)).updates.length,0);
  const kept=await f.db.prepare('SELECT note,length(photo_bytes) AS photoSize FROM edu_plant_updates WHERE id=?').bind(render.requestId).first();
  assert.equal(kept.note,render.note);assert.ok(kept.photoSize>0);
+});
+
+test('field report keeps unknowns blank, marks inherited field values, and finds an older actual photograph beneath newer notes',async t=>{
+  const f=await fixture(t);
+  f.db.sql.exec(readFileSync(new URL('../plant-field-report-schema.sql',import.meta.url),'utf8'));
+  const key='r1-p7', app=await approvePlant(f), path='/api/plants/field-report?applicationId='+app;
+  const read=async()=>code(await f.req(path,{actor:f.a}),200);
+  const empty=await read();
+  assert.deepEqual(empty.plant,{key,label:'P7',row:1,position:7,stage:2});
+  assert.ok(Object.values(empty.fields).every(v=>v===null));assert.equal(empty.latestPhoto,null);
+  assert.equal(empty.lastFertiliser,null);assert.equal(empty.latestObservation,null);
+  await code(await f.req(path),401);
+  await code(await f.req(path,{actor:f.b}),404);
+  const farm={key:'farm',revision:0,values:{soil:'Sandy loam',condition:'General orchard note',soilPh:6.3}};
+  await code(await f.staff('/plants/field-report',farm),200);
+  await code(await f.staff('/plants/field-report',{...farm,values:{soil:'Other'}}),409);
+  await code(await f.staff('/plants/field-report',farm),200);
+  const tree={key,revision:0,values:{variety:'Record checked in field',condition:'Fresh pair of leaves',soilPh:0}};
+  await code(await f.staff('/plants/field-report',tree),200);
+  const data=await read();
+  assert.equal(data.fields.soil.value,'Sandy loam');assert.equal(data.fields.soil.scope,'farm');
+  await code(await f.staff('/plants/field-report',{...farm,revision:1,values:{...farm.values,growerFocus:'Watch the new leaves'}}),200);
+  assert.equal((await read()).fields.soil.recordedAt,data.fields.soil.recordedAt,'A new classroom prompt must not re-date an existing soil record');
+  assert.equal(data.fields.condition.value,'Fresh pair of leaves');assert.equal(data.fields.condition.scope,'plant');
+  assert.equal(data.fields.soilPh.value,0);
+  const update={key,observedOn:'2026-01-01',note:'Photo from January',photo:fixturePhoto,requestId:uuid()};
+  await code(await f.staff('/plants/update',update),200);
+  await code(await f.staff('/plants/update',{key,observedOn:'2026-02-01',note:'Newer field note',requestId:uuid()}),200);
+  const current=await read();assert.equal(current.latestPhoto.id,update.requestId);assert.equal(current.latestObservation.note,'Newer field note');
+  assert.equal((await f.req(current.latestPhoto.photoUrl,{actor:f.a})).status,200);
+  assert.equal((await f.req(current.latestPhoto.photoUrl,{actor:f.b})).status,404);
+  await code(await f.staff('/plants/withdraw-update',{updateId:update.requestId}),200);
+  assert.equal((await read()).latestPhoto,null);
+  await code(await f.staff('/plants/field-report',{key,revision:1,values:{}}),200);
+  assert.equal((await read()).fields.condition.scope,'farm');
+  assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_plant_field_profiles WHERE scope_key=?').bind(key).first()).n,2);
+  const profile=await code(await f.staff('/plants/field-report?key='+key),200);
+  assert.equal(profile.revision,2);assert.equal(profile.inherited.soil,'Sandy loam');
+  assert.equal((await f.req('/api/plants/map')).status,200);
+  assert.ok(!JSON.stringify(await (await f.req('/api/plants/map')).json()).includes('Sandy loam'));
+});
+test('fertiliser logs distinguish farm and tree, retain corrections, and scope access to a current adoption',async t=>{
+  const f=await fixture(t);
+  f.db.sql.exec(readFileSync(new URL('../plant-field-report-schema.sql',import.meta.url),'utf8'));
+  const key='r1-p7', app=await approvePlant(f), other='r2-p2';
+  await approvePlant(f,f.b,other);
+  const path='/api/plants/field-report?applicationId='+app;
+  const read=async()=>code(await f.req(path,{actor:f.a}),200);
+  await code(await f.staff('/plants/field-report',{key:'r1-p8',revision:0,values:{}}),404);
+  for (const values of [{soilPh:14.1},{soilPh:'7'},{plantedOn:'2099-01-01'},{plantedOn:'2025-02-30'}]) {
+    await code(await f.staff('/plants/field-report',{key,revision:0,values}),400);
+  }
+  const event={key:'farm',id:uuid(),observedOn:'2026-02-01',description:'Applied farm compost'};
+  await code(await f.staff('/plants/fertiliser',event),200);
+  await code(await f.staff('/plants/fertiliser',event),200);
+  await code(await f.staff('/plants/fertiliser',{...event,description:'Different record'}),409);
+  await code(await f.staff('/plants/fertiliser',{...event,id:uuid(),observedOn:'2099-05-01'}),400);
+  const sameDay={...event,id:uuid(),key,description:'Individual row observation'};
+  await code(await f.staff('/plants/fertiliser',sameDay),200);
+  await code(await f.staff('/plants/fertiliser',{...event,id:uuid(),key:other,description:'Private other tree record'}),200);
+  let data=await read();
+  assert.equal(data.lastFertiliser.description,sameDay.description);
+  assert.deepEqual(data.fertiliserHistory.map(e=>e.scope),['plant','farm']);
+  await code(await f.staff('/plants/fertiliser',{action:'withdraw',id:sameDay.id,key:other,reason:'Wrong scope'}),409);
+  const withdrawal={action:'withdraw',id:sameDay.id,key,reason:'Applied to another tree'};
+  await code(await f.staff('/plants/fertiliser',withdrawal),200);
+  await code(await f.staff('/plants/fertiliser',withdrawal),200);
+  data=await read();assert.equal(data.fertiliserHistory.length,1);assert.equal(data.lastFertiliser.scope,'farm');
+  assert.equal((await f.db.prepare('SELECT withdrawal_reason FROM edu_plant_fertiliser WHERE id=?').bind(sameDay.id).first()).withdrawal_reason,withdrawal.reason);
+  await f.db.prepare("UPDATE edu_plant_applications SET status='cooling',release_at='2020-01-01T00:00:00Z',withdrawal_reason='Fixture only' WHERE id=?").bind(app).run();
+  await code(await f.req(path,{actor:f.a}),404);
+});
+
+test('school conversation keeps replies, follows and farmer inbox scoped to the current care period',async t=>{
+ const f=await fixture(t),applicationId=await approvePlant(f),threadId=uuid();
+ const root={applicationId,requestId:threadId,question:'Which leaves open first?',consent:true,follow:true};
+ const api='/api/plants/threads',reader=api+'?applicationId='+applicationId+'&threadId='+threadId;
+ await code(await f.post(api+'/open',root,f.a),200);
+ await code(await f.post(api+'/open',root,f.a),200);
+ await code(await f.post(api+'/open',{...root,question:'Something else'},f.a),409);
+ let detail=await code(await f.req(reader,{actor:f.a}),200);
+ assert.equal(detail.thread.following,true);assert.equal(detail.thread.question,root.question);
+ await code(await f.req(reader,{actor:f.b}),404);
+ await code(await f.req(reader),401);
+ const {handleAdmin}=await import('../admin-worker.mjs');
+ const env={ACCESS_AUD:'education-test-audience',ADMIN_EMAIL:'owner@example.test',FARMER_EMAILS:'field@example.test',EDUCATION_STAFF_TOKEN:f.env.STAFF_TOKEN,EDUCATION:{fetch:r=>handleEducation(r,f.env)}};
+ const staffRoute=(path,body)=>handleAdmin(adminReq('/api/education/plants/threads'+path,body?{method:'POST',body}:{}),env,access('field@example.test'));
+ const listing=await code(await staffRoute(''),200);
+ assert.equal(listing.threads[0].id,threadId);assert.equal(listing.threads[0].lastSide,'school');
+ assert.ok(!JSON.stringify(listing).includes(f.a.user.email));assert.ok(!JSON.stringify(listing).includes(f.a.schoolId));
+ const answer={threadId,requestId:uuid(),body:'Look at the tip of the stem.'};
+ await code(await staffRoute('/reply',answer),200);await code(await staffRoute('/reply',answer),200);
+ await code(await staffRoute('/reply',{...answer,body:'different'}),409);
+ assert.equal((await f.db.prepare('SELECT count(*) AS n FROM edu_plant_thread_mail_outbox').first()).n,1);
+ const q=await f.db.prepare('SELECT answer,answered_by FROM edu_plant_questions WHERE id=?').bind(threadId).first();
+ assert.equal(q.answer,answer.body);assert.equal(q.answered_by,'field@example.test');
+ const note={applicationId,threadId,requestId:uuid(),body:'We compared the two leaf pairs.',consent:true};
+ await code(await f.post(api+'/reply',note,f.b),404);
+ await code(await f.post(api+'/reply',note,f.a),200);
+ await code(await f.post(api+'/reply',{...note,requestId:uuid(),consent:false},f.a),400);
+ detail=await code(await f.req(reader,{actor:f.a}),200);
+ assert.deepEqual(detail.messages.map(m=>m.side),['farm','school']);
+ assert.ok(!JSON.stringify(detail).includes('field@example.test'));
+ await code(await f.post(api+'/follow',{applicationId,threadId,follow:false},f.a),200);
+ assert.equal((await f.db.prepare('SELECT state FROM edu_plant_thread_mail_outbox').first()).state,'cancelled');
+ await code(await staffRoute('/reply',{...answer,requestId:uuid(),body:'Keep watching next week.'}),200);
+ assert.equal((await f.db.prepare('SELECT count(*) AS n FROM edu_plant_thread_mail_outbox').first()).n,1);
+ await f.db.prepare("UPDATE edu_plant_applications SET status='cooling',release_at=?,withdrawal_reason='Class finished' WHERE id=?")
+  .bind('2020-01-01T00:00:00.000Z',applicationId).run();
+ await code(await f.req(reader,{actor:f.a}),404);await code(await staffRoute('/reply',{...answer,requestId:uuid()}),404);
+ assert.equal((await code(await staffRoute(''),200)).threads.length,0);
+});
+
+test('legacy replies and new messages coexist without sending historic email; message pages retain same-time replies',async t=>{
+ const f=await fixture(t),applicationId=await approvePlant(f),threadId=uuid(),detailPath='/api/plants/threads?applicationId='+applicationId+'&threadId='+threadId;
+ await code(await f.post('/api/plants/question',{applicationId,requestId:threadId,question:'Old class question',consent:true},f.a),200);
+ await code(await f.staff('/plants/answer',{questionId:threadId,answer:'Old farm reply'}),200);
+ f.db.sql.exec(readFileSync(new URL('../plant-threads-schema.sql',import.meta.url),'utf8'));
+ assert.equal((await f.db.prepare('SELECT count(*) AS n FROM edu_plant_thread_messages WHERE thread_id=?').bind(threadId).first()).n,1);
+ assert.equal((await f.db.prepare('SELECT count(*) AS n FROM edu_plant_thread_mail_outbox').first()).n,0);
+ for(let i=0;i<35;i++)await f.db.prepare("INSERT INTO edu_plant_thread_messages VALUES(?,?,'school',?,'fixture','2026-01-01T00:00:00Z')").bind(uuid(),threadId,'Observation '+i).run();
+ const latest=await code(await f.req(detailPath,{actor:f.a}),200),previous=await code(await f.req(detailPath+'&before='+latest.nextBefore,{actor:f.a}),200);
+ assert.equal(latest.messages.length,30);assert.equal(previous.messages.length,6);
+ assert.equal(new Set([...previous.messages,...latest.messages].map(m=>m.id)).size,36);
+ assert.equal(previous.nextBefore,null);
 });

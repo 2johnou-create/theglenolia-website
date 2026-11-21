@@ -84,3 +84,28 @@ details{margin:1.5rem 0}summary{cursor:pointer;color:var(--green);padding:.75rem
 .posted-result p{margin:0;color:var(--green);font-weight:700}
 .posted-result button{margin-top:.45rem;background:#fffdf8}
 #tree-picker[open] ~ #tree-work{display:none}
+
+#agronomy{max-width:54rem}.agronomy-body{padding:0 1rem 1rem}.agronomy-body label{display:block;font-weight:650;color:var(--green)}
+.agronomy-body details{margin:.6rem 0}.agronomy-body details summary{padding:.55rem 0;min-height:44px}
+.agronomy-body fieldset{margin:0;padding:0;border:0}.ag-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.1rem 1rem}
+.ag-fields input,.ag-fields textarea{font-weight:400;margin:0 0 .65rem}
+#ag-result:empty,#ag-inherited:empty{display:none}#ag-feed-history article{border-top:1px solid var(--sage);margin-top:1rem;padding-top:.5rem}
+.ag-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+@media(max-width:680px){.ag-fields{grid-template-columns:1fr}}
+
+.plant-message-panel{margin:1.5rem 0;padding:clamp(1rem,3vw,1.75rem);background:#fffdf7;border:1px solid #d9dfd0;border-radius:.8rem;color:#3b332d}
+.plant-message-panel h2,.plant-message-panel h3{color:#2f4a3c}.plant-message-panel p{max-width:68ch}
+.thread-actions{display:flex;align-items:center;flex-wrap:wrap;gap:.65rem;margin:.7rem 0}
+.thread-list{list-style:none;margin:1rem 0;padding:0}.thread-list li{display:grid;justify-items:start;gap:.2rem;padding:.65rem 0;border-top:1px solid #d9dfd0}
+.thread-list li button{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:start}
+.plant-message-panel .thread-check{display:flex;align-items:center;gap:.6rem;min-height:44px;cursor:pointer;font-weight:400}
+.plant-message-panel .thread-check input{margin:0;width:1.15rem;height:1.15rem;min-height:0;flex:none;accent-color:#2f4a3c}
+.thread-form{margin:1rem 0}.thread-form>label:first-child,.thread-form textarea{display:block;width:100%}.thread-form textarea{margin:.35rem 0}
+.thread-body{white-space:pre-wrap;overflow-wrap:anywhere}.thread-message{border-left:3px solid #9cae95;padding:.65rem 1rem;margin:.85rem 0;background:#f5f1e8}.thread-message.from-farm{border-color:#2f4a3c;background:#e8ece2}
+.thread-message small{display:block}.thread-status:empty{display:none}
+
+#school-files{max-width:54rem}#school-files-search{margin:.4rem 0 1rem}
+#school-files-list details{margin:.45rem 0;background:#fffdf8;border:1px solid var(--sage);border-radius:.6rem;padding:0 .9rem}
+#school-files-list summary{min-height:44px;overflow-wrap:anywhere;font-weight:650}
+#school-files-list ul{margin:0 0 .6rem;padding-left:1.2rem}
+#school-files-list a{display:inline-flex;align-items:center;min-height:44px}
