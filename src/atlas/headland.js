@@ -1,5 +1,6 @@
 import * as T from 'three';
 import { paintedMaterial, placeRelief, reliefGeometry } from './relief.js';
+import { pitch } from './orchard.js';
 import { timberGate } from './models.js';
 
 // Each prop has an independent footprint, depth, silhouette and contact shadow.
@@ -16,6 +17,7 @@ export async function createHeadland(assetPath) {
   const textures = await Promise.all(props.map(p=>loader.loadAsync(assetPath+'/world/'+p.name+'.webp')));
   const materials=textures.map(paintedMaterial);
   const gate=timberGate();
+  gate.position.z=pitch*1.5-10.5;
   gate.castShadow=true; root.add(gate);
   let worker;
   props.forEach((p,i)=>{

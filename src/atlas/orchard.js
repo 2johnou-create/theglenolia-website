@@ -2,7 +2,7 @@ import * as T from 'three';
 import { seeded } from './models.js';
 import { paintedMaterial, placeRelief, reliefGeometry } from './relief.js';
 
-export const pitch = 7;
+export const pitch = 8.4;
 // The illustrated sheet starts at the far side. Positive Z is nearer the reader.
 export const rowZ = row => (row - 2) * pitch;
 export const plantX = position => -20 + (position - 1) * 2.28;
@@ -87,10 +87,11 @@ export async function createOrchard(assetPath) {
     g.position.z = rowZ(index)-pitch/2;
     const specimens=[];
     for (let x=-20.9+rand()*.85;x<22;x+=5.7+rand()*2.5) {
-      const kind=Math.floor(rand()*4), width=2.8+rand()*2.65, z=(rand()-.5)*.85;
+      const kind=Math.floor(rand()*4), width=2.75+rand()*2.5, z=(rand()-.5)*.6;
       const ratio=textures[kind].image.width/textures[kind].image.height;
       const tree=new T.Mesh(relief,crowns[kind]);
-      placeRelief(tree,x,z,(rand()<.46?-1:1)*width,width/ratio,width*1.1);
+      const height=Math.min(width/ratio, index===1?5.7:4.55);
+      placeRelief(tree,x,z,(rand()<.46?-1:1)*height*ratio,height,width*1.1);
       tree.castShadow=true; g.add(tree);
       groundPlane(g,x+.32,.046,z-.13,width*.76,width*.52,shade);
       specimens.push({tree,x,z});

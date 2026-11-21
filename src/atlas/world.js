@@ -62,8 +62,9 @@ export async function createAtlasWorld({canvas,assets,project,contextLost}) {
     for(const [id,{lane}] of lanes)lane.visible=id>=start&&id<=end;
     for(const [id,{g,specimens}] of boundaries){
       g.visible=id>=start&&id<=end+1;
-      // Keep the two outer tree lines rooted inside the visible cutaway.
-      g.position.z=rowZ(id)-pitch/2+(id===end+1?-.67:1.25);
+      // Keep the magnolias behind the coffee in the oblique view. Pull the last
+      // tree line inside the clipped soil edge on the nearest visible row.
+      g.position.z=id===end+1?rowZ(end)+pitch/2-.67:rowZ(id)-1.38;
       for(const {tree,x} of specimens)tree.visible=!(focusPlant&&g.position.z>target.z&&Math.abs(x-target.x)<5.8);
     }
     for(const p of plants.values())p.mesh.visible=p.record.row>=start&&p.record.row<=end;
