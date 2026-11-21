@@ -52,15 +52,9 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a><a class="sub-link" href="#meet-farmer">Meet the Farmer <span aria-hidden="true">↓</span></a></div></div></section>
 <section class="explore shell" id="rows" aria-labelledby="rows-heading" tabindex="-1">
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
-<p>Explore the coffee plants among the established magnolias. Choose an open plant for your school or see which organisations are already growing with us.</p></div>
+<p>Choose a tree in the school pilot, or explore the magnolia lanes planned for autumn 2027.</p></div>
 <div id="row-app" hidden>
-<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary>
-<p>Choose a stage to explore what happens as a coffee plant grows.</p>
-<ol id="stage-plates" aria-label="Coffee growth stages"></ol>
-<div class="stage-detail" id="stage-detail" aria-live="polite"></div>
-<p class="stage-guide-note">Timing is a general guide and varies with variety, weather and growing conditions. The farmer records each plant’s actual stage and observations.</p>
-<p class="stage-sources">Learn more from <a href="https://agrifutures.com.au/product/australian-coffee-growers-manual/" target="_blank" rel="noopener noreferrer">the Australian Coffee Growers’ Manual</a>, <a href="https://varieties.worldcoffeeresearch.org/varieties/paraiso" target="_blank" rel="noopener noreferrer">World Coffee Research</a> and <a href="https://apps.cals.arizona.edu/arboretum/taxon.aspx?id=972" target="_blank" rel="noopener noreferrer">University of Arizona</a> and <a href="https://ucanr.edu/sites/default/files/2020-07/329593.pdf" target="_blank" rel="noopener noreferrer">University of California Agriculture and Natural Resources</a>.</p>
-</details>
+
 <div class="atlas-tools"><label for="row-jump"><span class="wide-label">Jump to </span>row</label><select id="row-jump" aria-label="Jump to row"></select>
 <span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button>
 <div class="farm-clock" aria-label="Glenorie local time"><span class="clock-face" aria-hidden="true"><i id="clock-hour"></i><i id="clock-minute"></i></span><div><span class="clock-place">Glenorie farm time</span><time id="farm-time">Sydney time</time></div></div></div>
@@ -68,12 +62,30 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <dl class="weather-readings"><div><dt>Air temperature</dt><dd id="wx-temp">—</dd></div><div><dt>Humidity</dt><dd id="wx-humidity">—</dd></div><div><dt>Wind</dt><dd id="wx-wind">—</dd></div><div><dt>Rain, next hour</dt><dd id="wx-rain">—</dd></div><div class="mean-reading"><dt>14-day avg. temp</dt><dd id="wx-mean-temp">—</dd></div><div><dt>14-day avg. rain</dt><dd id="wx-mean-rain">—</dd></div></dl>
 <details class="weather-notes"><summary>Weather details</summary><div><p id="wx-current-note">Loading the Glenorie area forecast…</p><p id="wx-history-note">Checking the last 14 complete local days…</p><p id="wx-source"></p></div></details></section>
 <div class="map-notice" id="map-notice" role="status"><span id="map-message">Loading the farmer’s planting map…</span><button type="button" id="retry-map" hidden>Try again</button></div>
-<figure class="atlas-sheet"><div id="art-notice" class="map-notice" role="status"><span id="art-message">Loading the orchard illustration…</span><button type="button" id="retry-art" hidden>Retry illustration</button></div>
+<figure class="atlas-sheet"><div id="estate-workspace"><div class="estate-map-column">
+<div id="world-scroll" role="region" tabindex="0" aria-label="3D estate map, scroll between rows" hidden>
+<div id="world-surface"><canvas id="world-canvas" aria-hidden="true"></canvas><div id="world-pins" aria-label="Plants on the map"></div>
+<div class="world-caption"><small id="world-area"></small><strong id="world-row"></strong></div>
+<button type="button" class="world-pause" id="world-pause" aria-label="Pause farm animation">Ⅱ</button>
+<div class="world-nav"><button type="button" id="world-back" hidden>← Back to rows</button><div id="world-pan" hidden><button type="button" id="world-prev" aria-label="Previous positions">←</button><span id="world-range"></span><button type="button" id="world-next" aria-label="Next positions">→</button></div></div></div><div class="world-distance" aria-hidden="true"></div></div><div id="art-notice" class="map-notice" role="status"><span id="art-message">Loading the orchard illustration…</span><button type="button" id="retry-art" hidden>Retry illustration</button></div>
 <div id="atlas-viewport" role="region" aria-label="Scrollable orchard map" aria-describedby="atlas-scroll-tip" tabindex="0"><div id="atlas-frame" data-art-state="loading"><picture><source id="mobile-art" media="(max-width:620px)" srcset="{assets}/estate-atlas-mobile.webp"><img id="estate-art" src="{assets}/estate-atlas.webp" width="1400" height="3332" alt="" loading="eager" decoding="async"></picture>
 <svg id="estate-map" viewBox="0 0 1000 2380" role="group" aria-labelledby="atlas-title atlas-desc">
 <title id="atlas-title">The Glenolia estate atlas</title><desc id="atlas-desc">A continuous illustrated orchard map. Explore individual planting positions in the plant list or use the arrow keys between them.</desc>
 <g id="atlas-row-labels" aria-hidden="true"></g><g id="atlas-plants" role="group" aria-label="Coffee planting positions"></g></svg></div></div>
+</div><aside id="estate-directory" aria-label="Field directory">
+<p class="eyebrow">Field directory</p><h3>Explore the rows</h3>
+<div class="estate-areas" role="group" aria-label="Planting area"><button id="pilot-area" type="button" aria-pressed="true">Pilot rows</button><button id="planned-area" type="button" aria-pressed="false">Autumn 2027</button></div>
+<div id="directory-rows" role="group" aria-label="Rows in this area"></div>
+<p id="directory-summary" role="status">Loading the planting register…</p>
+<div id="world-card-slot"></div><button class="future-invite" id="future-invite" type="button"><img src="{assets}/world/atlas-cover.webp" alt="" width="300" height="110" loading="lazy"><span>Explore the 2027 planting plan →</span></button><button id="view-toggle" type="button" hidden>Use illustrated map</button><small id="world-fallback" hidden>Illustrated map view</small></aside></div>
 <figcaption><span id="atlas-scroll-tip">Scroll the map to explore all 12 rows.</span><span>Rows 3–12 are in the autumn 2027 planting plan. The farm updates each row as work progresses.</span></figcaption></figure>
+<details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary>
+<p>Choose a stage to explore what happens as a coffee plant grows.</p>
+<ol id="stage-plates" aria-label="Coffee growth stages"></ol>
+<div class="stage-detail" id="stage-detail" aria-live="polite"></div>
+<p class="stage-guide-note">Timing is a general guide and varies with variety, weather and growing conditions. The farmer records each plant’s actual stage and observations.</p>
+<p class="stage-sources">Learn more from <a href="https://agrifutures.com.au/product/australian-coffee-growers-manual/" target="_blank" rel="noopener noreferrer">the Australian Coffee Growers’ Manual</a>, <a href="https://varieties.worldcoffeeresearch.org/varieties/paraiso" target="_blank" rel="noopener noreferrer">World Coffee Research</a> and <a href="https://apps.cals.arizona.edu/arboretum/taxon.aspx?id=972" target="_blank" rel="noopener noreferrer">University of Arizona</a> and <a href="https://ucanr.edu/sites/default/files/2020-07/329593.pdf" target="_blank" rel="noopener noreferrer">University of California Agriculture and Natural Resources</a>.</p>
+</details>
 <p class="map-key" id="map-adoption-key" hidden><span><i class="school-colour" aria-hidden="true">✓</i> Adopted</span><span><i class="cooling-colour" aria-hidden="true">◷</i> Release pending</span></p>
 <details class="school-register" id="school-register" hidden><summary id="school-register-title">School adoptions</summary><ul id="school-register-list"></ul></details>
 <a class="sub-link plain-apply" id="no-preference" href="{teacher}">Apply without a preference ↗</a>
@@ -99,6 +111,7 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div class="farmer-intro"><p class="eyebrow">The people behind the plants</p><h2 id="farmer-heading">Meet the Farmer</h2><p>Growing coffee is a journey of observation, care and shared knowledge.</p></div>
 <div class="farmer-layout">
 <figure class="farmer-photo"><img src="{assets}/meet-the-farmer.webp" width="1440" height="1080" loading="lazy" alt="Three people standing together among the magnolia rows at The Glenolia."><figcaption>At the farm in Glenorie</figcaption></figure>
+
 <div class="farmer-people">
 <article><p class="farmer-role">Program Director · Head of Coffee</p><h3>John Ou</h3><p>John leads the coffee-growing program and the school plant initiative at The Glenolia. He works with the farm team and plantation consultants to share the journey of growing coffee with students and the community.</p></article>
 <article><p class="farmer-role">Coffee plantation consultants</p><h3>David Peasley &amp; Jos Webber</h3><p>David and Jos advise The Glenolia on its coffee plantation planning and growing program. Both are co-authors of the <a href="https://agrifutures.com.au/product/australian-coffee-growers-manual/" target="_blank" rel="noopener noreferrer">Australian Coffee Growers’ Manual</a>, a resource for growers across Australia.</p></article>

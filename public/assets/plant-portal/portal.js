@@ -1,3 +1,4 @@
+import { mountEstateExplorer } from './estate-explorer.js';
 import { installFarmWeather } from './farm-weather.js';
 import { STAGE_NAMES } from './stages.js';
 import { setPlantIllustration } from './plant-illustration.js';
@@ -58,6 +59,13 @@ let artCheck = 0;
 let initialView = true;
 let previousMapWidth = 0;
 let previousMapTop = 0;
+const atlas = mountEstateExplorer({
+  assets,
+  inspect:plant=>showPosition(plant),
+  hover:plant=>{ if (!active || mode === 'hover') inspect(plant,'hover'); },
+  leave:()=>dismiss(), jump:row=>jump(row), attribution:shortAttribution,
+  ready:()=>{jumpList.disabled=!rows.length || (!atlas.enabled && frame.dataset.artState!=='ready');}
+});
 
 function showArtState(state) {
   frame.dataset.artState = state;
@@ -66,7 +74,7 @@ function showArtState(state) {
   byId('art-message').textContent = state === 'error'
     ? 'The orchard illustration could not be loaded. You can still explore positions in the plant list.'
     : 'Loading the orchard illustration…';
-  jumpList.disabled = !rows.length || state !== 'ready';
+  jumpList.disabled = !rows.length || (!atlas.enabled && state !== 'ready');
   if (state === 'ready' && initialView) {
     initialView = false;
     // Start in the pilot lanes; the hillside at the top is still reachable.
@@ -139,17 +147,19 @@ function rowLabelPoint(row) {
 function setRow(row) {
   currentRow = row;
   jumpList.value = String(row);
+  atlas.setRow(row);
 }
 function jump(row, worldY = rootPoint(row,10)[1]) {
   explicitRow = row;
   setRow(row);
-  if (frame.dataset.artState !== 'ready') return;
+  if (atlas.enabled || frame.dataset.artState !== 'ready') return;
   viewport.scrollTo({top:worldY * frame.clientWidth / 1000 - viewport.clientHeight * .45, behavior:'instant'});
   previousMapWidth = frame.clientWidth;
   previousMapTop = viewport.scrollTop;
 }
 function readScroll() {
   pendingScroll = false;
+  if (atlas.enabled) return;
   if (!rows.length || !frame.clientWidth || frame.dataset.artState !== 'ready') return;
   // Preserve the place in the drawing on rotation, including when the browser
   // clamps the old pixel scroll offset to a shorter image during the resize.
@@ -212,6 +222,7 @@ function notice(message = '', retry = false) {
   byId('map-notice').hidden = !message;
 }
 function updatePreference() {
+  atlas.prefer(preferred);
   const choice = register.get(preferred);
   const back = byId('return-selected');
   back.hidden = !canRequest(choice);
@@ -227,7 +238,7 @@ function setRoving(key) {
   if (markers.has(key)) markers.get(key).setAttribute('tabindex','0');
 }
 function positionCard() {
-  if (!active || mobileCard.matches) return;
+  if (atlas.enabled || !active || mobileCard.matches) return;
   const marker = markers.get(active.key);
   if (!marker) return;
   const box = (frame.dataset.artState === 'ready' ? marker : byId('plant-list')).getBoundingClientRect();
@@ -243,7 +254,7 @@ function inspect(plant, nextMode, focus = false) {
   if (active) markers.get(active.key)?.removeAttribute('data-preview');
   active = plant;
   mode = nextMode;
-  if (mode !== 'hover') { explicitRow = plant.row; setRow(plant.row); }
+  if (mode !== 'hover') { explicitRow = plant.row; setRow(plant.row); atlas.select(plant); }
   markers.get(plant.key)?.setAttribute('data-preview','');
   const selected = plant.key === preferred;
   card.hidden = false;
@@ -285,12 +296,14 @@ function dismiss(restoreFocus = false) {
   clearTimeout(hideTimer);
   if (!active) return;
   const previous = active.key;
+  atlas.unselect();
   markers.get(previous)?.removeAttribute('data-preview');
   active = null;
   mode = '';
   card.hidden = true;
   card.removeAttribute('data-key');
   dismissedAt = lastMouse;
+  if(restoreFocus && atlas.enabled){atlas.restore(previous);return;}
   if (restoreFocus && markers.has(previous)) {
     setRoving(previous);
     restoringFocus = true;
@@ -315,7 +328,7 @@ function trackMouse(event) {
 document.addEventListener('pointermove',trackMouse,{capture:true,passive:true});
 document.addEventListener('pointerdown',trackMouse,{capture:true,passive:true});
 document.addEventListener('pointerdown', event => {
-  if (active && !event.target.closest('#plant-card,[data-plant-key],#return-selected')) dismiss();
+  if (active && !event.target.closest('#plant-card,[data-plant-key],#return-selected,#world-surface,#estate-directory')) dismiss();
 });
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && active && !dialog.open) { event.preventDefault(); dismiss(true); }
@@ -339,7 +352,7 @@ function showPosition(plant, focus = false) {
   jump(plant.row,y);
   // A teacher can open the list from the toolbar before the map has entered the page viewport.
   const mark = markers.get(plant.key)?.getBoundingClientRect();
-  if (frame.dataset.artState === 'ready' && mark && (mark.top < 0 || mark.bottom > innerHeight))
+  if (!atlas.enabled && frame.dataset.artState === 'ready' && mark && (mark.top < 0 || mark.bottom > innerHeight))
     viewport.scrollIntoView({block:'center',behavior:'instant'});
   inspect(plant,'pinned',focus);
 }
@@ -426,10 +439,15 @@ function rebuildDialog() {
     btn.onclick = () => { dialog.close(); showPosition(plant,true); };
     options.append(btn);
   }
+  if(!options.children.length){
+    const empty=document.createElement('p');empty.className='list-empty';
+    empty.textContent=Number(dialogRows.value)>2?'Planned for autumn 2027. No coffee plants have been enabled in this row.':'No coffee plants are enabled in this row.';
+    options.append(empty);
+  }
 }
 byId('plant-list').onclick = () => {
   dismiss();
-  if (rows.some(r => r.row === currentRow && r.enabledCount > 0)) dialogRows.value = String(currentRow);
+  if (rows.some(r => r.row === currentRow)) dialogRows.value = String(currentRow);
   rebuildDialog(); dialog.showModal(); dialogRows.focus();
 };
 byId('close-list').onclick = () => dialog.close();
@@ -467,7 +485,7 @@ function showAdoptions() {
     button.type = 'button'; button.dataset.adoption = plant.adoptionStatus;
     button.textContent = label(plant) + (plant.variety ? ' · '+plant.variety : '') + ' · ' + adoptionText(plant);
     button.onclick = () => {
-      viewport.scrollIntoView({block:'center',behavior:'instant'});
+      (atlas.enabled?byId('world-scroll'):viewport).scrollIntoView({block:'center',behavior:'instant'});
       showPosition(plant,true);
     };
     const item = document.createElement('li'); item.append(button); list.append(item);
@@ -484,6 +502,7 @@ function draw(layout,result) {
   dismiss(); rows = layout; register = result; markers = new Map();
   const lost = Boolean(preferred && !canRequest(register.get(preferred)));
   if (lost) savePreference(null);
+  atlas.data(rows,register);
   const rowNames = byId('atlas-row-labels');
   rowNames.replaceChildren(); jumpList.replaceChildren(); dialogRows.replaceChildren();
   for (const row of rows) {
@@ -491,9 +510,9 @@ function draw(layout,result) {
     rowNames.append(svg('text',{x,y,class:'atlas-label'},'Row '+row.row));
     const state = row.enabledCount ? row.enabledCount + (row.enabledCount === 1 ? ' POSITION' : ' POSITIONS') : (row.row > 2 ? 'PLANNED' : 'NO POSITIONS');
     rowNames.append(svg('text',{x,y:y+13,class:'atlas-state'},state));
-    const choice = new Option('Row '+row.row, String(row.row));
+    const choice = new Option('Row '+row.row+(row.row>2 && !row.enabledCount?' · Planned':''), String(row.row));
     jumpList.add(choice);
-    if (row.enabledCount) dialogRows.add(new Option('Row '+row.row, String(row.row)));
+    dialogRows.add(new Option(choice.textContent, String(row.row)));
   }
   setRow(rows[currentRow-1] ? currentRow : 1);
   const fragment = document.createDocumentFragment();
@@ -509,7 +528,7 @@ function draw(layout,result) {
   if (dialog.open) {
     if (!register.size) dialog.close();
     else {
-      if (rows.some(r => String(r.row) === prevListRow && r.enabledCount)) dialogRows.value = prevListRow;
+      if (rows.some(r => String(r.row) === prevListRow)) dialogRows.value = prevListRow;
       rebuildDialog();
       const previousButton = [...byId('list-options').children].find(b=>b.dataset.listKey===focusedList);
       (previousButton || dialogRows).focus({preventScroll:true});
@@ -553,11 +572,12 @@ async function refresh() {
     dismiss(); if (dialog.open) dialog.close();
     lastDrawn = null; rows=[]; register.clear(); markers.clear(); markerLayer.replaceChildren();
     byId('atlas-row-labels').replaceChildren(); jumpList.replaceChildren();
+    atlas.data(rows,register);
     showAdoptions();
     for (const link of main.querySelectorAll('a.hero-marker[data-preview]')) link.hidden = true;
     updatePreference(); byId('plant-list').disabled=true;
     notice('The planting register could not be loaded. You can still register your school without a preference.',true);
-  } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length || frame.dataset.artState !== 'ready'; }
+  } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length || (!atlas.enabled && frame.dataset.artState !== 'ready'); }
 }
 byId('retry-map').onclick = refresh;
 installFarmWeather(main.dataset.weatherUrl);

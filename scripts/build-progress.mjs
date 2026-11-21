@@ -14,3 +14,8 @@ await copyFile('node_modules/suncalc/LICENSE','dist/assets/progress/SUNCALC-LICE
 // Cached HTML or module entries may still refer to either previous release's
 // hashed lazy chunks. Restore only byte-verified, closed compatibility graphs.
 await restoreProgressCompatibility('dist/assets/progress','compat/progress');
+
+// A separate lazy bundle keeps the 3D school atlas off the landing-page critical path.
+await build({entryPoints:['src/atlas/world.js'],outfile:'dist/assets/plant-portal/estate-world.js',
+  bundle:true,format:'esm',minify:true,target:['safari16','chrome110','firefox110'],legalComments:'linked'});
+await copyFile('node_modules/three/LICENSE','dist/assets/plant-portal/THREE-LICENSE.txt');
