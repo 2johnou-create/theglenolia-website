@@ -1,4 +1,4 @@
-import {fieldHero,fieldFacts,farmWeather,workshopShelf,schoolAward,companionPrompt} from './plant-field-home.js';
+import {fieldHero,fieldFacts,farmWeather,workshopShelf,schoolAward,companionPrompt,varietyProfile} from './plant-field-home.js';
 import {plantThreadsPanel} from './plant-threads-ui.js';
 /* Teacher-managed education. Private content is requested only from authorised APIs. */
 const STAGES={ES1:'Early Stage 1 · Kindergarten',S1:'Stage 1 · Years 1–2',S2:'Stage 2 · Years 3–4',S3:'Stage 3 · Years 5–6',S4:'Stage 4 · Years 7–8',S5:'Stage 5 · Years 9–10',S6:'Senior extension · Year 11'};
@@ -589,7 +589,7 @@ function start(root){
   const box=el('div',null,classroom?'plant-classroom':'plant-panel plant-journal');
   if(classroom){
    const exit=el('a','← Exit classroom view','edu-back plant-class-exit');exit.href=plantRoute('plant',orgId,application.id);
-   box.append(exit,heading(label,'','CLASSROOM PLANT JOURNAL'));
+   box.append(exit,heading(label,report?.fields?.variety?.value || 'Variety not recorded yet','CLASSROOM PLANT JOURNAL'));
    const stage=el('section',null,'plant-class-stage'),slide=el('div'),navigation=actions();
    let index=0;
    function showEntry(){
@@ -609,7 +609,7 @@ function start(root){
    let step=0;const question=el('h2',prompts[0]);question.setAttribute('aria-live','polite');
    prompt.append(el('p','DISCUSS TOGETHER','edu-kicker'),question,
     actions(button('Next question',()=>{step=(step+1)%prompts.length;question.textContent=prompts[step];},true),button('Print activity',()=>window.print(),true)));
-   box.append(stage,prompt);append(box,learningCard(guide,application.schoolType));return box;
+   box.append(stage,prompt,varietyProfile(report));append(box,learningCard(guide,application.schoolType));return box;
   }
   const threads=plantThreadsPanel({applicationId:application.id,api,threadId});
   const jump=target=>{
@@ -627,7 +627,7 @@ function start(root){
    history.addEventListener('toggle',()=>{if(history.open&&history.children.length===1)for(const entry of updates.slice(1))history.append(observation(entry));});latest.append(history);
   }
   const facts=el('div',null,'field-context-grid');facts.append(fieldFacts(report),farmWeather(api));
-  reportHeader.append(facts);
+  reportHeader.append(facts);reportHeader.append(varietyProfile(report));
   const workshops=workshopShelf(api),award=schoolAward(api,application.id);
   const nav=el('nav',null,'field-shortcuts');nav.setAttribute('aria-label','On this plant page');
   for(const [label,section] of [['Farmer journal',latest],['Workshops & sheets',workshops],['Certificate & media kit',award]]){
@@ -648,7 +648,8 @@ function start(root){
    try{
     const record=await api('/plants/classroom'+suffix);
     if(!['active','cooling'].includes(record.application?.status))return closed();
-    return plantJournal(record,true,await learningForPlant(record.application.stage),orgId);
+    const [guide,report]=await Promise.all([learningForPlant(record.application.stage),api('/plants/field-report?applicationId='+encodeURIComponent(record.application.id))]);
+    return plantJournal(record,true,guide,orgId,report);
    }catch(error){if([401,403,404].includes(error.status))return closed();throw error;}
   }
   if(!state.session.user)return plantSignIn(pref);

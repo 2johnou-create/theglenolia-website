@@ -2,7 +2,7 @@ import {all, dateValue, fail, json, keys, nowISO, text, uuid} from './education-
 import {orgMember} from './plant-organisation.mjs';
 import {currentSydneyDate} from './education-workspace.mjs';
 
-const fieldNames = ['variety','soil','soilPh','growerFocus','plantedOn','condition'];
+const fieldNames = ['variety','soil','soilPh','growerFocus','plantedOn','condition','stature','leafTip','beanSize','yieldPotential','firstFruit','ripening','rust','nutrition','varietySource'];
 const profileColumns = 'scope_key AS key, revision, snapshot, recorded_at AS recordedAt';
 const eventColumns = "id, observed_on AS observedOn, description, CASE WHEN scope_key='farm' THEN 'farm' ELSE 'plant' END AS scope";
 const eventOrder = "observed_on DESC, CASE WHEN scope_key='farm' THEN 1 ELSE 0 END, created_at DESC, id DESC";
@@ -95,10 +95,12 @@ async function saveProfile(db,body,staff) {
   const {key,revision,values}=keys(body,['key','revision','values']);
   await scopeKey(db,key);
   if (!Number.isSafeInteger(revision) || revision<0) fail(400,'invalid_revision');
-  const clean=sanitiseFields(values), at=nowISO();
+  const at=nowISO();
   const row=await db.prepare('SELECT revision,snapshot,recorded_at AS recordedAt FROM edu_plant_field_profiles WHERE scope_key=? ORDER BY revision DESC LIMIT 1').bind(key).first();
   const previous=row && profileRecord(key,row.snapshot,row.recordedAt);
-  const same=profile=>fieldNames.every(field=>profile.values[field]===clean[field]);
+  const priorTraits=Object.fromEntries(fieldNames.slice(6).map(name=>[name,previous?.values[name] ?? null]));
+  const clean=sanitiseFields({...priorTraits,...values});
+  const same=profile=>fieldNames.every(field=>(profile.values[field]??null)===clean[field]);
   if(previous && same(previous) && (row.revision===revision || row.revision===revision+1))return json({ok:true,revision:row.revision});
   const fieldDates={};
   for(const field of fieldNames) {

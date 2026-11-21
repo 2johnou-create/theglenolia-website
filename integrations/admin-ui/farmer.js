@@ -252,6 +252,23 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
   $('observed-on').addEventListener('invalid',() => { $('date-options').open = true; });
   $('field-position').addEventListener('change',() => { $('field-tag').value = ''; renderRegister(); });
   $('remove-photo').addEventListener('click',() => { clearPhoto(draft(selected().key)); renderDraft(); $('library-file').focus(); });
+  $('remove-stage-photo').addEventListener('click',()=>{
+    const tree=selected();if(!tree || !window.confirm('Remove the public stage photo for '+tree.label+'?'))return;
+    run(async()=>{await api('/stage-photo',{key:tree.key,stage:tree.stage,remove:true});
+      $('stage-photo-result').textContent='Public stage photo removed for '+tree.label+'.';});
+  });
+  $('stage-photo-form').addEventListener('submit',event=>{
+    event.preventDefault();const tree=selected(),file=$('stage-photo').files[0];
+    if(!tree || tree.status==='unverified' || !file)return;
+    run(async()=>{
+      $('stage-photo-result').textContent='Preparing photo…';
+      const image=await prepareFieldPhoto(file,true);
+      await api('/stage-photo',{key:tree.key,stage:tree.stage,photo:{mime:image.type,base64:await base64(image)}});
+      $('stage-photo').value='';
+      $('stage-photo-result').textContent='Stage photo published for '+tree.label+'.';
+    });
+  });
+
 
   function element(tag, text, cls) {
     const node = document.createElement(tag);

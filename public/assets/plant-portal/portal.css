@@ -203,3 +203,13 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
  .weather-readings dt{font-size:.65rem}.weather-readings .mean-reading{border:0;padding:0}
  .weather-notes summary{min-height:38px;padding-top:.6rem}
 }
+
+.plant-variety{font-size:.8rem;margin:.25rem 0 0;color:#526c56}
+
+.card-art{position:relative}
+#card-photo-toggle{position:absolute;inset:0;padding:0;border:0;background:transparent;cursor:pointer;width:100%;height:100%}
+#card-photo-toggle img{display:block;width:100%;height:100%;object-fit:cover;opacity:0}
+#card-photo-toggle:hover img,#card-photo-toggle:focus-visible img,#card-photo-toggle[aria-pressed="true"] img{opacity:1}
+#card-photo-toggle:focus-visible{outline:3px solid #2f4a3c;outline-offset:-3px}
+
+.plant-variety-map{font:700 8px Arial,sans-serif;fill:#2f4a3c;stroke:#f8ecd1;stroke-width:3px;paint-order:stroke;pointer-events:none}

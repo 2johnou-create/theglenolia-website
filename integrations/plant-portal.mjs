@@ -35,7 +35,10 @@ async function inventory(db, staff=false) {
   await releaseDueAdoptions(db);
   // One read snapshot keeps each row's count consistent with its stage records.
   const slots = await all(db.prepare(`SELECT r.row_num,r.enabled_count,r.revision AS row_revision,
-    v.plant_key,v.position,v.stage,v.revision,p.tag,p.available,a.status AS allocation,CASE WHEN o.public_name=1 THEN o.name END AS adopted_by
+    v.plant_key,v.position,v.stage,v.revision,p.tag,p.available,a.status AS allocation,CASE WHEN o.public_name=1 THEN o.name END AS adopted_by,
+    COALESCE((SELECT json_extract(snapshot,'$.variety') FROM edu_plant_field_profiles WHERE scope_key=v.plant_key ORDER BY revision DESC LIMIT 1),
+             (SELECT json_extract(snapshot,'$.variety') FROM edu_plant_field_profiles WHERE scope_key='farm' ORDER BY revision DESC LIMIT 1)) AS variety,
+    EXISTS(SELECT 1 FROM edu_plant_stage_photos sp WHERE sp.plant_key=v.plant_key AND sp.stage=v.stage) AS has_stage_photo
     FROM edu_atlas_rows r JOIN edu_atlas_positions v USING(row_num)
     LEFT JOIN edu_plants p ON p.plant_key=v.plant_key
     LEFT JOIN edu_plant_applications a ON a.plant_key=v.plant_key AND a.status IN ('offered','active','cooling')
@@ -54,7 +57,7 @@ async function inventory(db, staff=false) {
     const adoption = !staff && ['active','cooling'].includes(slot.allocation)
       ? {adoptionStatus:slot.allocation==='active'?'adopted':'cooling',...(slot.adopted_by?{adoptedBy:slot.adopted_by}:{})} : {};
     const plant = {key:slot.plant_key,row,position:slot.position,label:'P'+((row-1)*rowCapacity+slot.position),
-      stage:slot.stage,status,...adoption,...(staff ? {revision:slot.revision,tag:slot.tag} : {})};
+      stage:slot.stage,status,...(slot.variety ? {variety:slot.variety} : {}),...(slot.has_stage_photo ? {stagePhoto:true} : {}),...adoption,...(staff ? {revision:slot.revision,tag:slot.tag} : {})};
     (visible ? plants : archivedPlants).push(plant);
   }
   return {rows,plants,...(staff ? {archivedPlants} : {})};
@@ -63,6 +66,32 @@ export async function publicPlantMap(request,env) {
   const origin = request.headers.get('Origin');
   const headers = { Vary:'Origin', ...(origin === 'https://theglenolia.com.au' ? {'Access-Control-Allow-Origin':origin} : {}) };
   return json(await inventory(env.EDU_DB), 200, headers);
+}
+export async function publicStagePhoto(request,env) {
+  const key=position(new URL(request.url).pathname.split('/').at(-1)).key;
+  const row=await env.EDU_DB.prepare(`SELECT sp.photo_mime,sp.photo_bytes FROM edu_plant_stage_photos sp
+    JOIN edu_atlas_positions v ON v.plant_key=sp.plant_key AND v.stage=sp.stage
+    JOIN edu_atlas_rows r ON r.row_num=v.row_num WHERE sp.plant_key=? AND v.position<=r.enabled_count`).bind(key).first();
+  if(!row)fail(404,'not_found');
+  const bytes=Array.isArray(row.photo_bytes)?Uint8Array.from(row.photo_bytes):row.photo_bytes;
+  return new Response(bytes,{headers:{...SECURITY,'Content-Type':row.photo_mime,'Cache-Control':'public, max-age=60','Cross-Origin-Resource-Policy':'cross-origin','X-Content-Type-Options':'nosniff'}});
+}
+async function saveStagePhoto(db,body,staffId) {
+  const b=keys(body,['key','stage','photo','remove']),p=position(b.key);
+  const stage=boundedInt(b.stage,1,10);
+  if(b.remove===true){
+    await db.prepare('DELETE FROM edu_plant_stage_photos WHERE plant_key=? AND stage=?').bind(p.key,stage).run();
+    return ok();
+  }
+  const picture=cleanPhoto(b.photo);
+  if(!picture)fail(400,'invalid_image');
+  const saved=await db.prepare(`INSERT INTO edu_plant_stage_photos(plant_key,stage,photo_mime,photo_bytes,recorded_at,recorded_by)
+    SELECT plant_key,?,?,?,?,? FROM edu_plants WHERE plant_key=? AND EXISTS (SELECT 1 FROM edu_atlas_positions WHERE plant_key=? AND stage=?)
+    ON CONFLICT(plant_key,stage) DO UPDATE SET photo_mime=excluded.photo_mime,photo_bytes=excluded.photo_bytes,
+    recorded_at=excluded.recorded_at,recorded_by=excluded.recorded_by`)
+    .bind(stage,picture.mime,picture.bytes.buffer,nowISO(),staffId,p.key,p.key,stage).run();
+  if(!saved.meta.changes)fail(409,'atlas_changed');
+  return ok();
 }
 async function journal(db,plantKey,photoPrefix,actorId=null) {
   const scope=actorId ? ' AND plant_key IN ('+activeAccess+')' : '';
@@ -383,6 +412,7 @@ export async function staffPlantRoutes(request,env,path,body) {
   } else if (request.method==='POST') {
     if (path==='/plants/row') return saveRow(db,body);
     if (path==='/plants/stage') return saveStage(db,body);
+    if (path==='/plants/stage-photo') return saveStagePhoto(db,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_staff');
     if (path==='/plants/verify') return verify(db,body);
     if (path==='/plants/availability') return availability(db,body);
     if (path==='/plants/update') return publishUpdate(env,body,request.headers.get('X-Glenolia-Staff-Email')||'farm_staff');

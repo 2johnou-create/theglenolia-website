@@ -198,3 +198,10 @@
  .plant-journal .plant-org-nav{margin-bottom:.55rem;padding:.15rem 0}
  .plant-journal .plant-org-nav a{display:inline-flex;align-items:center;padding:.2rem 0;min-height:44px}
 }
+
+.variety-profile{margin:1.5rem 0;padding:clamp(1.1rem,3vw,2rem);border:1px solid #d9dfd0;border-radius:1rem;background:#f5f1e8;color:#2f4a3c}
+.variety-profile h2{margin:.2rem 0}.variety-name{font-family:serif;font-size:1.3rem;margin:.3rem 0 1rem}
+.variety-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:.7rem}
+.variety-fact{display:grid;gap:.3rem;padding:.9rem;background:#fffdf6;border-radius:.7rem;align-content:start}
+.variety-icon{font-size:1.5rem;line-height:1;color:#58755c}.variety-label{font-size:.8rem}.variety-fact strong{font-size:.95rem}
+.field-variety{margin:.25rem 0 .5rem;font-size:.9rem}

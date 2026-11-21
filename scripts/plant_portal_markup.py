@@ -77,11 +77,11 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list">Close</button></header>
 <div class="list-body"><label for="list-row">Planting row</label><select id="list-row"></select><div id="list-options" role="group" aria-label="Choose a position to inspect"></div></div></dialog>
 <section id="plant-card" hidden aria-label="Plant details">
-<button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3></div></div>
+<button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"><button type="button" id="card-photo-toggle" aria-label="Show real plant photograph" aria-pressed="false" hidden><img id="card-photo" alt="Real photograph of this plant"></button></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3><p id="plant-variety" class="plant-variety"></p></div></div>
 <p class="stage-line"><strong id="stage-title"></strong><span id="stage-number"></span></p>
 <p class="height">Individual height <strong>No reading published</strong></p><p class="cohort">Pilot average <strong>17 cm</strong> · <time datetime="2026-11-01">1 Nov 2026</time></p>
 <p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a>
-<a class="farm-card-link" id="farmer-update" href="{farmer}" rel="nofollow">Farmer · Update tree</a></section>
+</section>
 </div>
 <noscript><p>The interactive map uses JavaScript. You can register your school directly and the farmer can help match your class to a plant.</p><a class="cta" href="{teacher}">Register your school ↗</a></noscript>
 </section>

@@ -61,7 +61,7 @@ const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.met
 function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
-  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql'])
+  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql'])
    this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
  }
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
@@ -580,4 +580,26 @@ test('legacy replies and new messages coexist without sending historic email; me
  assert.equal(latest.messages.length,30);assert.equal(previous.messages.length,6);
  assert.equal(new Set([...previous.messages,...latest.messages].map(m=>m.id)).size,36);
  assert.equal(previous.nextBefore,null);
+});
+
+test('variety profiles and explicitly published current-stage photos remain tied to the tree',async t=>{
+ const f=await fixture(t),key='r1-p7',app=await approvePlant(f);
+ await code(await f.staff('/plants/field-report',{key,revision:0,values:{variety:'Trial variety',stature:'Compact',beanSize:'Large',varietySource:'Grower source'}}),200);
+ const report=await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.a}),200);
+ assert.equal(report.fields.variety.value,'Trial variety');assert.equal(report.fields.stature.value,'Compact');
+ let map=await code(await f.req('/api/plants/map'),200);
+ assert.equal(map.plants.find(p=>p.key===key).variety,'Trial variety');
+ assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);
+ await code(await f.staff('/plants/stage-photo',{key,stage:2,photo:fixturePhoto}),200);
+ map=await code(await f.req('/api/plants/map'),200);
+ assert.equal(map.plants.find(p=>p.key===key).stagePhoto,true);
+ const image=await f.req('/api/plants/stage-photo/'+key);
+ assert.equal(image.status,200);assert.equal(Buffer.from(await image.arrayBuffer()).toString('base64'),fixturePhoto.base64);
+ await code(await f.staff('/plants/stage',{key,stage:3,revision:1}),200);
+ assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);
+ assert.equal((await code(await f.req('/api/plants/map'),200)).plants.find(p=>p.key===key).stagePhoto,undefined);
+ await code(await f.staff('/plants/stage-photo',{key:'r1-p8',stage:2,photo:fixturePhoto}),409);
+ await code(await f.staff('/plants/stage-photo',{key,stage:3,photo:fixturePhoto}),200);
+ await code(await f.staff('/plants/stage-photo',{key,stage:3,remove:true}),200);
+ assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);
 });

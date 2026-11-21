@@ -1,5 +1,5 @@
-const names = ['variety','soil','soilPh','growerFocus','plantedOn','condition'];
-const labels = {variety:'Variety',soil:'Soil',soilPh:'pH',growerFocus:'Classroom focus',plantedOn:'Planted',condition:'Condition'};
+const names = ['variety','soil','soilPh','growerFocus','plantedOn','condition','stature','leafTip','beanSize','yieldPotential','firstFruit','ripening','rust','nutrition','varietySource'];
+const labels = {variety:'Variety',soil:'Soil',soilPh:'pH',growerFocus:'Classroom focus',plantedOn:'Planted',condition:'Condition',stature:'Stature',leafTip:'Leaf tip',beanSize:'Bean size',yieldPotential:'Yield potential',firstFruit:'First fruit',ripening:'Ripening',rust:'Coffee leaf rust',nutrition:'Nutrition',varietySource:'Variety source'};
 
 export function mountFieldReport({api,run,today}) {
   const get = id=>document.getElementById(id);

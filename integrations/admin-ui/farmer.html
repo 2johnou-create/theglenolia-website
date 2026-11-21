@@ -43,7 +43,7 @@
 <details id="field-stage-panel" class="field-tool" hidden><summary>Growth stage <span id="field-stage-current"></span></summary>
 <form id="field-stage-form"><label for="field-stage">Atlas growth stage</label>
 <select id="field-stage"></select><p class="hint">Changes the illustration on the map. Post a field note to tell the class what you saw.</p>
-<button type="submit" id="save-field-stage" class="quiet">Save stage</button><p id="field-stage-result" class="save-result" role="status"></p></form></details>
+<button type="submit" id="save-field-stage" class="quiet">Save stage</button><p id="field-stage-result" class="save-result" role="status"></p></form><form id="stage-photo-form"><label for="stage-photo">Public photograph of this tree at its current stage</label><input id="stage-photo" type="file" accept="image/*" capture="environment" required><p class="hint">This photo appears on the public map. Use a photo of this tree without people or identifying details.</p><button type="submit" class="quiet">Publish stage photo</button><button type="button" class="quiet" id="remove-stage-photo">Remove public stage photo</button><p id="stage-photo-result" role="status"></p></form></details>
 <details id="history" hidden><summary>Previous updates</summary><div id="history-list"></div></details></div>
 <details id="agronomy" class="field-tool"><summary>Growing conditions &amp; fertiliser</summary>
 <div class="agronomy-body"><label for="ag-scope">Record for</label><select id="ag-scope"><option value="farm">Whole farm</option></select>
@@ -53,7 +53,16 @@
 <details id="ag-profile" open><summary>Growing conditions</summary>
 <form id="ag-profile-form"><div class="ag-fields">
 <label>Coffee variety<input id="ag-variety" maxlength="120" autocomplete="off"></label>
-<label>Planting date<input id="ag-plantedOn" type="date"></label>
+<label>Planting date<input id="ag-plantedOn" type="date"></label><details class="ag-variety"><summary>Variety characteristics</summary><p class="hint">Enter characteristics from a reliable source. Leave unknown items blank. These describe the variety, not this tree’s measured performance.</p>
+<label>Source or reference<input id="ag-varietySource" maxlength="500" placeholder="e.g. breeder or published catalogue"></label>
+<label>Stature<select id="ag-stature"><option value="">Unknown</option><option>Compact</option><option>Tall</option></select></label>
+<label>New leaf tip colour<select id="ag-leafTip"><option value="">Unknown</option><option>Green</option><option>Bronze</option><option>Green or bronze</option></select></label>
+<label>Bean size<select id="ag-beanSize"><option value="">Unknown</option><option>Below average</option><option>Average</option><option>Large</option><option>Very large</option></select></label>
+<label>Yield potential<select id="ag-yieldPotential"><option value="">Unknown</option><option>Low</option><option>Medium</option><option>High</option><option>Very high</option></select></label>
+<label>First fruit<select id="ag-firstFruit"><option value="">Unknown</option><option>Year 2</option><option>Year 3</option><option>Year 4</option></select></label>
+<label>Fruit ripening<select id="ag-ripening"><option value="">Unknown</option><option>Early</option><option>Average</option><option>Late</option><option>Very late</option></select></label>
+<label>Coffee leaf rust<select id="ag-rust"><option value="">Unknown</option><option>Susceptible</option><option>Intermediate resistance</option><option>Highly resistant</option></select></label>
+<label>Nutrition requirement<select id="ag-nutrition"><option value="">Unknown</option><option>Low</option><option>Medium</option><option>High</option><option>Very high</option></select></label></details>
 <label>Soil description<textarea rows="2" id="ag-soil" maxlength="500"></textarea></label>
 <label>Measured soil pH<input id="ag-soilPh" type="number" min="0" max="14" step="any" inputmode="decimal"></label>
 <label>Current condition<textarea rows="2" id="ag-condition" maxlength="500"></textarea></label>

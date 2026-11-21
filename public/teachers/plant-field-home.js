@@ -47,7 +47,7 @@ export function fieldHero({application,report,updates,classroomHref,onMessage}) 
   const photo=latestPhoto(report,updates),fields=report?.fields||{};
   const area=element('section','field-cover'+(photo?' field-cover-photo':'')),intro=element('div','field-cover-intro');
   const where=match?'Row '+match[1]+' · Position '+match[2]:'Glenorie';
-  intro.append(element('p','edu-kicker','Class plant · '+where),element('h1',null,label));
+  intro.append(element('p','edu-kicker','Class plant · '+where),element('h1',null,label),element('p','field-variety',fields.variety?.value || 'Variety not recorded yet'));
   if(stageName)intro.append(element('p','field-stage-name',stageName+' · Stage '+stage+' of 10'));
   if(fields.condition?.value)intro.append(element('p','field-current-condition',fields.condition.value),element('p','field-condition-byline',[source(fields.condition.scope),dateOf(fields.condition.recordedAt)].filter(Boolean).join(' · ')));
   else intro.append(element('p','field-current-condition',report?'The farmer hasn’t recorded a condition yet.':'Field condition unavailable.'));
@@ -150,4 +150,27 @@ export function companionPrompt(artBase,question) {
   const copy=element('div');
   copy.append(element('p','edu-kicker','Pip, Milla & Dot'),element('h2',null,'Look closer'),element('p',null,question||'Which detail would you like to check again in the next field photograph?'));
   wrap.append(img,copy);return wrap;
+}
+
+export function varietyProfile(report) {
+  const section=element('section','variety-profile');
+  section.append(element('p','edu-kicker','GET TO KNOW YOUR PLANT'),element('h2',null,'Coffee variety'));
+  const fields=report?.fields || {};
+  section.append(element('p','variety-name',fields.variety?.value || 'Variety not recorded yet'));
+  const grid=element('div','variety-grid');
+  const facts=[
+    ['♧','Stature','stature'],['❧','New leaf tips','leafTip'],
+    ['◉','Bean size','beanSize'],['▥','Yield potential','yieldPotential'],
+    ['◷','First fruit','firstFruit'],['◌','Fruit ripening','ripening'],
+    ['◇','Leaf rust','rust'],['✳','Nutrition','nutrition']
+  ];
+  for(const [icon,title,key] of facts){
+    const item=element('div','variety-fact'),symbol=element('span','variety-icon',icon);
+    symbol.setAttribute('aria-hidden','true');
+    item.append(symbol,element('span','variety-label',title),element('strong',null,fields[key]?.value || 'Not recorded'));
+    grid.append(item);
+  }
+  section.append(grid,element('p','edu-small','Variety characteristics are a guide. Local growing conditions can affect what we observe.'));
+  if(fields.varietySource?.value)section.append(element('p','edu-small','Farmer’s source · '+fields.varietySource.value));
+  return section;
 }

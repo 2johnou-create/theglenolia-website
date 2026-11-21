@@ -267,12 +267,16 @@ function inspect(plant, nextMode, focus = false) {
   card.dataset.stage = String(plant.stage);
   byId('card-kind').textContent = (selected ? 'Class preference' : 'Planting position') + ' · Row ' + plant.row;
   byId('plant-title').textContent = label(plant);
-  const farmerLink = byId('farmer-update');
-  const farmerUrl = new URL(byId('farmer-login').href);
-  farmerUrl.searchParams.set('plant',plant.key);
-  farmerLink.href = farmerUrl.href;
-  farmerLink.textContent = 'Farmer · Update ' + label(plant);
+  byId('plant-variety').textContent = plant.variety || 'Variety not recorded';
   setPlantIllustration(byId('card-image'), assets + '/stages', plant.stage, plant);
+  const photoToggle=byId('card-photo-toggle'),photo=byId('card-photo');
+  photoToggle.hidden=!plant.stagePhoto;
+  photoToggle.setAttribute('aria-pressed','false');
+  if(plant.stagePhoto) {
+    photo.src=new URL('/api/plants/stage-photo/'+plant.key,main.dataset.mapUrl).href;
+    photo.alt='Real photograph of '+label(plant)+' at its current stage';
+  } else photo.removeAttribute('src');
+
   byId('stage-title').textContent = STAGE_NAMES[plant.stage - 1];
   byId('stage-number').textContent = 'Stage ' + plant.stage + ' of 10';
   card.querySelector('.height').hidden = plant.stage === 1;
@@ -287,6 +291,11 @@ function inspect(plant, nextMode, focus = false) {
   positionCard();
   if (focus) (select.hidden ? (request.hidden ? byId('close-card') : request) : select).focus({preventScroll:true});
 }
+byId('card-photo-toggle').addEventListener('click',event=>{
+  const button=event.currentTarget,shown=button.getAttribute('aria-pressed')==='true';
+  button.setAttribute('aria-pressed',String(!shown));
+  button.setAttribute('aria-label',shown?'Show real plant photograph':'Show plant illustration');
+});
 function dismiss(restoreFocus = false) {
   clearTimeout(hideTimer);
   if (!active) return;
@@ -377,13 +386,14 @@ function markerFor(plant) {
   const width = 52 - (plant.position - 1) * .25, height = width * 288 / 256;
   const g = svg('g', {class:'coffee-marker','data-plant-key':plant.key,'data-stage':plant.stage,
     transform:'translate(' + x + ' ' + y + ')',role:'button',tabindex:'-1','aria-pressed':'false',
-    'aria-label':[label(plant),'Row '+plant.row,STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', ')});
+    'aria-label':[label(plant),plant.variety,'Row '+plant.row,STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', ')});
   const drawing = svg('image',{x:-width/2,y:-height*.8993,width,height,'pointer-events':'none'});
   setPlantIllustration(drawing, assets + '/stages', plant.stage, plant);
   g.append(drawing);
   g.append(svg('rect',{class:'plant-hit',x:-20,y:-31,width:40,height:49,rx:5,fill:'transparent'}));
   g.append(svg('rect',{class:'tag-bg',x:-17,y:1,width:34,height:16,rx:6}));
   g.append(svg('text',{class:'plant-id',x:0,y:13,'text-anchor':'middle'},label(plant)));
+  if (plant.variety) g.append(svg('text',{class:'plant-variety-map',x:0,y:plant.adoptionStatus?37:26,'text-anchor':'middle',textLength:42,lengthAdjust:'spacingAndGlyphs'},plant.variety));
   if (plant.adoptionStatus) {
     g.dataset.adoption = plant.adoptionStatus;
     g.append(svg('text',{class:'plant-attribution',x:0,y:26,'text-anchor':'middle'},shortAttribution(plant)));
@@ -419,7 +429,7 @@ function rebuildDialog() {
   for (const plant of register.values()) {
     if (plant.row !== Number(dialogRows.value)) continue;
     const btn = document.createElement('button');
-    btn.type = 'button'; btn.textContent = label(plant); btn.dataset.listKey = plant.key;
+    btn.type = 'button'; btn.textContent = label(plant)+(plant.variety ? ' · '+plant.variety : ''); btn.dataset.listKey = plant.key;
     btn.setAttribute('aria-pressed',String(plant.key === preferred));
     if (plant.adoptionStatus) {
       btn.dataset.adoption = plant.adoptionStatus;
@@ -427,7 +437,7 @@ function rebuildDialog() {
       caption.textContent = adoptionText(plant);
       btn.append(caption);
     }
-    btn.setAttribute('aria-label',[label(plant),STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', '));
+    btn.setAttribute('aria-label',[label(plant),plant.variety,STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', '));
     btn.onclick = () => { dialog.close(); showPosition(plant,true); };
     options.append(btn);
   }
@@ -455,7 +465,7 @@ function validate(data) {
         plant.stage < 1 || plant.stage > STAGE_NAMES.length || !['available','unavailable','unverified','preparing'].includes(plant.status)) throw new Error('Invalid position');
     const adoptionStatus = ['adopted','cooling'].includes(plant.adoptionStatus) ? plant.adoptionStatus : null;
     const adoptedBy = adoptionStatus && typeof plant.adoptedBy === 'string' ? plant.adoptedBy.trim().slice(0,160) : '';
-    result.set(plant.key,{key:plant.key,row:plant.row,position:plant.position,stage:plant.stage,status:plant.status,adoptionStatus,adoptedBy});
+    result.set(plant.key,{key:plant.key,row:plant.row,position:plant.position,stage:plant.stage,status:plant.status,adoptionStatus,adoptedBy,variety:typeof plant.variety==='string' ? plant.variety.trim().slice(0,120) : '',stagePhoto:plant.stagePhoto===true});
   }
   if (result.size !== layout.reduce((total,r) => total+r.enabledCount,0)) throw new Error('Incomplete farm layout');
   return {layout,result};
@@ -470,7 +480,7 @@ function showAdoptions() {
   for (const plant of adopted) {
     const button = document.createElement('button');
     button.type = 'button'; button.dataset.adoption = plant.adoptionStatus;
-    button.textContent = label(plant) + ' · ' + adoptionText(plant);
+    button.textContent = label(plant) + (plant.variety ? ' · '+plant.variety : '') + ' · ' + adoptionText(plant);
     button.onclick = () => {
       viewport.scrollIntoView({block:'center',behavior:'instant'});
       showPosition(plant,true);
