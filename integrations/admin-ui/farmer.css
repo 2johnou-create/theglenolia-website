@@ -109,3 +109,10 @@ details{margin:1.5rem 0}summary{cursor:pointer;color:var(--green);padding:.75rem
 #school-files-list summary{min-height:44px;overflow-wrap:anywhere;font-weight:650}
 #school-files-list ul{margin:0 0 .6rem;padding-left:1.2rem}
 #school-files-list a{display:inline-flex;align-items:center;min-height:44px}
+
+.variety-positions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;margin:1rem 0}
+.variety-positions label{display:flex;align-items:center;gap:.5rem;padding:.65rem;border:1px solid #d9dfd0;border-radius:.5rem;background:#fffdf6}
+.variety-positions input{width:auto;margin:0}
+#variety-status form{display:grid;gap:.8rem;margin-top:1rem;padding:1rem;background:#f5f1e8;border:1px solid #b57b5a;border-radius:.6rem}
+#variety-status form label:has(input[type=checkbox]){display:flex;gap:.5rem;align-items:flex-start}
+#variety-status form input[type=checkbox]{width:auto;margin-top:.25rem}

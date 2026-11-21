@@ -8,7 +8,7 @@
 <header><a href="/" aria-label="The Glenolia admin home"><img src="/assets/logos/logo-compact-web.svg" alt="THE GLENOLIA" width="240"></a><a href="/cdn-cgi/access/logout">Sign out</a></header>
 <main id="main">
 <div class="workspace-title"><h1>Farm journal</h1></div>
-<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Field updates</a><a href="#atlas">Estate atlas</a><a href="#register">Plant register</a><a href="#messages">Class messages</a><a href="#school-files">School files</a><a href="#requests">School requests</a></nav>
+<nav aria-label="Farm tasks" hidden><a href="#update" aria-current="page">Field updates</a><a href="#atlas">Estate atlas</a><a href="#varieties">Coffee varieties</a><a href="#register">Plant register</a><a href="#messages">Class messages</a><a href="#school-files">School files</a><a href="#requests">School requests</a></nav>
 <div id="notice" role="status" tabindex="-1" aria-live="polite">Loading your farm workspace…</div>
 <button id="retry" type="button" class="quiet" hidden>Retry loading</button>
 <section id="update" aria-labelledby="update-heading" hidden>
@@ -52,7 +52,7 @@
 <fieldset id="ag-controls" disabled><legend class="ag-sr">Field records</legend>
 <details id="ag-profile" open><summary>Growing conditions</summary>
 <form id="ag-profile-form"><div class="ag-fields">
-<label>Coffee variety<input id="ag-variety" maxlength="120" autocomplete="off"></label>
+<label>Earlier variety entry<input id="ag-variety" maxlength="120" autocomplete="off" readonly></label><p class="hint">Use Coffee varieties to assign a variety to a position.</p>
 <label>Planting date<input id="ag-plantedOn" type="date"></label><details class="ag-variety"><summary>Variety characteristics</summary><p class="hint">Enter characteristics from a reliable source. Leave unknown items blank. These describe the variety, not this tree’s measured performance.</p>
 <label>Source or reference<input id="ag-varietySource" maxlength="500" placeholder="e.g. breeder or published catalogue"></label>
 <label>Stature<select id="ag-stature"><option value="">Unknown</option><option>Compact</option><option>Tall</option></select></label>
@@ -73,6 +73,36 @@
 <label for="ag-feed-note">What was applied?</label><textarea id="ag-feed-note" rows="2" maxlength="500" required></textarea>
 <button id="ag-feed-save" type="submit">Record fertiliser</button></form>
 <div id="ag-feed-history"></div></details></fieldset></div></details>
+</section>
+<section id="varieties" aria-labelledby="varieties-heading" hidden>
+<h2 id="varieties-heading" tabindex="-1">Coffee varieties</h2>
+<p class="intro">Choose a variety and assign it to a row or several plants. Existing plantings have a separate replacement review.</p>
+<details id="variety-catalogue"><summary>Variety catalogue</summary>
+<label for="variety-edit">Choose an existing variety or add a new one</label><select id="variety-edit"></select>
+<form id="variety-catalogue-form">
+<label>Name<input id="variety-name" maxlength="120" required></label>
+<label>Reference link <span class="hint">optional</span><input id="variety-url" type="url" maxlength="500"></label>
+<label>Source, supplier or notes<textarea id="variety-note" maxlength="500" rows="2"></textarea></label><details><summary>Variety characteristics</summary><p class="hint">Use information from your reference. Leave unknown answers blank.</p>
+<label>Stature<select id="catalogue-stature"><option value="">Unknown</option><option>Compact</option><option>Tall</option></select></label>
+<label>New leaf tips<select id="catalogue-leafTip"><option value="">Unknown</option><option>Green</option><option>Bronze</option><option>Green or bronze</option></select></label>
+<label>Bean size<select id="catalogue-beanSize"><option value="">Unknown</option><option>Below average</option><option>Average</option><option>Large</option><option>Very large</option></select></label>
+<label>Yield potential<select id="catalogue-yieldPotential"><option value="">Unknown</option><option>Low</option><option>Medium</option><option>High</option><option>Very high</option></select></label>
+<label>First fruit<select id="catalogue-firstFruit"><option value="">Unknown</option><option>Year 2</option><option>Year 3</option><option>Year 4</option></select></label>
+<label>Fruit ripening<select id="catalogue-ripening"><option value="">Unknown</option><option>Early</option><option>Average</option><option>Late</option><option>Very late</option></select></label>
+<label>Coffee leaf rust<select id="catalogue-rust"><option value="">Unknown</option><option>Susceptible</option><option>Intermediate resistance</option><option>Highly resistant</option></select></label>
+<label>Nutrition requirement<select id="catalogue-nutrition"><option value="">Unknown</option><option>Low</option><option>Medium</option><option>High</option><option>Very high</option></select></label></details>
+<button type="submit">Save variety</button></form></details>
+<div class="editor"><h3>Assign new plants</h3>
+<label for="variety-choice">Variety</label><select id="variety-choice"></select>
+<label for="variety-date">Date planted</label><input id="variety-date" type="date" required>
+<label for="variety-stage">Stage of the new plants</label><select id="variety-stage"></select>
+<label for="variety-row">Row</label><select id="variety-row"></select>
+<button type="button" class="quiet" id="variety-select-row">Select available positions in this row</button>
+<div id="variety-positions" class="variety-positions"></div>
+<p id="variety-selection" role="status"></p>
+<button type="button" id="variety-assign">Review selection</button></div>
+<div class="editor"><h3>Replace an existing plant</h3><p class="hint">Select an existing position above. The next step records removal, replanting and any school review.</p><button type="button" id="variety-replace" class="quiet">Review replacement</button><button type="button" id="variety-history" class="quiet">View planting history</button></div>
+<p id="variety-status" role="status" aria-live="polite"></p>
 </section>
 <section id="atlas" aria-labelledby="atlas-heading" hidden>
 <h2 id="atlas-heading" tabindex="-1">Estate atlas</h2>

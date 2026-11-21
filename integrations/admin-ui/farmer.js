@@ -1,3 +1,4 @@
+import {mountVarieties} from './varieties.js';
 import {mountRecognitionFiles} from './recognition-files.js';
 import {plantThreadsPanel} from '../../public/teachers/plant-threads-ui.js';
 import {prepareFieldPhoto} from './photo-preparation.js';
@@ -17,6 +18,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
   let dashboard = null, journalVersion = 0, reading = false, writing = false;
   const atlas = mountFarmAtlas({api,run,reload});
   const fieldReport = mountFieldReport({api,run,today});
+  const openVarieties = mountVarieties({api,run,today,reload});
 
   function message(text, focus = false) {
     $('notice').textContent = text;
@@ -66,7 +68,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     plant_unavailable:'This plant is no longer available. Refresh and choose another.',plant_already_verified:'This position already has a tag. Refresh the register.',application_changed:'This application has already changed. Refresh the school requests.',
     invalid_date:'Choose today or an earlier observation date.',duplicate_tag:'That tag is already registered at another position.',
     invalid_photo:'Choose a different plant photograph and try again.',invalid_update:'Add a field note or a plant photograph.',
-    invalid_image:'This photo could not be read. Choose another photo.',future_observation:'Choose today or an earlier date.',image_too_large:'Choose a smaller photo.',plant_not_verified:'Verify the physical tag in the plant register first.',answer_changed:'Another reply is already saved. Refresh the school requests.',update_withdrawn:'This update has already been withdrawn.',request_conflict:'This draft differs from an update already saved. Check previous updates before posting another.'
+    invalid_image:'This photo could not be read. Choose another photo.',future_observation:'Choose today or an earlier date.',image_too_large:'Choose a smaller photo.',plant_not_verified:'Verify the physical tag in the plant register first.',variety_name_locked:'This variety is already used. Keep its name or add a new variety.',planting_exists:'An existing planting needs a replacement review.',planting_changed:'The planting changed. Refresh the farm workspace and check the tree before continuing.',answer_changed:'Another reply is already saved. Refresh the school requests.',update_withdrawn:'This update has already been withdrawn.',request_conflict:'This draft differs from an update already saved. Check previous updates before posting another.'
   };
   async function api(path, body) {
     let response;
@@ -89,13 +91,14 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
   const openSchoolFiles=mountRecognitionFiles(api);
   function showTab(focus = false) {
     let tab = location.hash.slice(1);
-    if (!['register','requests','update','atlas','messages','school-files'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
-    for (const id of ['update','requests','register','atlas','messages','school-files']) $(id).hidden = !dashboard || id !== tab;
+    if (!['register','requests','update','atlas','messages','school-files','varieties'].includes(tab) || (tab === 'requests' && dashboard?.role === 'farmer')) tab = 'update';
+    for (const id of ['update','requests','register','atlas','messages','school-files','varieties']) $(id).hidden = !dashboard || id !== tab;
     for (const link of document.querySelectorAll('nav a')) {
       if (link.hash === '#' + tab) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
       link.hidden = link.hash === '#requests' && dashboard?.role === 'farmer';
     }
     if (dashboard && tab==='school-files') openSchoolFiles();
+    if (dashboard && tab==='varieties') openVarieties();
     if (dashboard && tab==='messages' && !$('farmer-threads').firstElementChild) {
       $('farmer-threads').append(plantThreadsPanel({staff:true,api:(path,body)=>api(path.slice('/plants'.length),body)}));
     }
@@ -254,7 +257,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
   $('remove-photo').addEventListener('click',() => { clearPhoto(draft(selected().key)); renderDraft(); $('library-file').focus(); });
   $('remove-stage-photo').addEventListener('click',()=>{
     const tree=selected();if(!tree || !window.confirm('Remove the public stage photo for '+tree.label+'?'))return;
-    run(async()=>{await api('/stage-photo',{key:tree.key,stage:tree.stage,remove:true});
+    run(async()=>{await api('/stage-photo',{key:tree.key,stage:tree.stage,expectedPlantingId:tree.plantingId,remove:true});
       $('stage-photo-result').textContent='Public stage photo removed for '+tree.label+'.';});
   });
   $('stage-photo-form').addEventListener('submit',event=>{
@@ -263,7 +266,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     run(async()=>{
       $('stage-photo-result').textContent='Preparing photo…';
       const image=await prepareFieldPhoto(file,true);
-      await api('/stage-photo',{key:tree.key,stage:tree.stage,photo:{mime:image.type,base64:await base64(image)}});
+      await api('/stage-photo',{key:tree.key,stage:tree.stage,expectedPlantingId:tree.plantingId,photo:{mime:image.type,base64:await base64(image)}});
       $('stage-photo').value='';
       $('stage-photo-result').textContent='Stage photo published for '+tree.label+'.';
     });
@@ -445,7 +448,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
       const {updates} = await api('/journal?key=' + encodeURIComponent(p.key));
       if (version !== journalVersion) return;
       const rows = updates.map(update => {
-        const row = element('article',null,'log-entry'); row.append(element('h3',displayDate(update.observedOn)));
+        const row = element('article',null,'log-entry'); row.append(element('h3',(update.previousPlanting?'Previous planting · ':'')+displayDate(update.observedOn)));
         if (update.note) row.append(element('p',update.note));
         if (photoPath(update.photoUrl)) {
           const image = element('img'); image.src = photoPath(update.photoUrl); image.alt = 'Field photograph of ' + name(p); image.loading = 'lazy'; row.append(image);
@@ -482,7 +485,7 @@ import {setPlantIllustration} from '../../public/assets/plant-portal/plant-illus
     if (!d.note.trim() && !d.blob) { message('Add a field note or a photograph.'); $('update-note').focus(); return; }
     run(async () => {
       message('Posting your observation…'); d.requestId ||= crypto.randomUUID();
-      const body = {key:p.key,observedOn:d.date,note:d.note.trim(),requestId:d.requestId};
+      const body = {key:p.key,expectedPlantingId:p.plantingId,observedOn:d.date,note:d.note.trim(),requestId:d.requestId};
       if (d.blob) body.photo = {mime:d.blob.type,base64:await base64(d.blob)};
       await api('/update',body);
       clearPhoto(d); drafts.delete(p.key); renderDraft(); await loadHistory();

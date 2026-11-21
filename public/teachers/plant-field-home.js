@@ -19,7 +19,7 @@ function element(tag,cls,text) {
 function anchor(label,href,cls) {
   const a=element('a',cls,label);a.href=href;return a;
 }
-function source(scope){return scope==='plant'?'This tree':scope==='farm'?'Farm-wide record':'';}
+function source(scope){return scope==='plant'?'This tree':scope==='farm'?'Farm-wide record':scope==='variety'?'Variety reference':'';}
 function fact(grid,label,value,detail) {
   const group=element('div','field-fact');group.append(element('dt',null,label),element('dd',null,value));
   if(detail)group.append(element('dd','field-fact-source',detail));
@@ -38,7 +38,7 @@ function stagePlate(stage,key) {
   return svg;
 }
 function latestPhoto(report,updates) {
-  const record=report?.latestPhoto||updates.find(u=>photoPath.test(u.photoUrl));
+  const record=report?.latestPhoto||(report?.replacementAt?null:updates.find(u=>!u.previousPlanting&&photoPath.test(u.photoUrl)));
   return record && photoPath.test(record.photoUrl)?record:null;
 }
 export function fieldHero({application,report,updates,classroomHref,onMessage}) {
@@ -172,5 +172,9 @@ export function varietyProfile(report) {
   }
   section.append(grid,element('p','edu-small','Variety characteristics are a guide. Local growing conditions can affect what we observe.'));
   if(fields.varietySource?.value)section.append(element('p','edu-small','Farmer’s source · '+fields.varietySource.value));
+  if(report?.varietySourceUrl){
+    try{const url=new URL(report.varietySourceUrl);if(url.protocol==='https:'){const link=anchor('Explore the variety reference',url.href);link.target='_blank';link.rel='noopener noreferrer';section.append(link);}}catch{}
+  }
+
   return section;
 }

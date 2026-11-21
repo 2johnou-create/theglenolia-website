@@ -4,7 +4,7 @@ import {currentSydneyDate} from './education-workspace.mjs';
 
 const fieldNames = ['variety','soil','soilPh','growerFocus','plantedOn','condition','stature','leafTip','beanSize','yieldPotential','firstFruit','ripening','rust','nutrition','varietySource'];
 const profileColumns = 'scope_key AS key, revision, snapshot, recorded_at AS recordedAt';
-const eventColumns = "id, observed_on AS observedOn, description, CASE WHEN scope_key='farm' THEN 'farm' ELSE 'plant' END AS scope";
+const eventColumns = "id, observed_on AS observedOn, description, planting_id AS plantingId, CASE WHEN scope_key='farm' THEN 'farm' ELSE 'plant' END AS scope";
 const eventOrder = "observed_on DESC, CASE WHEN scope_key='farm' THEN 1 ELSE 0 END, created_at DESC, id DESC";
 const positionKey = /^r(?:[1-9]|1[0-2])-p(?:[1-9]|1[0-9])$/;
 
@@ -31,15 +31,19 @@ const currentProfiles = `SELECT ${profileColumns} FROM edu_plant_field_profiles 
 export async function teacherFieldReport(db,actor,applicationId) {
   // One read snapshot ties the permanent tree and all school-visible records to this live grant.
   const row=await db.prepare(`SELECT v.plant_key AS key,v.row_num AS row,v.position,v.stage,
-    fp.snapshot AS farmValues,fp.recorded_at AS farmAt,tp.snapshot AS treeValues,tp.recorded_at AS treeAt,
+    fp.snapshot AS farmValues,fp.recorded_at AS farmAt,tp.snapshot AS treeValues,tp.recorded_at AS treeAt,tp.planting_id AS treePlantingId,cp.id AS currentPlantingId,
+    cp.planted_on AS cataloguePlanted,cp.recorded_at AS catalogueAt,cv.name AS catalogueVariety,cv.source_url AS catalogueSource,cv.traits AS catalogueTraits,
+    CASE WHEN EXISTS(SELECT 1 FROM edu_coffee_plantings old WHERE old.plant_key=v.plant_key AND old.ended_at IS NOT NULL) THEN cp.recorded_at END AS replacementAt,
     (SELECT json_object('id',u.id,'observedOn',u.observed_on,'note',u.note) FROM edu_plant_updates u
-      WHERE u.plant_key=v.plant_key AND u.withdrawn=0 ORDER BY u.observed_on DESC,u.created_at DESC,u.id DESC LIMIT 1) AS lastNote,
+      WHERE u.plant_key=v.plant_key AND u.withdrawn=0 AND (NOT EXISTS(SELECT 1 FROM edu_coffee_plantings old WHERE old.plant_key=v.plant_key AND old.ended_at IS NOT NULL) OR u.planting_id=cp.id) ORDER BY u.observed_on DESC,u.created_at DESC,u.id DESC LIMIT 1) AS lastNote,
     (SELECT json_object('id',u.id,'observedOn',u.observed_on) FROM edu_plant_updates u
-      WHERE u.plant_key=v.plant_key AND u.withdrawn=0 AND u.photo_mime IS NOT NULL ORDER BY u.observed_on DESC,u.created_at DESC,u.id DESC LIMIT 1) AS lastPhoto,
-    (SELECT json_group_array(json_object('id',id,'observedOn',observedOn,'description',description,'scope',scope))
+      WHERE u.plant_key=v.plant_key AND u.withdrawn=0 AND u.photo_mime IS NOT NULL AND (NOT EXISTS(SELECT 1 FROM edu_coffee_plantings old WHERE old.plant_key=v.plant_key AND old.ended_at IS NOT NULL) OR u.planting_id=cp.id) ORDER BY u.observed_on DESC,u.created_at DESC,u.id DESC LIMIT 1) AS lastPhoto,
+    (SELECT json_group_array(json_object('id',id,'observedOn',observedOn,'description',description,'scope',scope,'plantingId',plantingId))
       FROM (SELECT ${eventColumns} FROM edu_plant_fertiliser WHERE withdrawn_at IS NULL AND scope_key IN ('farm',v.plant_key)
         ORDER BY ${eventOrder} LIMIT 25)) AS feedHistory
     FROM edu_plant_applications a JOIN edu_atlas_positions v ON v.plant_key=a.plant_key
+    LEFT JOIN edu_coffee_plantings cp ON cp.plant_key=v.plant_key AND cp.ended_at IS NULL
+    LEFT JOIN edu_coffee_varieties cv ON cv.id=cp.variety_id
     LEFT JOIN edu_plant_field_profiles fp ON fp.scope_key='farm'
       AND fp.revision=(SELECT MAX(r.revision) FROM edu_plant_field_profiles r WHERE r.scope_key='farm')
     LEFT JOIN edu_plant_field_profiles tp ON tp.scope_key=v.plant_key
@@ -50,12 +54,25 @@ export async function teacherFieldReport(db,actor,applicationId) {
   const {key,position,stage}=row;
   const plant={key,label:'P'+((row.row-1)*19+position),row:row.row,position,stage};
   const profiles=[];
-  if(row.treeValues)profiles.push(profileRecord(key,row.treeValues,row.treeAt));
+  if(row.treeValues && (!row.replacementAt || row.treePlantingId===row.currentPlantingId))profiles.push(profileRecord(key,row.treeValues,row.treeAt));
   if(row.farmValues)profiles.push(profileRecord('farm',row.farmValues,row.farmAt));
   const fertiliserHistory=JSON.parse(row.feedHistory);
   const latestPhoto=JSON.parse(row.lastPhoto);
   if(latestPhoto)latestPhoto.photoUrl='/api/plants/photos/'+latestPhoto.id;
-  return json({plant,fields:resolvedFields(profiles),lastFertiliser:fertiliserHistory[0]||null,
+  const fields=resolvedFields(profiles);
+  if(row.catalogueVariety){
+    const farmVariety=profiles.find(p=>p.key==='farm')?.values.variety;
+    if(!farmVariety || farmVariety.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()!==row.catalogueVariety.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()){
+      for(const name of fieldNames.slice(6))if(fields[name]?.scope==='farm')fields[name]=null;
+    }
+    for(const [name,value] of Object.entries(JSON.parse(row.catalogueTraits||'{}'))){
+      if(fieldNames.slice(6).includes(name) && value && fields[name]?.scope!=='plant')fields[name]={value,scope:'variety',recordedAt:row.catalogueAt};
+    }
+    fields.variety={value:row.catalogueVariety,scope:'plant',recordedAt:row.catalogueAt};
+    fields.plantedOn=row.cataloguePlanted?{value:row.cataloguePlanted,scope:'plant',recordedAt:row.catalogueAt}:fields.plantedOn;
+  }
+  const currentFeed=row.replacementAt ? fertiliserHistory.filter(e=>e.scope==='farm' || e.plantingId===row.currentPlantingId) : fertiliserHistory;
+  return json({plant,fields,varietySourceUrl:row.catalogueSource||null,replacementAt:row.replacementAt||null,lastFertiliser:currentFeed[0]||null,
     fertiliserHistory,latestObservation:JSON.parse(row.lastNote),latestPhoto});
 }
 
@@ -112,9 +129,10 @@ async function saveProfile(db,body,staff) {
       ? previous.fieldDates[field] || previous.recordedAt : at;
   }
   const snapshot=JSON.stringify({...clean,fieldDates});
-  const saved=await db.prepare(`INSERT INTO edu_plant_field_profiles(scope_key,plant_key,revision,snapshot,recorded_at,recorded_by)
-    SELECT ?,?,?,?, ?,? WHERE COALESCE((SELECT MAX(revision) FROM edu_plant_field_profiles WHERE scope_key=?),0)=?
-    ON CONFLICT(scope_key,revision) DO NOTHING`).bind(key,key==='farm'?null:key,revision+1,snapshot,at,staff,key,revision).run();
+  const saved=await db.prepare(`INSERT INTO edu_plant_field_profiles(scope_key,plant_key,revision,snapshot,recorded_at,recorded_by,planting_id)
+    SELECT ?,?,?,?, ?,?,(SELECT id FROM edu_coffee_plantings cp WHERE cp.plant_key=? AND cp.ended_at IS NULL)
+    WHERE COALESCE((SELECT MAX(revision) FROM edu_plant_field_profiles WHERE scope_key=?),0)=?
+    ON CONFLICT(scope_key,revision) DO NOTHING`).bind(key,key==='farm'?null:key,revision+1,snapshot,at,staff,key,key,revision).run();
   if (!saved.meta.changes) {
     const latest=await db.prepare('SELECT revision,snapshot FROM edu_plant_field_profiles WHERE scope_key=? ORDER BY revision DESC LIMIT 1').bind(key).first();
     if (latest?.revision!==revision+1 || !same(profileRecord(key,latest.snapshot,null))) fail(409,'field_report_changed');
@@ -133,8 +151,8 @@ async function fertiliser(db,body,staff) {
   const {id,key,observedOn,description}=keys(body,['id','key','observedOn','description']);
   await scopeKey(db,key);
   const note=text(description,500),date=nonFuture(observedOn);
-  const saved=await db.prepare(`INSERT INTO edu_plant_fertiliser(id,scope_key,plant_key,observed_on,description,created_at,created_by)
-    VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING`).bind(uuid(id),key,key==='farm'?null:key,date,note,nowISO(),staff).run();
+  const saved=await db.prepare(`INSERT INTO edu_plant_fertiliser(id,scope_key,plant_key,observed_on,description,created_at,created_by,planting_id)
+    VALUES(?,?,?,?,?,?,?,(SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL)) ON CONFLICT(id) DO NOTHING`).bind(uuid(id),key,key==='farm'?null:key,date,note,nowISO(),staff,key).run();
   if (!saved.meta.changes && !await db.prepare('SELECT 1 FROM edu_plant_fertiliser WHERE id=? AND scope_key=? AND observed_on=? AND description=? AND withdrawn_at IS NULL').bind(id,key,date,note).first()) fail(409,'request_conflict');
   return json({ok:true});
 }

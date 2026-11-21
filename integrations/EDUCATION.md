@@ -277,3 +277,20 @@ before the education service so it recognises thread-reply notices. Bundle
 both teacher and farmer entry points with their module dependencies and stage
 the private workshop and recognition assets. The admin proxy forwards download
 filenames only on the protected recognition routes.
+
+## Coffee variety catalogue and planting history
+
+Apply the coffee variety schema and the one-time planting-review migration after
+the field, atlas and stage-photo schemas. The second migration adds planting
+references to existing journal, field and fertiliser records. It must be applied
+once to an existing database after a recovery bookmark and count check.
+
+In the protected farmer workspace, **Coffee varieties** holds the source-linked
+catalogue and its optional characteristic selections. Farmers can select open
+positions across rows, review a planting date and growth stage, then assign them
+together. An existing planting requires the separate replacement flow. It
+requires removal and replanting confirmation, a reason, and a fresh growth
+stage. If a school is attached, the farmer sees its name and explicitly confirms
+the adoption has been reviewed and will continue. The previous planting,
+stage photographs and journal records remain in history. Requests use IDs and
+revision checks to prevent silent overwrites and support retry.

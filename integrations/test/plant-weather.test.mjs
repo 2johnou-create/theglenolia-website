@@ -89,9 +89,10 @@ test('submission snapshots fix location and timestamp; backdated observation use
 
 test('retrying a farmer post freezes its first time, plot and weather atomically; a legacy note retains its missing weather',async t=>{
   const env=envFor(t),db=env.EDU_DB,reqId=crypto.randomUUID();
-  db.sql.exec(`CREATE TABLE edu_plants(plant_key TEXT PRIMARY KEY);
+  db.sql.exec(`CREATE TABLE edu_coffee_plantings(id TEXT,plant_key TEXT,ended_at TEXT);
+  CREATE TABLE edu_plants(plant_key TEXT PRIMARY KEY);
   CREATE TABLE edu_plant_updates(id TEXT PRIMARY KEY,plant_key TEXT,observed_on TEXT,note TEXT,created_at TEXT,
-    photo_mime TEXT,photo_bytes BLOB,request_hash TEXT,posted_by TEXT,withdrawn_by TEXT,withdrawn_at TEXT,withdrawn INTEGER DEFAULT 0);
+    photo_mime TEXT,photo_bytes BLOB,request_hash TEXT,posted_by TEXT,withdrawn_by TEXT,withdrawn_at TEXT,withdrawn INTEGER DEFAULT 0,planting_id TEXT);
   INSERT INTO edu_plants VALUES('r2-p2');
   INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at) VALUES('legacy','r2-p2','2026-01-01','Original note','2026-01-01T01:12:00Z')`);
   const action=(path,method,body)=>staffPlantRoutes(new Request(address+'?key=r2-p2',{method,headers:{'X-Glenolia-Plant-Role':'farmer'}}),env,'/plants/'+path,body);

@@ -92,7 +92,7 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  const url=new URL(request.url),path=url.pathname;
  const owner=identityEmail.toLowerCase()===configuredOwner.toLowerCase();
  const farmerPages=['/plants','/plants/','/plants/farmer.js','/plants/farmer.css','/assets/logos/logo-compact-web.svg','/assets/fonts/en-sans.woff2','/assets/fonts/en-serif.woff2'];
- const farmerAPI=/^\/api\/education\/plants\/(?:dashboard|journal|row|stage|stage-photo|verify|availability|update|withdraw-update|field-report|fertiliser|threads(?:\/reply)?|photos\/[a-f0-9-]{36})$/;
+ const farmerAPI=/^\/api\/education\/plants\/(?:dashboard|journal|row|stage|stage-photo|verify|availability|update|withdraw-update|field-report|fertiliser|varieties(?:\/(?:assign|replace|history|archive))?|threads(?:\/reply)?|photos\/[a-f0-9-]{36})$/;
  const schoolFileRoute=/^\/api\/education\/plants\/recognition(?:\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\/(?:certificate\.pdf|feed\.png|story\.png|landscape\.png|captions\.txt))?$/.test(path);
  const permittedFarmer=typeof env.FARMER_EMAILS==='string'&&env.FARMER_EMAILS.toLowerCase().split(',').map(email=>email.trim()).includes(identityEmail.toLowerCase());
  if(!owner&&!(permittedFarmer&&(farmerPages.includes(path)||farmerAPI.test(path)||(request.method==='GET'&&schoolFileRoute))))return json(403,{error:'owner_required'});

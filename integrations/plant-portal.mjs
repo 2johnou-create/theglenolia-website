@@ -1,3 +1,4 @@
+import {varietyRoutes} from './plant-varieties.mjs';
 import {recognitionRoute} from './plant-recognition.mjs';
 import {plantThreadRoute} from './plant-threads.mjs';
 import {teacherFieldReport,staffFieldReport} from './plant-field-report.mjs';
@@ -36,8 +37,9 @@ async function inventory(db, staff=false) {
   // One read snapshot keeps each row's count consistent with its stage records.
   const slots = await all(db.prepare(`SELECT r.row_num,r.enabled_count,r.revision AS row_revision,
     v.plant_key,v.position,v.stage,v.revision,p.tag,p.available,a.status AS allocation,CASE WHEN o.public_name=1 THEN o.name END AS adopted_by,
-    COALESCE((SELECT json_extract(snapshot,'$.variety') FROM edu_plant_field_profiles WHERE scope_key=v.plant_key ORDER BY revision DESC LIMIT 1),
-             (SELECT json_extract(snapshot,'$.variety') FROM edu_plant_field_profiles WHERE scope_key='farm' ORDER BY revision DESC LIMIT 1)) AS variety,
+    (SELECT cp.id FROM edu_coffee_plantings cp WHERE cp.plant_key=v.plant_key AND cp.ended_at IS NULL) AS current_planting,
+    COALESCE((SELECT cv.name FROM edu_coffee_plantings cp JOIN edu_coffee_varieties cv ON cv.id=cp.variety_id WHERE cp.plant_key=v.plant_key AND cp.ended_at IS NULL),
+             (SELECT json_extract(snapshot,'$.variety') FROM edu_plant_field_profiles WHERE scope_key=v.plant_key ORDER BY revision DESC LIMIT 1)) AS variety,
     EXISTS(SELECT 1 FROM edu_plant_stage_photos sp WHERE sp.plant_key=v.plant_key AND sp.stage=v.stage) AS has_stage_photo
     FROM edu_atlas_rows r JOIN edu_atlas_positions v USING(row_num)
     LEFT JOIN edu_plants p ON p.plant_key=v.plant_key
@@ -57,7 +59,7 @@ async function inventory(db, staff=false) {
     const adoption = !staff && ['active','cooling'].includes(slot.allocation)
       ? {adoptionStatus:slot.allocation==='active'?'adopted':'cooling',...(slot.adopted_by?{adoptedBy:slot.adopted_by}:{})} : {};
     const plant = {key:slot.plant_key,row,position:slot.position,label:'P'+((row-1)*rowCapacity+slot.position),
-      stage:slot.stage,status,...(slot.variety ? {variety:slot.variety} : {}),...(slot.has_stage_photo ? {stagePhoto:true} : {}),...adoption,...(staff ? {revision:slot.revision,tag:slot.tag} : {})};
+      stage:slot.stage,status,...(slot.variety ? {variety:slot.variety} : {}),...(slot.has_stage_photo ? {stagePhoto:true} : {}),...adoption,...(staff ? {revision:slot.revision,tag:slot.tag,plantingId:slot.current_planting||null} : {})};
     (visible ? plants : archivedPlants).push(plant);
   }
   return {rows,plants,...(staff ? {archivedPlants} : {})};
@@ -77,29 +79,37 @@ export async function publicStagePhoto(request,env) {
   return new Response(bytes,{headers:{...SECURITY,'Content-Type':row.photo_mime,'Cache-Control':'public, max-age=60','Cross-Origin-Resource-Policy':'cross-origin','X-Content-Type-Options':'nosniff'}});
 }
 async function saveStagePhoto(db,body,staffId) {
-  const b=keys(body,['key','stage','photo','remove']),p=position(b.key);
+  const b=keys(body,['key','stage','photo','remove','expectedPlantingId']),p=position(b.key);
   const stage=boundedInt(b.stage,1,10);
+  const current=await db.prepare('SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL').bind(p.key).first();
+  if(b.expectedPlantingId!==undefined && (current?.id||null)!==(b.expectedPlantingId||null))fail(409,'planting_changed');
+  if(b.expectedPlantingId===undefined && await db.prepare('SELECT 1 FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NOT NULL').bind(p.key).first())fail(409,'planting_changed');
   if(b.remove===true){
-    await db.prepare('DELETE FROM edu_plant_stage_photos WHERE plant_key=? AND stage=?').bind(p.key,stage).run();
+    await db.prepare("DELETE FROM edu_plant_stage_photos WHERE plant_key=? AND stage=? AND COALESCE((SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL),'')=?").bind(p.key,stage,p.key,current?.id||'').run();
+    const latest=await db.prepare('SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL').bind(p.key).first();
+    if((latest?.id||null)!==(current?.id||null))fail(409,'planting_changed');
     return ok();
   }
   const picture=cleanPhoto(b.photo);
   if(!picture)fail(400,'invalid_image');
   const saved=await db.prepare(`INSERT INTO edu_plant_stage_photos(plant_key,stage,photo_mime,photo_bytes,recorded_at,recorded_by)
-    SELECT plant_key,?,?,?,?,? FROM edu_plants WHERE plant_key=? AND EXISTS (SELECT 1 FROM edu_atlas_positions WHERE plant_key=? AND stage=?)
+    SELECT plant_key,?,?,?,?,? FROM edu_plants WHERE plant_key=? AND EXISTS (SELECT 1 FROM edu_atlas_positions WHERE plant_key=? AND stage=?) AND COALESCE((SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL),'')=?
     ON CONFLICT(plant_key,stage) DO UPDATE SET photo_mime=excluded.photo_mime,photo_bytes=excluded.photo_bytes,
     recorded_at=excluded.recorded_at,recorded_by=excluded.recorded_by`)
-    .bind(stage,picture.mime,picture.bytes.buffer,nowISO(),staffId,p.key,p.key,stage).run();
+    .bind(stage,picture.mime,picture.bytes.buffer,nowISO(),staffId,p.key,p.key,stage,p.key,current?.id||'').run();
   if(!saved.meta.changes)fail(409,'atlas_changed');
   return ok();
 }
 async function journal(db,plantKey,photoPrefix,actorId=null) {
   const scope=actorId ? ' AND plant_key IN ('+activeAccess+')' : '';
   const rows=await all(db.prepare(`SELECT id,observed_on AS observedOn,note,created_at AS createdAt,photo_mime AS mime,
+    EXISTS(SELECT 1 FROM edu_coffee_plantings current WHERE current.plant_key=edu_plant_updates.plant_key AND current.ended_at IS NULL
+      AND (edu_plant_updates.planting_id IS NULL OR edu_plant_updates.planting_id<>current.id)
+      AND EXISTS(SELECT 1 FROM edu_coffee_plantings old WHERE old.plant_key=current.plant_key AND old.ended_at IS NOT NULL)) AS previousPlanting,
     (SELECT payload FROM edu_plant_weather_logs WHERE update_id=edu_plant_updates.id) AS weatherJson
     FROM edu_plant_updates WHERE plant_key=? AND withdrawn=0${scope} ORDER BY observed_on DESC,created_at DESC,id DESC`)
     .bind(plantKey,...(actorId ? [actorId] : [])));
-  return rows.map(({ mime,weatherJson,...row }) => ({ ...row, weather:weatherJson ? JSON.parse(weatherJson) : null, photoUrl:mime ? photoPrefix+row.id : null }));
+  return rows.map(({ mime,weatherJson,previousPlanting,...row }) => ({ ...row,...(previousPlanting?{previousPlanting:true}:{}), weather:weatherJson ? JSON.parse(weatherJson) : null, photoUrl:mime ? photoPrefix+row.id : null }));
 }
 async function photo(db,updateId,actorId=null) {
   const scope=actorId ? ' AND plant_key IN ('+activeAccess+')' : '';
@@ -352,7 +362,7 @@ function cleanPhoto(value) {
 }
 async function publishUpdate(env,body,staffId) {
   const db=env.EDU_DB;
-  const b=keys(body,['key','observedOn','note','requestId','photo']),p=position(b.key),req=uuid(b.requestId);
+  const b=keys(body,['key','observedOn','note','requestId','photo','expectedPlantingId']),p=position(b.key),req=uuid(b.requestId);
   const observed=dateValue(b.observedOn),at=nowISO();
   if (observed>currentSydneyDate(new Date(at))) fail(400,'future_observation');
   const note=text(b.note??'',1200,{empty:true}),picture=cleanPhoto(b.photo);
@@ -367,15 +377,20 @@ async function publishUpdate(env,body,staffId) {
   const previous=await existing();
   if (previous) { confirmRetry(previous); return ok(); }
   if (!await db.prepare('SELECT 1 FROM edu_plants WHERE plant_key=?').bind(p.key).first()) fail(404,'plant_not_verified');
+  const current=await db.prepare('SELECT id FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NULL').bind(p.key).first();
+  if(b.expectedPlantingId!==undefined && (current?.id||null)!==(b.expectedPlantingId||null))fail(409,'planting_changed');
+  if(b.expectedPlantingId===undefined && await db.prepare('SELECT 1 FROM edu_coffee_plantings WHERE plant_key=? AND ended_at IS NOT NULL').bind(p.key).first())fail(409,'planting_changed');
   const log=await snapshotForUpdate(env,p,observed,at);
   const [result]=await db.batch([
-    db.prepare(`INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at,photo_mime,photo_bytes,request_hash,posted_by)
-      SELECT ?,plant_key,?,?,?,?,?,?,? FROM edu_plants WHERE plant_key=? ON CONFLICT(id) DO NOTHING`)
-      .bind(req,observed,note,at,picture?.mime??null,picture?.bytes.buffer??null,fingerprint,staffId,p.key),
+    db.prepare(`INSERT INTO edu_plant_updates(id,plant_key,observed_on,note,created_at,photo_mime,photo_bytes,request_hash,posted_by,planting_id)
+      SELECT ?,plant_key,?,?,?,?,?,?,?,(SELECT id FROM edu_coffee_plantings cp WHERE cp.plant_key=edu_plants.plant_key AND cp.ended_at IS NULL) FROM edu_plants WHERE plant_key=? AND COALESCE((SELECT id FROM edu_coffee_plantings WHERE plant_key=edu_plants.plant_key AND ended_at IS NULL),'')=? ON CONFLICT(id) DO NOTHING`)
+      .bind(req,observed,note,at,picture?.mime??null,picture?.bytes.buffer??null,fingerprint,staffId,p.key,current?.id||''),
     db.prepare(`INSERT OR IGNORE INTO edu_plant_weather_logs(update_id,payload)
       SELECT id,? FROM edu_plant_updates WHERE id=? AND request_hash=? AND created_at=?`).bind(log,req,fingerprint,at)
   ]);
-  if (!result.meta.changes) confirmRetry(await existing());
+  if (!result.meta.changes) {
+    const saved=await existing();if(saved)confirmRetry(saved);else fail(409,'planting_changed');
+  }
   return ok();
 }
 async function withdraw(db,body,staffId) {
@@ -398,6 +413,7 @@ async function answer(db,body,staffId) {
 // Only the Access-verified admin service creates the role header on its signed binding request.
 export async function staffPlantRoutes(request,env,path,body) {
   if(path==='/plants/recognition'||path.startsWith('/plants/recognition/'))return recognitionRoute(request,env,path);
+  if(path==='/plants/varieties'||path.startsWith('/plants/varieties/'))return varietyRoutes(request,env.EDU_DB,path,body);
   if(path==='/plants/field-report'||path==='/plants/fertiliser')return staffFieldReport(request,env.EDU_DB,path,body);
   const db=env.EDU_DB,farmer=request.headers.get('X-Glenolia-Plant-Role')==='farmer';
   if(path==='/plants/threads'||path.startsWith('/plants/threads/'))return plantThreadRoute(request,db,path.slice('/plants'.length),{staffId:request.headers.get('X-Glenolia-Staff-Email')||'farm_staff'},body);

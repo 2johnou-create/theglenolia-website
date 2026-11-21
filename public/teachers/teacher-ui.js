@@ -580,6 +580,7 @@ function start(root){
    img.addEventListener('error',()=>figure.replaceChildren(small('This photograph could not be loaded. Refresh to try again.')),{once:true});
    figure.append(img);card.append(figure);
   }
+  if(entry.previousPlanting)textBox.append(el('p','Previous planting at this position','edu-kicker'));
   const time=el('time',date);time.dateTime=entry.observedOn;
   textBox.append(time);if(entry.note)textBox.append(el('p',entry.note));append(textBox,fieldConditions(entry.weather));card.append(textBox);return card;
  }
@@ -621,10 +622,15 @@ function start(root){
   reportHeader.append(fieldHero({application,updates,report,classroomHref:plantRoute('plant-classroom',orgId,application.id),onMessage:()=>jump(threads)}));
   box.append(reportHeader);
   if(application.status==='cooling')box.append(notice('Withdrawal requested','This plant is reserved until '+localPlantTime(application.releaseAt)+' Sydney time. The primary teacher can cancel in School settings.'));
-  const latest=section('Farmer journal',updates.length?observation(updates[0]):notice('Waiting for the first field note.','The farmer’s dated observations and photos will appear here.'));
-  if(updates.length>1){
-   const history=el('details',null,'plant-history');history.append(el('summary','Earlier updates ('+(updates.length-1)+')'));
-   history.addEventListener('toggle',()=>{if(history.open&&history.children.length===1)for(const entry of updates.slice(1))history.append(observation(entry));});latest.append(history);
+  const currentUpdates=updates.filter(entry=>!entry.previousPlanting),previousUpdates=updates.filter(entry=>entry.previousPlanting);
+  const latest=section('Farmer journal',currentUpdates.length?observation(currentUpdates[0]):notice('Waiting for the first field note.','The farmer’s dated observations and photos will appear here.'));
+  if(currentUpdates.length>1){
+   const history=el('details',null,'plant-history');history.append(el('summary','Earlier updates ('+(currentUpdates.length-1)+')'));
+   history.addEventListener('toggle',()=>{if(history.open&&history.children.length===1)for(const entry of currentUpdates.slice(1))history.append(observation(entry));});latest.append(history);
+  }
+  if(previousUpdates.length){
+   const previous=el('details',null,'plant-history');previous.append(el('summary','Previous planting ('+previousUpdates.length+' updates)'));
+   previous.addEventListener('toggle',()=>{if(previous.open&&previous.children.length===1)for(const entry of previousUpdates)previous.append(observation(entry));});latest.append(previous);
   }
   const facts=el('div',null,'field-context-grid');facts.append(fieldFacts(report),farmWeather(api));
   reportHeader.append(facts);reportHeader.append(varietyProfile(report));

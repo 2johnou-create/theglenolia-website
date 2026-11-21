@@ -63,6 +63,9 @@ class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
   for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql'])
    this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
+  this.sql.exec(readFileSync(new URL('../plant-varieties-schema.sql',import.meta.url),'utf8').split('-- John confirmed')[0]);
+  this.sql.exec(readFileSync(new URL('../plant-variety-review-schema.sql',import.meta.url),'utf8'));
+
  }
  prepare(sql){const db=this;return {sql,args:[],bind(...args){return {...this,args};},async first(column){const row=db.sql.prepare(sql).get(...this.args.map(normal));return row?(column?row[column]:{...row}):null;},async all(){return {results:db.sql.prepare(sql).all(...this.args.map(normal)).map(r=>({...r})),success:true};},async run(){const r=db.sql.prepare(sql).run(...this.args.map(normal));return {success:true,meta:{changes:Number(r.changes),last_row_id:Number(r.lastInsertRowid)}};}};}
  async batch(statements){this.sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of statements)out.push(await s.run());this.sql.exec('COMMIT');return out;}catch(e){this.sql.exec('ROLLBACK');throw e;}}
@@ -606,4 +609,53 @@ test('variety profiles and explicitly published current-stage photos remain tied
  await code(await f.staff('/plants/stage-photo',{key,stage:3,photo:fixturePhoto}),200);
  await code(await f.staff('/plants/stage-photo',{key,stage:3,remove:true}),200);
  assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);
+});
+
+test('catalogue, bulk assignments and reviewed replacement preserve the previous planting and private school journal',async t=>{
+ const f=await fixture(t),key='r1-p7',app=await approvePlant(f);
+ const catalog=await code(await f.staff('/plants/varieties'),200);
+ assert.equal(catalog.varieties.length,4);
+ const bulk={requestId:uuid(),varietyId:'paraiso',positions:[key,'r1-p8'],expectedRevisions:{[key]:1,'r1-p8':1},newStage:2,plantedOn:'2026-01-01'};
+ await code(await f.staff('/plants/varieties/assign',bulk),200);
+ await code(await f.staff('/plants/varieties/assign',bulk),200);
+ await code(await f.staff('/plants/varieties/assign',{...bulk,varietyId:'ipr107'}),409,'request_conflict');
+ let after=await code(await f.staff('/plants/varieties'),200),p=after.positions.find(v=>v.key===key);
+ assert.equal(p.variety,'Paraíso');assert.equal(p.applicationId,app);
+ await code(await f.staff('/plants/varieties/assign',{requestId:uuid(),varietyId:'ipr107',positions:[key,'r1-p9'],expectedRevisions:{[key]:2,'r1-p9':1},newStage:2,plantedOn:'2026-01-01'}),409);
+ assert.equal(f.db.sql.prepare("SELECT count(*) AS n FROM edu_coffee_plantings WHERE plant_key='r1-p9'").get().n,0);
+ const update={key,observedOn:'2026-01-01',note:'Earlier plant',photo:fixturePhoto,requestId:uuid()};
+ await code(await f.staff('/plants/update',update),200);
+ f.db.sql.prepare("UPDATE edu_plant_updates SET created_at='2026-01-02T00:00:00.000Z' WHERE id=?").run(update.requestId);
+ await code(await f.staff('/plants/stage-photo',{key,stage:2,photo:fixturePhoto}),200);
+ const request={requestId:uuid(),key,expectedPlantingId:p.plantingId,expectedApplicationId:app,varietyId:'ipr107',plantedOn:'2026-01-03',reason:'Earlier plant removed',newStage:2,expectedRevision:p.revision,removed:true,replanted:true,reviewed:false};
+ await code(await f.staff('/plants/varieties/replace',request),400,'adoption_review_required');
+ assert.equal((await code(await f.req('/api/plants/map'),200)).plants.find(x=>x.key===key).variety,'Paraíso');
+ request.reviewed=true;
+ await code(await f.staff('/plants/varieties/replace',{...request,expectedRevision:p.revision+1}),409,'planting_changed');
+ await code(await f.staff('/plants/varieties/replace',{...request,expectedApplicationId:null}),409,'planting_changed');
+ await code(await f.staff('/plants/varieties/replace',request),200);
+ await code(await f.staff('/plants/varieties/replace',request),200);
+ await code(await f.staff('/plants/varieties/replace',{...request,reason:'Different reason'}),409,'request_conflict');
+ assert.equal(f.db.sql.prepare('SELECT count(*) n FROM edu_coffee_plantings WHERE plant_key=?').get(key).n,2);
+ assert.equal(f.db.sql.prepare('SELECT count(*) n FROM edu_stage_photo_archive').get().n,1);
+ assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);
+ assert.equal((await code(await f.req('/api/plants/map'),200)).plants.find(x=>x.key===key).variety,'IPR107');
+ const report=await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.a}),200);
+ assert.equal(report.fields.variety.value,'IPR107');assert.equal(report.latestPhoto,null);
+ assert.equal(report.varietySourceUrl,'https://varieties.worldcoffeeresearch.org/varieties/ipr-107');
+ const journal=await code(await f.req('/api/plants/me',{actor:f.a}),200);
+ assert.equal(journal.updates[0].previousPlanting,true);
+ assert.equal(journal.updates[0].note,'Earlier plant');
+ await code(await f.staff('/plants/update',{key,expectedPlantingId:p.plantingId,observedOn:'2026-01-04',note:'Stale old-tree draft',requestId:uuid()}),409,'planting_changed');
+ const current=(await code(await f.staff('/plants/varieties'),200)).positions.find(x=>x.key===key);
+ await code(await f.staff('/plants/update',{key,expectedPlantingId:current.plantingId,observedOn:'2026-01-04',note:'New tree',requestId:uuid()}),200);
+ const refreshed=await code(await f.req('/api/plants/me',{actor:f.a}),200);
+ assert.equal(refreshed.updates.find(x=>x.note==='New tree').previousPlanting,undefined);
+ assert.equal(refreshed.updates.find(x=>x.note==='Earlier plant').previousPlanting,true);
+ const archived=await code(await f.staff('/plants/varieties/history?key='+key),200);
+ assert.equal(archived.history.length,2);assert.deepEqual(archived.history.find(x=>x.endedAt).archivedStages,[2]);
+ const photo=await f.staff('/plants/varieties/archive?key='+key+'&planting='+encodeURIComponent(p.plantingId)+'&stage=2');
+ assert.equal(photo.status,200);assert.equal(Buffer.from(await photo.arrayBuffer()).toString('base64'),fixturePhoto.base64);
+
+ await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.b}),404);
 });
