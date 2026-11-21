@@ -183,8 +183,8 @@
  .plant-field-companions>div{padding:.8rem .6rem .8rem 0}
 }
 .field-shortcuts{display:flex;align-items:center;flex-wrap:wrap;gap:0 1.15rem;padding:0 .15rem;border-bottom:1px solid var(--edu-sage)}
-.field-shortcuts button{border:0;border-radius:0;background:none;color:var(--edu-green);font:600 .86rem var(--edu-sans);text-decoration:underline;text-underline-offset:.23em;min-height:44px;padding:.4rem .1rem;cursor:pointer}
-@media(max-width:540px){.field-shortcuts{gap:0 .75rem}.field-shortcuts button{font-size:.79rem}}
+.field-shortcuts button,.field-shortcuts a{display:inline-flex;align-items:center;border:0;border-radius:0;background:none;color:var(--edu-green);font:600 .86rem var(--edu-sans);text-decoration:underline;text-underline-offset:.23em;min-height:44px;padding:.4rem .1rem;cursor:pointer}
+@media(max-width:540px){.field-shortcuts{gap:0 .75rem}.field-shortcuts button,.field-shortcuts a{font-size:.79rem}}
 
 [data-plant-view="teacher"] .edu-app-header{padding-block:.65rem}
 [data-plant-view="teacher"] .edu-brand{width:155px}

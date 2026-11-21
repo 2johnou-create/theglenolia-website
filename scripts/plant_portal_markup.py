@@ -49,7 +49,7 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div class="invite"><p class="eyebrow">Free school programme · Glenorie, NSW</p><h1 id="invite-heading">A coffee plant<br> for your class.</h1>
 <p class="hero-intro">Watch it grow with the farmer’s photos, field notes and classroom activities.</p>
 <div class="invite-actions"><a class="cta" href="#rows">Explore the rows <span aria-hidden="true">↓</span></a>
-<a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></div></section>
+<a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a><a class="sub-link" href="#meet-farmer">Meet the farmer <span aria-hidden="true">↓</span></a></div></div></section>
 <section class="explore shell" id="rows" aria-labelledby="rows-heading" tabindex="-1">
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
 <p>Explore the coffee plants among the established magnolias. Choose an open plant for your school or see which organisations are already growing with us.</p></div>
@@ -95,4 +95,14 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <li><strong>Follow it together.</strong> Invite other teachers to the same journal. Compare the farmer’s dated photos with your class.</li></ol>
 <p class="terms">Your school can apply for up to three plants. Each extra plant needs an educational reason and approval. The farm cares for the plants. Students take part through a teacher.</p>
 <a class="cta" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></section>
-</main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a><a href="{farmer}" rel="nofollow">Farmer login</a></nav></footer></body></html>'''
+<section class="meet-farmer shell" id="meet-farmer" aria-labelledby="farmer-heading">
+<div class="farmer-intro"><p class="eyebrow">The people behind the plants</p><h2 id="farmer-heading">Meet the farmer.</h2><p>Growing coffee is a journey of observation, care and shared knowledge.</p></div>
+<div class="farmer-layout">
+<figure class="farmer-photo"><img src="{assets}/meet-the-farmer.webp" width="1440" height="1080" loading="lazy" alt="Three people standing together among the magnolia rows at The Glenolia."><figcaption>At the farm in Glenorie</figcaption></figure>
+<div class="farmer-people">
+<article><p class="farmer-role">Program Director · Head of Coffee</p><h3>John Ou</h3><p>John leads the coffee-growing program and the school plant initiative at The Glenolia. He works with the farm team and plantation consultants to share the journey of growing coffee with students and the community.</p></article>
+<article><p class="farmer-role">Coffee plantation consultants</p><h3>David Peasley &amp; Jos Webber</h3><p>David and Jos advise The Glenolia on its coffee plantation planning and growing program. Both are co-authors of the <a href="https://agrifutures.com.au/product/australian-coffee-growers-manual/" target="_blank" rel="noopener noreferrer">Australian Coffee Growers’ Manual</a>, a resource for growers across Australia.</p></article>
+</div></div>
+<div class="farmer-membership"><p>The Glenolia is a proud member of the <strong>Australian Grown Coffee Association</strong>.</p><a href="https://www.agca.au/" target="_blank" rel="noopener noreferrer">Discover the association <span aria-hidden="true">↗</span></a></div>
+</section>
+</main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="#meet-farmer">Meet the farmer</a><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a><a href="{farmer}" rel="nofollow">Farmer login</a></nav></footer></body></html>'''
