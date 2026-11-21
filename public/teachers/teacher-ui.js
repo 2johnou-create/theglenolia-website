@@ -610,7 +610,7 @@ function start(root){
    let step=0;const question=el('h2',prompts[0]);question.setAttribute('aria-live','polite');
    prompt.append(el('p','DISCUSS TOGETHER','edu-kicker'),question,
     actions(button('Next question',()=>{step=(step+1)%prompts.length;question.textContent=prompts[step];},true),button('Print activity',()=>window.print(),true)));
-   box.append(stage,prompt,varietyProfile(report),actions(link('Meet the farmer','https://theglenolia.com.au/plant-portal/#meet-farmer',true)));append(box,learningCard(guide,application.schoolType));return box;
+   box.append(stage,prompt,varietyProfile(report),actions(link('Meet the Farmer','https://theglenolia.com.au/plant-portal/#meet-farmer',true)));append(box,learningCard(guide,application.schoolType));return box;
   }
   const threads=plantThreadsPanel({applicationId:application.id,api,threadId});
   const jump=target=>{
@@ -639,7 +639,7 @@ function start(root){
   for(const [label,section] of [['Farmer journal',latest],['Workshops & sheets',workshops],['Certificate & media kit',award]]){
    const control=el('button',label);control.type='button';control.addEventListener('click',()=>jump(section));nav.append(control);
   }
-  const meet=el('a','Meet the farmer');meet.href='https://theglenolia.com.au/plant-portal/#meet-farmer';nav.append(meet);
+  const meet=el('a','Meet the Farmer');meet.href='https://theglenolia.com.au/plant-portal/#meet-farmer';nav.append(meet);
   reportHeader.append(nav);box.append(latest,threads,companionPrompt(artBase,guide?.item?.question));
   append(box,learningCard(guide,application.schoolType));
   const files=el('div',null,'field-download-grid');files.append(workshops,award);box.append(files);
