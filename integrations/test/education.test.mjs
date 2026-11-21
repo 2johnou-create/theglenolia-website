@@ -587,6 +587,10 @@ test('variety profiles and explicitly published current-stage photos remain tied
  await code(await f.staff('/plants/field-report',{key,revision:0,values:{variety:'Trial variety',stature:'Compact',beanSize:'Large',varietySource:'Grower source'}}),200);
  const report=await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.a}),200);
  assert.equal(report.fields.variety.value,'Trial variety');assert.equal(report.fields.stature.value,'Compact');
+ await code(await f.staff('/plants/field-report',{key:'farm',revision:0,values:{variety:'Another variety',ripening:'Early'}}),200);
+ const distinct=await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.a}),200);
+ assert.equal(distinct.fields.ripening,null,'Different farm variety must not supply traits to this tree');
+
  let map=await code(await f.req('/api/plants/map'),200);
  assert.equal(map.plants.find(p=>p.key===key).variety,'Trial variety');
  assert.equal((await f.req('/api/plants/stage-photo/'+key)).status,404);

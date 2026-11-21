@@ -14,9 +14,13 @@ function profileRecord(key,snapshot,recordedAt) {
 }
 function resolvedFields(profiles) {
   const result = {};
+  const tree=profiles.find(p=>p.key!=='farm'), farm=profiles.find(p=>p.key==='farm');
+  const varietiesDiffer=tree?.values.variety && (!farm?.values.variety ||
+    tree.values.variety.trim().toLocaleLowerCase()!==farm.values.variety.trim().toLocaleLowerCase());
   for (const field of fieldNames) {
+    const allowFarm=!(fieldNames.slice(6).includes(field) && varietiesDiffer);
     const profile = profiles.find(p=>p.key!=='farm' && p.values[field] != null) ||
-                    profiles.find(p=>p.key==='farm' && p.values[field] != null);
+                    profiles.find(p=>allowFarm && p.key==='farm' && p.values[field] != null);
     result[field] = profile ? {value:profile.values[field],scope:profile.key==='farm'?'farm':'plant',recordedAt:profile.fieldDates[field] || profile.recordedAt} : null;
   }
   return result;
