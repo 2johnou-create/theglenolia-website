@@ -513,7 +513,7 @@ class MobileContentTests(unittest.TestCase):
     def test_build_hook_regenerates_feed_after_cleaning_dist_and_preserves_routes(self):
         scripts = self.website / "scripts"
         scripts.mkdir()
-        for name in ("build.py", "progress_markup.py", "programme_markup.py", "teachers_markup.py", "plant_portal_markup.py", "coffee_gallery.py", EXPORTER.name, "mobile-content-v1.schema.json"):
+        for name in ("build.py", "progress_markup.py", "programme_markup.py", "teachers_markup.py", "plant_portal_markup.py", "site_footer.py", "coffee_gallery.py", EXPORTER.name, "mobile-content-v1.schema.json"):
             shutil.copyfile(ROOT / "scripts" / name, scripts / name)
         # Education pages consume the public summary-only catalogue, never the
         # separate full teaching pack sources provisioned to the Worker.

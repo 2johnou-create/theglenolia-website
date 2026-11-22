@@ -3,6 +3,7 @@ from hashlib import sha256
 from html import escape
 import json
 from pathlib import Path
+from site_footer import company_details
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'public' / 'assets' / 'plant-portal'
@@ -123,4 +124,4 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 </div></div>
 <div class="farmer-membership"><p>The Glenolia is a proud member of the <strong>Australian Grown Coffee Association</strong>.</p><a href="https://www.agca.au/" target="_blank" rel="noopener noreferrer">Discover the association <span aria-hidden="true">↗</span></a></div>
 </section>
-</main><footer><a href="{base}/">The Glenolia</a><nav aria-label="More from The Glenolia"><a href="#meet-farmer">Meet the Farmer</a><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a><a href="{farmer}" rel="nofollow">Farmer login</a></nav></footer></body></html>'''
+</main><footer><div><a href="{base}/">The Glenolia</a>{company_details()}</div><nav aria-label="More from The Glenolia"><a href="#meet-farmer">Meet the Farmer</a><a href="{base}/coffee-trial/">Coffee trial</a><a href="{base}/teachers/">For teachers</a><a href="{base}/privacy/">Privacy</a><a href="{farmer}" rel="nofollow">Farmer login</a></nav></footer></body></html>'''
