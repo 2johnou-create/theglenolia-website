@@ -92,25 +92,7 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 .map-notice button,.list-body select,#plant-dialog button,.plain-apply{min-height:44px}
 .map-notice button,#plant-dialog button,.list-body select{background:var(--ivory);border:1px solid var(--border);color:var(--green);border-radius:4px}
 .atlas-sheet{margin:.6rem 0 0}
-#atlas-viewport{width:100%;aspect-ratio:1000/478;max-height:68vh;max-height:68svh;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-color:#77836d #ebe4d4;outline:1px solid #c2b392;background:#ecdfbf}
-#atlas-viewport:focus-visible{outline:3px solid var(--green);outline-offset:2px}
-#atlas-viewport:has(#atlas-frame[data-art-state="error"]){display:none}
-#atlas-frame{position:relative;width:100%;aspect-ratio:1000/2380;background:#ecdfbf}
-#atlas-frame picture,#estate-art,#estate-map{position:absolute;inset:0;display:block;width:100%;height:100%}
-#estate-art{object-fit:fill}
-#estate-map{touch-action:pan-y pinch-zoom}
-#atlas-frame:not([data-art-state="ready"]) #estate-map{visibility:hidden}
-#atlas-frame[data-art-state="error"]{display:none}
 .atlas-sheet figcaption{display:flex;justify-content:space-between;gap:1rem;font-size:.75rem;color:#525749;padding:.75rem 0}
-#atlas-row-labels{pointer-events:none;text-anchor:end}.atlas-label,.atlas-state,.plant-id{paint-order:stroke fill;stroke:#f8ecd1;stroke-linejoin:round}
-.atlas-label{font:italic 17px Georgia,serif;fill:#353d2f;stroke-width:3px}
-.atlas-state{font:700 7.5px Noto,Arial,sans-serif;letter-spacing:.55px;fill:#3b4638;stroke-width:2.2px}
-.coffee-marker{cursor:pointer;outline:none}
-.plant-id{font:bold 12px Georgia,serif;fill:#314531;stroke-width:2.6px;pointer-events:none}
-.tag-bg{opacity:0;pointer-events:none}
-.coffee-marker:is([data-preview],:focus-visible) .tag-bg{opacity:1;fill:#f8ebc8;stroke:#62553c;stroke-width:1.3}
-.coffee-marker[aria-pressed=true] .tag-bg{opacity:1;fill:#294937;stroke:#f8ebc8;stroke-width:1.3}
-.coffee-marker[aria-pressed=true] .plant-id{fill:#fff8dd;stroke:none}
 .plain-apply{width:fit-content;margin:0 auto}
 #plant-dialog{width:min(470px,calc(100% - 24px));max-height:85dvh;background:var(--ivory);color:var(--ink);border:1px solid var(--green);border-radius:.5rem;padding:0}
 #plant-dialog::backdrop{background:#203127a6}
@@ -119,7 +101,10 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 #close-list{padding:.4rem .9rem}.list-body{padding:.8rem 1rem 1.25rem}.list-body label{margin-right:.5rem;font-size:.9rem}.list-body select{padding:.3rem .65rem}
 #list-options{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:5px;margin-top:1rem}
 #list-options button[aria-pressed=true]{background:var(--green);color:var(--ivory)}
-#plant-card{position:fixed;z-index:6;width:min(304px,calc(100vw - 20px));max-height:84dvh;overflow:auto;background:#faf6e8;color:var(--ink);border:1px solid #87846c;border-radius:6px;padding:12px 16px;box-shadow:0 8px 27px #332c1645;line-height:1.35}
+#plant-card{position:relative;width:100%;margin:12px 0 0;padding:12px 10px;background:#fffaf1;color:var(--ink);border:1px solid #c5c7b4;border-radius:6px;line-height:1.35}
+#plant-card .height{flex-wrap:wrap}
+.world-notice{margin:0;min-height:112px;display:grid;place-content:center;padding:16px;text-align:center;color:var(--green);background:#f4f0e4;font-size:.9rem}
+#row-app:not([data-world=ready]) .atlas-hint,#row-app:not([data-world=ready]) #atlas-scroll-tip{display:none}
 #close-card{position:absolute;right:3px;top:2px;width:44px;height:44px;border:0;background:transparent;color:var(--green);font:1.5rem Noto,sans-serif}
 .card-head{display:flex;align-items:center;gap:.75rem;padding-right:24px}
 .card-art{display:block;width:56px;height:64px;flex:none;overflow:hidden;background:#e8e7d0;border-radius:50% 50% 4px 4px;border:1px solid #d4d1b9}
@@ -135,15 +120,11 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 #plant-status{font-size:.79rem;margin:.4rem 0;color:#495040}
 .farm-card-link{display:flex;align-items:center;justify-content:center;min-height:44px;color:var(--green);font-size:.8rem}
 #plant-card .cta{width:100%;min-height:44px;text-align:center;justify-content:center;padding:.45rem;font-size:.85rem}
-@media(max-width:760px),(pointer:coarse){
- #plant-card{inset:auto auto max(8px,env(safe-area-inset-bottom)) 50%!important;transform:translateX(-50%);width:min(356px,calc(100vw - 18px));max-height:57dvh}
-}
 @media(max-width:760px){
  .explore{padding-inline:.8rem}.atlas-hint,.wide-label{display:none}
  .atlas-tools{padding:.25rem .4rem;gap:.35rem}.atlas-tools label{display:none}
  .atlas-tools select{margin-right:auto}.atlas-tools select,.atlas-tools button{font-size:.78rem;padding:.25rem .45rem}
  .atlas-sheet figcaption{display:block}.atlas-sheet figcaption span{display:block}
- .atlas-label{font-size:30px}.atlas-state{font-size:11px}.plant-id{font-size:13px}
 }
 .growth-guide{margin-top:.7rem;font-size:.85rem;color:var(--green)}
 .growth-guide summary{width:fit-content;cursor:pointer;min-height:44px;padding-block:.65rem;text-decoration:underline;text-underline-offset:3px}
@@ -184,12 +165,6 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 .map-key span{display:inline-flex;gap:.4rem;align-items:center}
 .map-key i{font:700 .78rem/1.3 Noto,Arial,sans-serif;border-radius:.2rem;padding:.04rem .3rem}
 .school-colour{color:var(--ivory);background:var(--ink)}.cooling-colour{color:var(--ink);background:#f2dfbe;border:1px dashed #684f3e}
-.coffee-marker[data-adoption] .tag-bg{opacity:1;fill:var(--ink);stroke:var(--ivory);stroke-width:1}
-.coffee-marker[data-adoption] .plant-id{fill:var(--ivory);stroke:none}
-.coffee-marker[data-adoption=cooling] .tag-bg{fill:#f2dfbe;stroke:#684f3e;stroke-width:1;stroke-dasharray:3 1}
-.coffee-marker[data-adoption=cooling] .plant-id{fill:#482e1f}
-.coffee-marker[data-adoption]:is([data-preview],:focus-visible) .tag-bg{stroke:#fff;stroke-width:2.3}
-.plant-attribution{font:700 9px Arial,sans-serif;fill:#332d22;stroke:#f8ecd1;stroke-width:3px;paint-order:stroke;pointer-events:none}
 .school-register{font-size:.85rem;color:var(--green);margin-top:.25rem}
 .school-register summary{padding-block:.6rem;min-height:44px;cursor:pointer;width:fit-content}
 .school-register ul{margin:0 0 .5rem;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.4rem}
@@ -221,7 +196,6 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 #card-photo-toggle:hover img,#card-photo-toggle:focus-visible img,#card-photo-toggle[aria-pressed="true"] img{opacity:1}
 #card-photo-toggle:focus-visible{outline:3px solid #2f4a3c;outline-offset:-3px}
 
-.plant-variety-map{font:700 8px Arial,sans-serif;fill:#2f4a3c;stroke:#f8ecd1;stroke-width:3px;paint-order:stroke;pointer-events:none}
 
 /* The people behind the coffee programme. */
 .meet-farmer{background:#e6eadf;color:var(--green);scroll-margin-top:1rem}
@@ -249,14 +223,12 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 #estate-directory{min-width:0;padding:22px 17px;background:#f8f6ee;border-left:1px solid #c5c9b9;color:var(--green)}
 #estate-directory h3{font-size:1.7rem;margin:.35rem 0 .85rem}
 .estate-areas,#directory-rows{display:flex;gap:5px;flex-wrap:wrap}
-.estate-areas button,#directory-rows button,#view-toggle,.world-nav button,.world-pause{border:1px solid #b2bbaa;background:#fbfaf4;color:var(--green);border-radius:5px;padding:5px 9px;font:600 .78rem/1.3 Noto,sans-serif;min-height:40px}
+.estate-areas button,#directory-rows button,.world-nav button,.world-pause{border:1px solid #b2bbaa;background:#fbfaf4;color:var(--green);border-radius:5px;padding:5px 9px;font:600 .78rem/1.3 Noto,sans-serif;min-height:40px}
 .estate-areas button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:var(--ivory)}
 #directory-rows{margin:12px 0 9px}
 #directory-rows button{font-size:.77rem;min-height:35px;padding:5px 8px}
 #directory-rows [aria-pressed=true]{background:#e2e8d9;border-color:#74836f}
 #directory-summary{font-size:.83rem;line-height:1.5;color:#435746}
-#view-toggle{margin-top:14px;background:transparent;border:0;padding:0;text-decoration:underline;text-underline-offset:3px}
-#world-fallback{display:block;margin-top:12px;font-size:.72rem}
 #world-scroll{--field-height:clamp(350px,35vw,510px);height:var(--field-height);overflow:auto;scrollbar-gutter:stable;scrollbar-color:#889b83 #ebecdf;position:relative;background:#f6f4e9;outline-offset:-4px}
 #world-surface{width:100%;height:var(--field-height);position:sticky;top:0;overflow:hidden;isolation:isolate;background:radial-gradient(#cdd0bd 0.8px,transparent 1px) 0 0/17px 17px,#faf7ed}
 #world-canvas,#world-pins{position:absolute;inset:0;width:100%;height:100%}
@@ -280,22 +252,13 @@ footer{border-top:1px solid var(--border);min-height:6rem;flex-wrap:wrap}
 .world-nav{display:flex;align-items:center;right:10px;bottom:9px;gap:6px}
 #world-pan{display:flex;align-items:center;gap:7px;background:#fbf9eeec;border-radius:5px;font-size:12px}
 #world-pan button:disabled{opacity:.45}
-#row-app[data-world=ready] :is(#atlas-viewport,#art-notice){display:none}
-#world-card-slot #plant-card{position:static!important;transform:none!important;width:100%;max-height:none;box-shadow:none;margin:12px 0 0;padding:12px 10px;background:#fffaf1;border:1px solid #c5c7b4}
-#world-card-slot #plant-card>.card-head{padding-right:18px}#world-card-slot:has(#plant-card:not([hidden])){position:relative}
-#world-card-slot #close-card{right:4px;top:4px}
-#world-card-slot #plant-title{font-size:1.7rem;margin:0}
-#world-card-slot .height{flex-wrap:wrap}
 .atlas-sheet{background:#f8f6ef}.atlas-sheet figcaption{border:0;background:#f8f6ef}
 @media(max-width:920px){#estate-workspace{grid-template-columns:minmax(0,1fr) 205px}#estate-directory{padding:16px 10px}}
-@media(max-width:700px){#estate-workspace{display:flex;flex-direction:column}.estate-map-column{width:100%}#estate-directory{border:0;border-top:1px solid #c5c9b9;padding:12px 15px}#estate-directory h3{font-size:1.25rem;margin:.2rem 0 .6rem}#estate-directory .eyebrow{display:none}#world-scroll{--field-height:clamp(265px,45svh,415px)}#directory-rows{margin:8px 0}#view-toggle{margin-top:4px;min-height:30px}.world-pin{min-width:34px;min-height:37px}.world-nav button{min-width:42px;min-height:42px}#world-card-slot #plant-card{margin-top:8px}.estate-areas button,#directory-rows button{min-height:40px}}
+@media(max-width:700px){#estate-workspace{display:flex;flex-direction:column}.estate-map-column{width:100%}#estate-directory{border:0;border-top:1px solid #c5c9b9;padding:12px 15px}#estate-directory h3{font-size:1.25rem;margin:.2rem 0 .6rem}#estate-directory .eyebrow{display:none}#world-scroll{--field-height:clamp(265px,45svh,415px)}#directory-rows{margin:8px 0}.world-pin{min-width:34px;min-height:37px}.world-nav button{min-width:42px;min-height:42px}.estate-areas button,#directory-rows button{min-height:40px}}
 @media(prefers-reduced-motion:reduce){#world-scroll{scroll-behavior:auto}}
 #world-scroll,#world-surface{overflow-anchor:none}
-.future-invite{background:#f4f0e4;color:#2f4a3c;border:1px solid #c8ccbb;border-radius:6px;overflow:hidden;padding:0;margin-top:15px;text-align:left;width:100%}
-.future-invite img{display:block;width:100%;height:96px;object-fit:cover;object-position:left 58%}
-.future-invite span{font-size:.78rem;display:block;padding:7px 9px}
+.future-invite{background:#f4f0e4;color:#2f4a3c;border:1px solid #c8ccbb;border-radius:6px;min-height:44px;padding:7px 9px;margin-top:15px;text-align:left;width:100%;font-size:.78rem}
 #estate-directory:has(#plant-card:not([hidden])) .future-invite{display:none}
-@media(max-width:700px){.future-invite{display:flex;align-items:center}.future-invite img{width:86px;height:45px}}
 
 .field-row-sign{position:absolute;pointer-events:none;color:#455941;background:#fffcf0d9;padding:1px 4px;border-radius:3px;font:italic 12px/1.3 Editorial,Georgia,serif}
 #estate-directory:has(#plant-card:not([hidden])) #directory-summary{display:none}

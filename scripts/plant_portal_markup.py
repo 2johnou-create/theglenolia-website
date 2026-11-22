@@ -67,17 +67,19 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div id="world-surface"><canvas id="world-canvas" aria-hidden="true"></canvas><div id="world-pins" aria-label="Plants on the map"></div>
 <div class="world-caption"><small id="world-area"></small><strong id="world-row"></strong></div>
 <button type="button" class="world-pause" id="world-pause" aria-label="Pause farm animation">Ⅱ</button>
-<div class="world-nav"><button type="button" id="world-scale" hidden>Whole field</button><button type="button" id="world-back" hidden>← Back to rows</button><div id="world-pan" hidden><button type="button" id="world-prev" aria-label="Previous positions">←</button><span id="world-range"></span><button type="button" id="world-next" aria-label="Next positions">→</button></div></div></div><div class="world-distance" aria-hidden="true"></div></div><div id="art-notice" class="map-notice" role="status"><span id="art-message">Loading the orchard illustration…</span><button type="button" id="retry-art" hidden>Retry illustration</button></div>
-<div id="atlas-viewport" role="region" aria-label="Scrollable orchard map" aria-describedby="atlas-scroll-tip" tabindex="0"><div id="atlas-frame" data-art-state="loading"><picture><source id="mobile-art" media="(max-width:620px)" srcset="{assets}/estate-atlas-mobile.webp"><img id="estate-art" src="{assets}/estate-atlas.webp" width="1400" height="3332" alt="" loading="eager" decoding="async"></picture>
-<svg id="estate-map" viewBox="0 0 1000 2380" role="group" aria-labelledby="atlas-title atlas-desc">
-<title id="atlas-title">The Glenolia estate atlas</title><desc id="atlas-desc">A continuous illustrated orchard map. Explore individual planting positions in the plant list or use the arrow keys between them.</desc>
-<g id="atlas-row-labels" aria-hidden="true"></g><g id="atlas-plants" role="group" aria-label="Coffee planting positions"></g></svg></div></div>
+<div class="world-nav"><button type="button" id="world-scale" hidden>Whole field</button><button type="button" id="world-back" hidden>← Back to rows</button><div id="world-pan" hidden><button type="button" id="world-prev" aria-label="Previous positions">←</button><span id="world-range"></span><button type="button" id="world-next" aria-label="Next positions">→</button></div></div></div><div class="world-distance" aria-hidden="true"></div></div><p class="world-notice" id="world-notice" role="status" hidden></p>
 </div><aside id="estate-directory" aria-label="Field directory">
 <p class="eyebrow">Field directory</p><h3>Explore the rows</h3>
 <div class="estate-areas" role="group" aria-label="Planting area"><button id="pilot-area" type="button" aria-pressed="true">Pilot rows</button><button id="planned-area" type="button" aria-pressed="false">Autumn 2027</button></div>
 <div id="directory-rows" role="group" aria-label="Rows in this area"></div>
 <p id="directory-summary" role="status">Loading the planting register…</p>
-<div id="world-card-slot"></div><button class="future-invite" id="future-invite" type="button"><img src="{assets}/world/atlas-cover.webp" alt="" width="300" height="110" loading="lazy"><span>Explore the 2027 planting plan →</span></button><button id="view-toggle" type="button" hidden>Use illustrated map</button><small id="world-fallback" hidden>Illustrated map view</small></aside></div>
+<section id="plant-card" hidden aria-label="Plant details">
+<button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"><button type="button" id="card-photo-toggle" aria-label="Show real plant photograph" aria-pressed="false" hidden><img id="card-photo" alt="Real photograph of this plant"></button></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3><p id="plant-variety" class="plant-variety"></p></div></div>
+<p class="stage-line"><strong id="stage-title"></strong><span id="stage-number"></span></p>
+<p class="height">Individual height <strong>No reading published</strong></p><p class="cohort">Pilot average <strong>17 cm</strong> · <time datetime="2026-11-01">1 Nov 2026</time></p>
+<p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a>
+</section>
+<button class="future-invite" id="future-invite" type="button">Explore the 2027 planting plan →</button></aside></div>
 <figcaption><span id="atlas-scroll-tip">Scroll the map to explore all 12 rows.</span><span>Rows 3–12 are in the autumn 2027 planting plan. The farm updates each row as work progresses.</span></figcaption></figure>
 <details class="growth-guide" id="stage-guide"><summary>See the 10 coffee growth stages</summary>
 <p>Choose a stage to explore what happens as a coffee plant grows.</p>
@@ -92,12 +94,6 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <p id="selection-live" class="sr" role="status"></p>
 <dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list">Close</button></header>
 <div class="list-body"><label for="list-row">Planting row</label><select id="list-row"></select><div id="list-options" role="group" aria-label="Choose a position to inspect"></div></div></dialog>
-<section id="plant-card" hidden aria-label="Plant details">
-<button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"><button type="button" id="card-photo-toggle" aria-label="Show real plant photograph" aria-pressed="false" hidden><img id="card-photo" alt="Real photograph of this plant"></button></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3><p id="plant-variety" class="plant-variety"></p></div></div>
-<p class="stage-line"><strong id="stage-title"></strong><span id="stage-number"></span></p>
-<p class="height">Individual height <strong>No reading published</strong></p><p class="cohort">Pilot average <strong>17 cm</strong> · <time datetime="2026-11-01">1 Nov 2026</time></p>
-<p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a>
-</section>
 </div>
 <noscript><p>The interactive map uses JavaScript. You can register your school directly and the farmer can help match your class to a plant.</p><a class="cta" href="{teacher}">Register your school ↗</a></noscript>
 </section>

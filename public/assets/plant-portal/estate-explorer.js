@@ -1,39 +1,49 @@
 import { positionsPerView } from './atlas-framing.js';
 
-// The directory and the illustrated map remain usable while WebGL and its textures load.
-export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready, attribution}){
+// Row and plant controls use the live register independently of the 3D renderer.
+export function mountEstateExplorer({assets, inspect, leave, jump, hover, attribution}){
   const by=id=>document.getElementById(id), app=by('row-app'),scroll=by('world-scroll'),surface=by('world-surface');
-  const pins=by('world-pins'),list=by('directory-rows'),card=by('plant-card'),originalParent=card.parentElement;
+  const pins=by('world-pins'),list=by('directory-rows'),notice=by('world-notice');
   const thin=()=>surface.clientWidth<670;
   const scaleButton=by('world-scale');
-  let wholeField=!scaleButton;
+  let wholeField=false;
   const pageSize=()=>positionsPerView(surface.clientWidth,wholeField);
   const step=144;
-  let rows=[],records=new Map(),row=1,page=0,focused=null,preference=null,renderer=null,loading=false,requested=false,userFlat=false;
-  let paused=matchMedia('(prefers-reduced-motion: reduce)').matches, near=false,available=false,positions=new Map(),keyboardKey=null;
+  let rows=[],records=new Map(),row=1,page=0,focused=null,preference=null,renderer=null,requested=false;
+  let paused=matchMedia('(prefers-reduced-motion: reduce)').matches, near=false,available=false,positions=new Map(),keyboardKey=null,focusNext=null;
   const observer=new IntersectionObserver(events=>{near=events[0].isIntersecting;if(near)load();},{rootMargin:'420px'});
   observer.observe(by('estate-workspace'));
-  function showWorld(){
-    scroll.hidden=false;app.dataset.world='ready';by('world-card-slot').append(card);
-    available=true;by('world-fallback').hidden=true;by('view-toggle').hidden=false;by('view-toggle').textContent='Use illustrated map';
-    scroll.scrollTop=(row-1)*step;renderer.data(records);renderer.navigate(row,page,focused,true,wholeField);directory();ready();
+  function updateNotice(message){
+    notice.textContent=message;
+    notice.hidden=!message;
   }
-  function showFlat(failed){
-    available=false;scroll.hidden=true;delete app.dataset.world;originalParent.append(card);
-    by('view-toggle').textContent='Use 3D map';by('view-toggle').hidden=failed;
-    by('world-fallback').hidden=!failed;directory();ready();jump(row);
+  function showWorld(){
+    scroll.hidden=false;app.dataset.world='ready';available=true;
+    updateNotice('');
+    scroll.scrollTop=(row-1)*step;
+    if(focused)page=Math.floor((records.get(focused).position-1)/pageSize());
+    renderer.data(records);
+    renderer.navigate(row,page,focused,true,wholeField);
+    directory();
+  }
+  function unavailable(){
+    const focusInside=scroll.contains(document.activeElement);
+    available=false;scroll.hidden=true;app.dataset.world='unavailable';
+    updateNotice('The 3D map is unavailable. Use the row controls and Plant list to browse.');
+    directory();
+    if(focusInside)by('row-jump').focus();
   }
   async function load(){
-    if(!near||!rows.length||requested||loading||userFlat)return;
-    requested=true;loading=true;
+    if(!near||!rows.length||requested)return;
+    requested=true;
+    updateNotice('Loading the 3D map…');
     try{
       const module=await import(assets+'/estate-world.js?v=painted-estate-2');
       renderer=await module.createAtlasWorld({assets,canvas:by('world-canvas'),project,contextLost(){
-        renderer?.destroy();renderer=null;leave();showFlat(true);
+        renderer?.destroy();renderer=null;unavailable();
       }});
-      renderer.pause(paused);if(!userFlat)showWorld();
-    }catch{showFlat(true);}
-    finally{loading=false;}
+      renderer.pause(paused);showWorld();
+    }catch{unavailable();}
   }
   const motionPref=matchMedia('(prefers-reduced-motion: reduce)');
   motionPref.addEventListener('change',e=>{paused=e.matches;renderer?.pause(paused);navigation();});
@@ -46,7 +56,7 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     if(plant.adoptionStatus){btn.dataset.adoption=plant.adoptionStatus;const school=document.createElement('small');school.textContent=attribution(plant);btn.append(school);}
     btn.title=[id,plant.variety,plant.adoptedBy].filter(Boolean).join(' · ');
     btn.setAttribute('aria-label',[id,plant.variety,'Row '+plant.row,plant.adoptedBy||plant.adoptionStatus].filter(Boolean).join(', '));
-    btn.addEventListener('click',()=>{keyboardKey=plant.key;inspect(plant);});
+    btn.addEventListener('click',event=>{keyboardKey=plant.key;inspect(plant,event.detail===0);});
     btn.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'&&!focused)hover(plant);});
     btn.addEventListener('keydown',e=>{
       if(!['ArrowLeft','ArrowRight'].includes(e.key))return;
@@ -55,7 +65,8 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
       if(!next)return;e.preventDefault();keyboardKey=next.key;
       if(next.row!==row)jump(next.row);
       page=Math.floor((next.position-1)/pageSize());
-      renderer.navigate(row,page,null,true,wholeField);navigation();requestAnimationFrame(()=>positions.get(next.key)?.focus({preventScroll:true}));
+      focusNext=next.key;
+      renderer.navigate(row,page,null,true,wholeField);navigation();
     });
     return btn;
   }
@@ -80,6 +91,10 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     for(const [key,el] of positions)if(!visible.has(key))el.hidden=true;
     const tabKey=visible.has(keyboardKey)?keyboardKey:[...visible].find(k=>records.get(k).row===row)||visible.values().next().value;
     for(const [key,el] of positions)el.tabIndex=key===tabKey?0:-1;
+    if(focusNext && visible.has(focusNext)){
+      positions.get(focusNext)?.focus({preventScroll:true});
+      focusNext=null;
+    }
   }
   function navigation(){
     const count=rows.find(r=>r.row===row)?.enabledCount||0;
@@ -124,13 +139,13 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     renderer?.data(records);renderer?.navigate(row,page,focused,true,wholeField);directory();load();
   }
   function setRow(next){
-    if(next!==row){row=next;page=0;focused=null;directory();}
+    if(next!==row){row=next;page=0;focused=null;focusNext=null;directory();}
     if(available&&Math.round(scroll.scrollTop/step)+1!==next)scroll.scrollTop=(next-1)*step;
     renderer?.navigate(row,page,focused,false,wholeField);
   }
   function visit(next){
     if(!rows.length)return;
-    userScrollUntil=0;leave();jump(next);setRow(next);
+    userScrollUntil=0;leave();jump(next);
   }
   function select(p){
     focused=p.key;row=p.row;keyboardKey=p.key;page=Math.floor((p.position-1)/pageSize());
@@ -157,7 +172,6 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
   by('world-pause').onclick=()=>{paused=!paused;renderer?.pause(paused);navigation();};
   by('future-invite').onclick=()=>visit(3);
   by('pilot-area').onclick=()=>visit(1);by('planned-area').onclick=()=>visit(3);
-  by('view-toggle').onclick=()=>{leave();userFlat=available;if(userFlat)showFlat(false);else if(renderer)showWorld();else load();};
   scaleButton?.addEventListener('click',()=>{
     wholeField=!wholeField;page=0;renderer.navigate(row,page,null,true,wholeField);navigation();
   });
@@ -172,5 +186,11 @@ export function mountEstateExplorer({assets, inspect, leave, jump, hover, ready,
     }
     lastSize=per; navigation();
   }).observe(surface);
-  return {data,setRow,select,unselect,prefer,get enabled(){return available;},restore(key){positions.get(key)?.focus({preventScroll:true});}};
+  return {data,setRow,select,unselect,prefer,get enabled(){return available;},restore(key){
+    if(!available||!positions.has(key))return false;
+    const pin=positions.get(key);
+    if(pin.hidden)focusNext=key;
+    else pin.focus({preventScroll:true});
+    return true;
+  }};
 }
