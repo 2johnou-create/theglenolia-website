@@ -4,6 +4,8 @@ export const sender='john@theglenolia.com.au';
 const root='https://theglenolia.com.au';
 const footer='The Glenolia · 1435 Old Northern Road, Glenorie NSW 2157';
 const phone='1300 70 11 55';
+const operator='Operated by Paxton Australia Pty Ltd.';
+const abn='ABN 59 688 923 337';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
 export function schoolInvitation(school,subject='A coffee plant for '+school.name+' to follow'){
@@ -15,7 +17,7 @@ export function schoolInvitation(school,subject='A coffee plant for '+school.nam
   const forward='Could you please pass this to the teacher who looks after science, STEM or sustainability? I’d be happy to answer any questions.';
   const greeting='Hello '+school.name+' team,';
   const stop='If you’d prefer no further emails about the pilot, please reply and let me know.';
-  const body=[greeting,intro,classActivity,apply,'Apply for your class: '+signup,'Explore the pilot: '+plantInfo,forward,'Kind regards,\nJohn Ou\nProgram Director and Head of Coffee\n'+footer+'\n'+sender+' · '+phone,stop].join('\n\n');
+  const body=[greeting,intro,classActivity,apply,'Apply for your class: '+signup,'Explore the pilot: '+plantInfo,forward,'Kind regards,\nJohn Ou\nProgram Director and Head of Coffee\n'+footer+'\n'+operator+'\n'+abn+'\n'+sender+' · '+phone,stop].join('\n\n');
 
   const paragraph=(line)=>'<p style="margin:0 0 16px;font-family:Arial,sans-serif;font-size:16px;line-height:1.6;color:#3b332d">'+esc(line)+'</p>';
   const fragment=`<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="width:100%;background:#f5f1e8"><tr><td align="center" style="padding:16px 9px">
@@ -32,7 +34,7 @@ export function schoolInvitation(school,subject='A coffee plant for '+school.nam
       <p style="margin:0;font:16px/1.6 Arial,sans-serif;color:#3b332d">Kind regards,<br><strong>John Ou</strong><br>Program Director and Head of Coffee</p>
     </td></tr>
     <tr><td style="padding:18px 24px;background:#e7ebdf;color:#2f4a3c;font:13px/1.55 Arial,sans-serif">
-      <strong>The Glenolia</strong><br>1435 Old Northern Road, Glenorie NSW 2157<br><a style="color:#2f4a3c" href="mailto:${sender}">${sender}</a> · <a style="color:#2f4a3c" href="tel:+611300701155">${phone}</a><br><br>${esc(stop)}
+      <strong>The Glenolia</strong><br>1435 Old Northern Road, Glenorie NSW 2157<br>${operator}<br>${abn}<br><a style="color:#2f4a3c" href="mailto:${sender}">${sender}</a> · <a style="color:#2f4a3c" href="tel:+611300701155">${phone}</a><br><br>${esc(stop)}
     </td></tr>
   </table></td></tr></table>`;
   const html='<!doctype html><html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'+esc(subject)+'</title></head><body style="margin:0">'+fragment+'</body></html>';

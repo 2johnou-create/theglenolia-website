@@ -28,6 +28,11 @@ test('email template personalises each audience and retains both the programme a
   assert.ok(primary.html.includes('href="'+signup+'"'));
   assert.ok(primary.html.includes('href="https://theglenolia.com.au/plant-portal/"'));
   assert.ok(primary.html.includes('If you’d prefer no further emails'));
+  for(const draft of [primary,secondary]){
+    assert.ok(draft.body.includes('Operated by Paxton Australia Pty Ltd.\nABN 59 688 923 337'));
+    assert.ok(draft.fragment.includes('Operated by Paxton Australia Pty Ltd.<br>ABN 59 688 923 337'));
+    assert.ok(draft.html.includes('ABN 59 688 923 337'));
+  }
   assert.ok(secondary.html.includes('Example &amp; Associates'));
   const email='office@example.test';
   const compose=new URL(composeGmail(email,secondary));

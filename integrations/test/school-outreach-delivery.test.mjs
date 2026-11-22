@@ -61,6 +61,8 @@ test('Send now dispatches a single reviewed message and replays the same review 
   assert.equal(body.subject,payload.subject);
   assert.ok(body.htmlContent.includes('#plant'));
   assert.ok(body.textContent.includes('https://theglenolia.com.au/plant-portal/'));
+  assert.ok(body.htmlContent.includes('Operated by Paxton Australia Pty Ltd.<br>ABN 59 688 923 337'));
+  assert.ok(body.textContent.includes('Operated by Paxton Australia Pty Ltd.\nABN 59 688 923 337'));
   assert.equal(body.headers.idempotencyKey,payload.id);
   assert.equal((await f.send(payload)).status,200);
   assert.equal((await f.send({...payload,subject:'Different subject'})).status,409);
