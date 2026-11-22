@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>School invitations | The Glenolia</title>
+<link rel="stylesheet" href="/school-outreach/styles.css">
+<script src="/school-outreach/app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to school invitations</a>
+<header class="top">
+ <a href="/" class="brand" aria-label="The Glenolia admin"><img src="https://theglenolia.com.au/assets/email/logo-compact.png" alt="The Glenolia"></a>
+ <nav aria-label="Admin"><a href="/">Admin home</a><a href="/education">Education</a></nav>
+</header>
+<main id="main">
+ <header class="heading">
+  <div><h1>School invitations</h1><p>Choose a school, review the invitation and open a single email in Gmail.</p></div>
+  <a href="https://theglenolia.com.au/plant-portal/" target="_blank" rel="noopener">View the Plant Portal ↗</a>
+ </header>
+ <div class="workspace">
+  <aside class="directory" aria-labelledby="directory-title">
+   <h2 id="directory-title">Local schools</h2>
+   <label for="school-search">Find a school or suburb</label>
+   <input id="school-search" type="search" placeholder="Search schools">
+   <label for="school-filter">Show</label>
+   <select id="school-filter">
+    <option value="all">All schools</option>
+    <option value="first">Suggested first round</option>
+    <option value="Primary">Primary schools</option>
+    <option value="Secondary">Secondary schools</option>
+    <option value="K–12">K–12 schools</option>
+   </select>
+   <p id="school-total" role="status"></p>
+   <ul id="schools" aria-label="School contacts"></ul>
+   <a href="/school-outreach/contact-list.csv" download>Download contact list (CSV)</a>
+   <p class="quiet" id="checked"></p>
+  </aside>
+  <section class="composer" aria-labelledby="school-name">
+   <header>
+    <p class="quiet" id="school-meta"></p>
+    <h2 id="school-name"></h2>
+    <div id="contact-actions" class="actions"><a id="school-phone"></a><a id="school-source" target="_blank" rel="noopener">Official school contact ↗</a></div>
+   </header>
+   <div class="form">
+    <label for="recipient">School office email</label>
+    <input id="recipient" type="email" maxlength="254" autocomplete="off" spellcheck="false" aria-describedby="office-note">
+    <p id="office-note"></p>
+    <label for="subject">Subject</label>
+    <input id="subject" maxlength="180">
+   </div>
+   <div class="actions compose-tools">
+    <a id="open-gmail" class="button main" target="_blank" rel="noopener">Open Gmail draft ↗</a>
+    <button id="copy-styled" class="button" type="button">Copy styled eDM</button>
+    <button id="download-html" class="button" type="button">Download HTML</button>
+   </div>
+   <p class="quiet">Send from <strong>john@theglenolia.com.au</strong>. To use the photo and button, copy the styled eDM and paste it over the plain message in Gmail.</p>
+   <p id="notify" role="status" class="quiet"></p>
+   <details class="plain">
+    <summary>Plain-text email</summary>
+    <label for="body-text">Message</label>
+    <textarea id="body-text" rows="13" readonly></textarea>
+    <button id="copy-plain" class="button" type="button">Copy plain text</button>
+   </details>
+   <div class="preview-heading"><h3>eDM preview</h3></div>
+   <iframe id="preview" title="School invitation email preview" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+  </section>
+ </div>
+ <footer class="notice">Office contacts were checked against schools’ own websites. Check that an invitation is welcome before sending. Consent rules apply to commercial email. <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noopener">ACMA email guidance ↗</a></footer>
+</main>
+</body>
+</html>

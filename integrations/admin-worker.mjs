@@ -1,10 +1,11 @@
+import {contactsCSV} from './school-outreach-contacts.mjs';
 import programmeSeed from '../programme-content.json' with {type:'json'};
 import {fetchProgramme,saveProgramme,publishProgramme,prepareProgrammeTranslations,retainProgrammeSnapshots,ProgrammeError} from './programme-store.mjs';
 import {translateDepartmentNotes,translateSnapshotNotes} from './programme-translation.mjs';
 import {uploadProgrammeImage,fetchProgrammeImage,programmeImageResponse} from './programme-media.mjs';
 import seeds from './editions.json' with {type:'json'};
 import {languages,renderEmail,monthEndSchedule} from './email-render.mjs';
-import {html,css,js,programmeJs,educationHtml,educationJs,educationCss,farmerHtml,farmerJs,farmerCss} from './admin-assets.mjs';
+import {html,css,js,programmeJs,educationHtml,educationJs,educationCss,farmerHtml,farmerJs,farmerCss,outreachHtml,outreachCss,outreachJs} from './admin-assets.mjs';
 import {runOwnerNotifications} from './owner-notifications.mjs';
 const localeKeys={'en-AU':'EN','zh-Hant':'ZH',ja:'JA'};
 const headers={'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Frame-Options':'DENY','Permissions-Policy':'camera=(), microphone=(), geolocation=()'};
@@ -99,6 +100,25 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(request.method==='POST'&&request.headers.get('Origin')!==url.origin)return json(403,{error:'origin'});
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+ if(path==='/school-outreach'||path.startsWith('/school-outreach/')){
+  if(request.method!=='GET')return json(405,{error:'method'});
+  if(path==='/school-outreach/contact-list.csv')return new Response(contactsCSV(),{headers:{...headers,
+   'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="Glenolia-local-school-contacts.csv"',
+   'X-Robots-Tag':'noindex, nofollow'}});
+  const outreach={
+   '/school-outreach':[outreachHtml,'text/html'],
+   '/school-outreach/':[outreachHtml,'text/html'],
+   '/school-outreach/styles.css':[outreachCss,'text/css'],
+   '/school-outreach/app.js':[outreachJs,'text/javascript']
+  };
+  if(Object.hasOwn(outreach,path)){
+   const [body,type]=outreach[path];
+   const policy=csp.replace("style-src 'self'","style-src 'self'; style-src-attr 'unsafe-inline'");
+   return new Response(body,{headers:{...headers,'Content-Type':type+'; charset=utf-8',
+    'Content-Security-Policy':policy,'X-Robots-Tag':'noindex, nofollow'}});
+  }
+  return json(404,{error:'not_found'});
+ }
  // Education remains behind the same runtime-verified, exact-owner Access gate.
  // A service binding carries the private staff credential; it is never sent to
  // the browser and caller-supplied identity headers are not forwarded.

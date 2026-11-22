@@ -1,0 +1,175 @@
+{
+  "checked": "2026-11-22",
+  "schools": [
+    {
+      "id": "glenorie",
+      "name": "Glenorie Public School",
+      "suburb": "Glenorie",
+      "level": "Primary",
+      "phone": "02 9652 1237",
+      "email": "glenorie-p.school@det.nsw.edu.au",
+      "source": "https://glenorie-p.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "hillside",
+      "name": "Hillside Public School",
+      "suburb": "Glenorie",
+      "level": "Primary",
+      "phone": "02 9652 1459",
+      "email": "hillside-p.school@det.nsw.edu.au",
+      "source": "https://hillside-p.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "middle-dural",
+      "name": "Middle Dural Public School",
+      "suburb": "Middle Dural",
+      "level": "Primary",
+      "phone": "02 9651 1761",
+      "email": "middledura-p.school@det.nsw.edu.au",
+      "source": "https://middledura-p.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "arcadia",
+      "name": "Arcadia Public School",
+      "suburb": "Arcadia",
+      "level": "Primary",
+      "phone": "02 9653 1207",
+      "email": "arcadia-p.school@det.nsw.edu.au",
+      "source": "https://arcadia-p.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "galston-primary",
+      "name": "Galston Public School",
+      "suburb": "Galston",
+      "level": "Primary",
+      "phone": "02 9653 2062",
+      "email": "galston-p.school@det.nsw.edu.au",
+      "source": "https://galston-p.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "galston-high",
+      "name": "Galston High School",
+      "suburb": "Galston",
+      "level": "Secondary",
+      "phone": "02 9651 2199",
+      "email": "galston-h.school@det.nsw.edu.au",
+      "source": "https://galston-h.schools.nsw.gov.au/contact-us",
+      "first": true
+    },
+    {
+      "id": "northholm",
+      "name": "Northholm Grammar School",
+      "suburb": "Arcadia",
+      "level": "K–12",
+      "phone": "02 9656 2000",
+      "email": "admin@northholm.nsw.edu.au",
+      "source": "https://www.northholm.nsw.edu.au/contact-us/",
+      "first": true
+    },
+    {
+      "id": "maroota",
+      "name": "Maroota Public School",
+      "suburb": "Maroota",
+      "level": "Primary",
+      "phone": "02 4566 8231",
+      "email": "maroota-p.school@det.nsw.edu.au",
+      "source": "https://maroota-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "dural",
+      "name": "Dural Public School",
+      "suburb": "Dural",
+      "level": "Primary",
+      "phone": "02 9651 1164",
+      "email": "dural-p.school@det.nsw.edu.au",
+      "source": "https://dural-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "kenthurst",
+      "name": "Kenthurst Public School",
+      "suburb": "Kenthurst",
+      "level": "Primary",
+      "phone": "02 9654 1173",
+      "email": "kenthurst-p.school@det.nsw.edu.au",
+      "source": "https://kenthurst-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "annangrove",
+      "name": "Annangrove Public School",
+      "suburb": "Annangrove",
+      "level": "Primary",
+      "phone": "02 9679 1303",
+      "email": "annangrove-p.school@det.nsw.edu.au",
+      "source": "https://annangrove-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "cattai",
+      "name": "Cattai Public School",
+      "suburb": "Cattai",
+      "level": "Primary",
+      "phone": "02 4572 8445",
+      "email": "cattai-p.school@det.nsw.edu.au",
+      "source": "https://cattai-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "glenhaven",
+      "name": "Glenhaven Public School",
+      "suburb": "Glenhaven",
+      "level": "Primary",
+      "phone": "02 9634 3675",
+      "email": "glenhaven-p.school@det.nsw.edu.au",
+      "source": "https://glenhaven-p.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "rouse-hill-high",
+      "name": "Rouse Hill High School",
+      "suburb": "Rouse Hill",
+      "level": "Secondary",
+      "phone": "02 9836 1890",
+      "email": "rousehill-h.school@det.nsw.edu.au",
+      "source": "https://rousehill-h.schools.nsw.gov.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "pacific-hills",
+      "name": "Pacific Hills Christian School",
+      "suburb": "Dural",
+      "level": "K–12",
+      "phone": "02 9651 0700",
+      "email": "",
+      "source": "https://www.pacifichills.nsw.edu.au/enrol/faq",
+      "first": false
+    },
+    {
+      "id": "st-madeleines",
+      "name": "St Madeleine’s Primary School",
+      "suburb": "Kenthurst",
+      "level": "Primary",
+      "phone": "02 9654 6751",
+      "email": "",
+      "source": "https://www.stmadeleineskenthurst.catholic.edu.au/contact-us",
+      "first": false
+    },
+    {
+      "id": "hills-grammar",
+      "name": "Hills Grammar",
+      "suburb": "Kenthurst",
+      "level": "K–12",
+      "phone": "02 9654 2111",
+      "email": "",
+      "source": "https://www.hillsgrammar.nsw.edu.au/",
+      "first": false
+    }
+  ]
+}
