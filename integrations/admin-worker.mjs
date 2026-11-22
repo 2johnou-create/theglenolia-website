@@ -1,3 +1,4 @@
+import {runSchoolInvitations,schoolDeliveryRequest} from './school-outreach-delivery.mjs';
 import {contactsCSV} from './school-outreach-contacts.mjs';
 import programmeSeed from '../programme-content.json' with {type:'json'};
 import {fetchProgramme,saveProgramme,publishProgramme,prepareProgrammeTranslations,retainProgrammeSnapshots,ProgrammeError} from './programme-store.mjs';
@@ -101,6 +102,15 @@ export async function handleAdmin(request,env,ctx,fetcher=runtimeFetch){
  if(!['GET','POST'].includes(request.method))return json(405,{error:'method'});
  const csp="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob: https://theglenolia.com.au; font-src https://theglenolia.com.au; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
  if(path==='/school-outreach'||path.startsWith('/school-outreach/')){
+  const deliveryRoute=path.match(/^\/school-outreach\/delivery(?:\/(cancel))?$/);
+  if(deliveryRoute){
+   const method=request.method;
+   if(deliveryRoute[1]&&method!=='POST')return json(405,{error:'method'});
+   const action=deliveryRoute[1]||(method==='GET'?'list':'send');
+   const body=method==='POST'?await readJson(request,4096):null;
+   try{return await schoolDeliveryRequest(env,method,action,body,json,fetcher);}
+   catch{console.warn('School invitation delivery request failed');return json(503,{error:'delivery_unavailable'});}
+  }
   if(request.method!=='GET')return json(405,{error:'method'});
   if(path==='/school-outreach/contact-list.csv')return new Response(contactsCSV(),{headers:{...headers,
    'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="Glenolia-local-school-contacts.csv"',
@@ -251,6 +261,7 @@ export async function runScheduler(env,fetcher=runtimeFetch,now=Date.now()){
 export default {fetch(request,env,ctx){return handleAdmin(request,env,ctx);},scheduled(controller,env,ctx){
  ctx.waitUntil(Promise.allSettled([
   runScheduler(env).then(results=>console.log('Glenolia schedule check',JSON.stringify(results))),
+  runSchoolInvitations(env),
   runOwnerNotifications(env).then(result=>console.log('Glenolia owner notification check',JSON.stringify(result)))
  ]).then(results=>{for(const r of results)if(r.status==='rejected')console.warn('Glenolia background check failed');}));
 }};

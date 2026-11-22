@@ -6,8 +6,7 @@ const footer='The Glenolia · 1435 Old Northern Road, Glenorie NSW 2157';
 const phone='1300 70 11 55';
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
-export function schoolInvitation(school){
-  const subject='A coffee plant for '+school.name+' to follow';
+export function schoolInvitation(school,subject='A coffee plant for '+school.name+' to follow'){
   const intro='I’m John Ou from The Glenolia, a farm in Glenorie. I’d like to invite '+school.name+' to join our free school coffee plant pilot.';
   const classActivity=school.level==='Secondary'
     ? 'Students can follow an individual coffee plant in our magnolia orchard, compare dated grower observations and use the student workbook to investigate growth and growing conditions.'

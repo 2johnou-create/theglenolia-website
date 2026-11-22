@@ -16,8 +16,8 @@
 </header>
 <main id="main">
  <header class="heading">
-  <div><h1>School invitations</h1><p>Choose a school, review the invitation and open a single email in Gmail.</p></div>
-  <a href="https://theglenolia.com.au/plant-portal/" target="_blank" rel="noopener">View the Plant Portal ↗</a>
+  <div><h1>School invitations</h1><p>Choose a school, review the eDM and send it now or schedule it for later.</p></div>
+  <div class="actions"><a href="#delivery-history">Delivery history</a><a href="https://theglenolia.com.au/plant-portal/" target="_blank" rel="noopener">View the Plant Portal ↗</a></div>
  </header>
  <div class="workspace">
   <aside class="directory" aria-labelledby="directory-title">
@@ -50,12 +50,26 @@
     <label for="subject">Subject</label>
     <input id="subject" maxlength="180">
    </div>
+   <section class="send-panel" aria-labelledby="send-title">
+    <h3 id="send-title">Send this invitation</h3>
+    <p class="quiet">From <strong>info@theglenolia.com.au</strong> · Replies to <strong>john@theglenolia.com.au</strong></p>
+    <div class="send-options">
+     <button class="button main" id="review-now" type="button" disabled>Review &amp; send now</button>
+     <div class="schedule-field">
+      <label for="send-at">Schedule for Sydney time</label>
+      <input id="send-at" type="datetime-local" aria-describedby="schedule-note">
+     </div>
+     <button class="button" id="review-schedule" type="button" disabled>Review schedule</button>
+    </div>
+    <p class="quiet" id="schedule-note">Scheduled emails are picked up every five minutes.</p>
+    <p id="send-notice" class="quiet" role="status"></p>
+   </section>
    <div class="actions compose-tools">
-    <a id="open-gmail" class="button main" target="_blank" rel="noopener">Open Gmail draft ↗</a>
+    <a id="open-gmail" class="button" target="_blank" rel="noopener">Open Gmail draft ↗</a>
     <button id="copy-styled" class="button" type="button">Copy styled eDM</button>
     <button id="download-html" class="button" type="button">Download HTML</button>
    </div>
-   <p class="quiet">Send from <strong>john@theglenolia.com.au</strong>. To use the photo and button, copy the styled eDM and paste it over the plain message in Gmail.</p>
+   <p class="quiet">For Gmail, copy the styled eDM and paste it over the plain message to include the photo and button.</p>
    <p id="notify" role="status" class="quiet"></p>
    <details class="plain">
     <summary>Plain-text email</summary>
@@ -67,6 +81,21 @@
    <iframe id="preview" title="School invitation email preview" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
   </section>
  </div>
+ <section id="delivery-history" class="delivery-history" aria-labelledby="history-title">
+  <header class="actions"><h2 id="history-title">Delivery history</h2><button id="refresh-deliveries" class="button" type="button">Refresh</button></header>
+  <p id="delivery-list-status" class="quiet" role="status">Loading invitations…</p>
+  <ul id="delivery-list"></ul>
+ </section>
+ <dialog id="delivery-review" aria-labelledby="review-title">
+  <div class="review-body">
+   <h2 id="review-title">Review invitation</h2>
+   <dl id="review-fields"></dl>
+   <details id="review-text"><summary>Review email text</summary><pre id="review-message"></pre></details>
+   <label class="permission"><input type="checkbox" id="confirm-permission"> The school asked for this invitation or explicitly agreed to receive it.</label>
+   <p class="quiet" id="review-status" role="status"></p>
+   <div class="actions"><button id="confirm-delivery" class="button main" type="button" disabled>Confirm</button><button id="close-review" class="button" type="button">Back to invitation</button></div>
+  </div>
+ </dialog>
  <footer class="notice">Office contacts were checked against schools’ own websites. Check that an invitation is welcome before sending. Consent rules apply to commercial email. <a href="https://www.acma.gov.au/avoid-sending-spam" target="_blank" rel="noopener">ACMA email guidance ↗</a></footer>
 </main>
 </body>

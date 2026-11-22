@@ -1,4 +1,5 @@
 import directory from './school-outreach-directory.json';
+import { installInvitationDelivery } from './school-outreach-delivery-ui.js';
 import { composeGmail, schoolInvitation } from '../school-outreach.mjs';
 
 const $=id=>document.getElementById(id);
@@ -43,6 +44,9 @@ function renderDirectory(){
 }
 function updateComposeLink(){
   const address=recipient.value.trim();
+  $('office-note').textContent=address&&address.toLowerCase()===selected.email.toLowerCase()
+    ?'Published general enquiries address.'
+    :address?'Address entered for this invitation.':'Call the office or use its contact page for the right address.';
   const link=composeGmail(address,{...draft,subject:subject.value.trim()||draft.subject});
   if(link){gmail.href=link;gmail.removeAttribute('aria-disabled');}
   else{gmail.removeAttribute('href');gmail.setAttribute('aria-disabled','true');}
@@ -57,7 +61,6 @@ function selectSchool(school){
   phone.textContent=school.phone;
   recipient.value=school.email;
   recipient.placeholder=school.email?'':'Enter a contact confirmed by the school';
-  $('office-note').textContent=school.email?'Published general enquiries address.':'Call the office or use its contact page for the right address.';
   subject.value=draft.subject;
   $('body-text').value=draft.body;
   $('preview').srcdoc=draft.html;
@@ -95,3 +98,4 @@ $('download-html').addEventListener('click',()=>{
   link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 selectSchool(selected);renderDirectory();
+installInvitationDelivery(()=>({school:selected,recipient:recipient.value.trim(),subject:subject.value.trim()||draft.subject,body:draft.body}));
