@@ -1,3 +1,4 @@
+import {classroomRoutes,prepareClassroomMonth,staffClassroom} from './plant-classroom.mjs';
 import {plantWorkshopManifest,servePlantWorkshop} from './plant-workshops.mjs';
 import {publicPlantWeather} from './plant-weather.mjs';
 import {EducationError,json,fail,readBody,loadActor,requireCSRF,secureEqual,SECURITY,all,nowISO} from './education-common.mjs';
@@ -20,6 +21,7 @@ export async function handleEducation(request,env,ctx={}){
   if(path.startsWith('/internal/admin/')){
    if(!env.STAFF_TOKEN||!secureEqual(request.headers.get('Authorization'),'Bearer '+env.STAFF_TOKEN))return json({error:'not_found'},404);
    if(!['GET','POST'].includes(request.method))return json({error:'method'},405);
+   if(path==='/internal/admin/classroom-monthly')return await staffClassroom(request,env.EDU_DB,request.method==='POST'?await readBody(request,2048):null);
    if (path.startsWith('/internal/admin/plants/')) {
     const limit=['/internal/admin/plants/update','/internal/admin/plants/stage-photo'].includes(path) ? 420000 : 8192;
     const body=request.method==='POST' ? await readBody(request,limit) : null;
@@ -49,6 +51,7 @@ export async function handleEducation(request,env,ctx={}){
    if(path==='/api/teacher/preferences')return await preferencesRoute(request,env,actor,body);
    if(path.startsWith('/api/plants/')){
     await requireTeacherConsent(env.EDU_DB,actor.id);
+    if(path==='/api/plants/class-library'||path.startsWith('/api/plants/class-library/'))return await classroomRoutes(request,env,path,actor,body);
     if(path==='/api/plants/workshops' && request.method==='GET') return json({workshops:plantWorkshopManifest});
     const workshop=path.match(/^\/api\/plants\/workshops\/([a-z0-9-]+)\.pdf$/);
     if(workshop && ['GET','HEAD'].includes(request.method)) return await servePlantWorkshop(request,env,workshop[1]);
@@ -82,7 +85,10 @@ export async function purgeEducation(env,now=Date.now()){
  return {closedGroupsProcessed:expired.length};
 }
 export default {fetch:handleEducation,scheduled(controller,env,ctx){
- if(controller.cron==='15 14 * * *')ctx.waitUntil(purgeEducation(env));
+ if(controller.cron==='15 14 * * *'){
+  ctx.waitUntil(purgeEducation(env));
+  ctx.waitUntil(prepareClassroomMonth(env.EDU_DB,new Date(controller.scheduledTime||Date.now())));
+ }
  else ctx.waitUntil((async()=>{
   await releaseDueAdoptions(env.EDU_DB);
   await processPlantMail(env,controller.scheduledTime||Date.now());

@@ -1,3 +1,6 @@
 
 # Frozen generated modules retain their original shader bytes; manifests verify them.
 compat/progress/*.js -whitespace linguist-generated=true
+
+# Printable classroom PDFs are binary documents.
+public/assets/education/plant-library/*.pdf binary

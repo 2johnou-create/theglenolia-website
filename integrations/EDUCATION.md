@@ -294,3 +294,27 @@ stage. If a school is attached, the farmer sees its name and explicitly confirms
 the adoption has been reviewed and will continue. The previous planting,
 stage photographs and journal records remain in history. Requests use IDs and
 revision checks to prevent silent overwrites and support retry.
+
+## Plant Portal classroom library and monthly activities
+
+Apply `plant-classroom-schema.sql` to the education database before deploying
+this edition of the Education Worker. Build the usual owner bundle and run
+`stage-teacher-ui.mjs` before deploying Education. The staging script copies
+the checked classroom PDFs from the website assets. School and plant-specific
+downloads require teacher consent and recheck membership when generated.
+The generic PDFs contain no private farm journal, school or class data. The
+colouring PDFs are free classroom resources.
+
+The existing 15:14 UTC daily trigger prepares the current Sydney calendar
+month’s draft once. It takes the top topic, stage and format from the prior
+month’s one-vote-per-teacher tally. Without format votes, use saved interests
+and default to a workbook when none exist. Apply the curated topic rotation
+when there are no topic votes. The owner opens **Education → Monthly
+classroom** to view the full activity, format adaptation and tally, then
+publishes it. No automation emails teachers about a new issue. The library
+shows the latest twelve published issues and individual links stay stable.
+
+To update the first-edition printable artwork and text, run
+`scripts/build_plant_class_library.py` with the four source plates in story
+order. Source masters, print review and provenance are held in the Glenolia
+workspace’s dated Teacher Plant Portal Onboarding folder.

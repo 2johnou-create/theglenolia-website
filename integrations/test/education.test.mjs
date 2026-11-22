@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
+import {prepareClassroomMonth} from '../plant-classroom.mjs';
 import {handleEducation,purgeEducation} from '../education-worker.mjs';
 import {digest,token,loadActor,evidenceGate,dateValue} from '../education-common.mjs';
 import {handleEducationMail} from '../education-mailer.mjs';
@@ -61,7 +62,7 @@ const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.met
 function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
-  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql'])
+  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql','plant-classroom-schema.sql'])
    this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
   this.sql.exec(readFileSync(new URL('../plant-varieties-schema.sql',import.meta.url),'utf8').split('-- John confirmed')[0]);
   this.sql.exec(readFileSync(new URL('../plant-variety-review-schema.sql',import.meta.url),'utf8'));
@@ -658,4 +659,65 @@ test('catalogue, bulk assignments and reviewed replacement preserve the previous
  assert.equal(photo.status,200);assert.equal(Buffer.from(await photo.arrayBuffer()).toString('base64'),fixturePhoto.base64);
 
  await code(await f.req('/api/plants/field-report?applicationId='+app,{actor:f.b}),404);
+});
+
+
+test('teacher classroom choices authenticate, persist across requests and remain personal',async t=>{
+ const f=await fixture(t),path='/api/plants/class-library';
+ await code(await f.req(path),401);
+ assert.equal((await code(await f.req(path,{actor:f.a}),200)).profile,null);
+ const saved={band:'S2',interests:['seeds','visit'],skipped:false};
+ await code(await f.post(path+'/preferences',saved,f.a,{csrf:false}),403);
+ await code(await f.post(path+'/preferences',{...saved,band:'unknown'},f.a),400);
+ await code(await f.post(path+'/preferences',saved,f.a),200);
+ assert.deepEqual((await code(await f.req(path,{actor:f.a}),200)).profile,saved);
+ assert.equal((await code(await f.req(path,{actor:f.b}),200)).profile,null);
+ await code(await f.post(path+'/preferences',{band:'',interests:[],skipped:true},f.b),200);
+ assert.equal((await code(await f.req(path,{actor:f.b}),200)).profile.skipped,true);
+});
+
+test('monthly draft uses prior Sydney votes once and is visible after owner review only',async t=>{
+ const f=await fixture(t),path='/api/plants/class-library',start=new Date();
+ const current=new Intl.DateTimeFormat('sv-SE',{timeZone:'Australia/Sydney',year:'numeric',month:'2-digit'}).format(start);
+ const last=new Date(current+'-01T00:00:00Z');last.setUTCMonth(last.getUTCMonth()-1);
+ const prior=last.toISOString().slice(0,7);
+ for(const actor of [f.a,f.b]){
+  await code(await f.post(path+'/feedback',{band:'S3',topic:'soil',format:'seeds'},actor),200);
+  await code(await f.post(path+'/feedback',{band:'S3',topic:'growth',format:'seeds'},actor),200);
+ }
+ assert.equal((await f.db.prepare('SELECT COUNT(*) total FROM edu_plant_class_feedback').first()).total,2);
+ assert.equal((await code(await f.req(path,{actor:f.a}),200)).feedback.topic,'growth');
+ await f.db.prepare('UPDATE edu_plant_class_feedback SET month=?').bind(prior).run();
+ await Promise.all([prepareClassroomMonth(f.db,start),prepareClassroomMonth(f.db,start)]);
+ const {draft}=await code(await f.staff('/classroom-monthly'),200);
+ assert.equal(draft.published_at,null);
+ assert.deepEqual([draft.month,draft.topic,draft.band,draft.format,draft.votes],[current,'growth','S3','seeds',2]);
+ assert.deepEqual((await code(await f.req(path,{actor:f.a}),200)).monthly,[]);
+ await code(await f.req('/internal/admin/classroom-monthly',{actor:f.a}),404);
+ await code(await f.staff('/classroom-monthly',{month:prior}),409);
+ await code(await f.staff('/classroom-monthly',{month:current}),200);
+ assert.equal((await code(await f.req(path,{actor:f.a}),200)).monthly[0].topic,'growth');
+ const pdf=await f.req(path+'/monthly-'+current+'.pdf',{actor:f.a});
+ assert.equal(pdf.status,200);
+ assert.equal((await PDFDocument.load(await pdf.arrayBuffer())).getPageCount(),1);
+});
+
+test('plant workbooks are downloadable without a plant, and only the assigned teaching account can personalise',async t=>{
+ const f=await fixture(t),app=await approvePlant(f),asset=readFileSync(new URL('../../public/assets/education/plant-library/student-s2.pdf',import.meta.url));
+ f.env.ASSETS={fetch:async()=>new Response(asset,{headers:{'Content-Type':'application/pdf'}})};
+ const path='/api/plants/class-library/student-s2.pdf';
+ await code(await f.req(path),401);
+ const other=await f.req(path,{actor:f.b});
+ assert.equal(other.status,200);
+ assert.equal((await PDFDocument.load(await other.arrayBuffer())).getPageCount(),4);
+ const specific=path+'?applicationId='+app;
+ await code(await f.req(specific,{actor:f.b}),404);
+ const downloaded=await f.req(specific,{actor:f.a});
+ assert.equal(downloaded.status,200);
+ assert.equal(downloaded.headers.get('Cache-Control'),'no-store');
+ const bytes=await downloaded.arrayBuffer();
+ assert.equal((await PDFDocument.load(bytes)).getPageCount(),4);
+ assert.notEqual(bytes.byteLength,asset.length);
+ const head=await f.req(specific,{actor:f.a,method:'HEAD'});
+ assert.equal(head.status,200);assert.equal(await head.text(),'');
 });
