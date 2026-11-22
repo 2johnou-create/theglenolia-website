@@ -52,6 +52,16 @@ h1,h2,h3,.mast-title{font-family:Editorial,Georgia,serif;font-weight:400;color:v
 .explore{scroll-margin-top:1rem}
 .section-head,.school{display:grid;grid-template-columns:1.2fr 1fr;align-items:end;gap:clamp(1rem,4vw,5rem)}
 h2{font-size:clamp(2.4rem,4.2vw,4.5rem);margin-top:.4rem}
+.benefits{max-width:1370px;padding-block:clamp(2.6rem,5vw,4.8rem) 0;scroll-margin-top:1rem}
+.benefits-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:0 1.5rem;margin-bottom:clamp(1rem,2.2vw,1.7rem)}
+.benefits-head h2{margin:0}
+.benefit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin:0;padding:0;list-style:none}
+.benefit-grid li{padding:clamp(1rem,2vw,1.6rem);background:#fbf8ef;border:1px solid var(--border);border-radius:.65rem}
+.benefit-grid li:first-child{background:var(--sage)}
+.benefit-grid h3{font-size:clamp(1.45rem,2vw,1.95rem);line-height:1.12;margin-bottom:.55rem}
+.benefit-grid p{font-size:.93rem;line-height:1.6}
+@media(max-width:1050px){.benefit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:530px){.benefit-grid{grid-template-columns:minmax(0,1fr)}}
 .section-head>p{max-width:43ch;justify-self:end}
 .school{align-items:start;background:var(--sage);border-top:1px solid var(--border)}
 .school ol{list-style:none;padding:0}

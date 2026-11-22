@@ -17,8 +17,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
     admin_origin = json.loads((ROOT / 'config.json').read_text())['adminUrl']
     farmer = escape(admin_origin.rstrip('/') + '/plants', quote=True)
     title = 'School Plant Portal | Adopt a coffee plant in Glenorie | The Glenolia'
-    description = ('Register your primary or high school to follow a coffee plant at The Glenolia in '
-                   'Glenorie, NSW. Explore the estate atlas and follow illustrated coffee growth stages and farmer field notes.')
+    description = ('A free school programme at The Glenolia in Glenorie, NSW. Follow a coffee plant with '
+                   'direct farmer updates, classroom resources and a plant care certificate.')
     schema = {
         '@context': 'https://schema.org', '@type': 'WebPage', 'url': canonical,
         'name': 'School Plant Portal at The Glenolia', 'description': description, 'inLanguage': 'en-AU',
@@ -50,6 +50,15 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <p class="hero-intro">Watch it grow with the farmer’s photos, field notes and classroom activities.</p>
 <div class="invite-actions"><a class="cta" href="#rows">Explore the rows <span aria-hidden="true">↓</span></a>
 <a class="sub-link" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a><a class="sub-link" href="#meet-farmer">Meet the Farmer <span aria-hidden="true">↓</span></a></div></div></section>
+<section class="benefits shell" id="benefits" aria-labelledby="benefits-heading">
+<div class="benefits-head"><h2 id="benefits-heading">What your class gets</h2><a class="sub-link" href="#schools">How to take part <span aria-hidden="true">↓</span></a></div>
+<ul class="benefit-grid" role="list">
+<li><h3>Free for schools</h3><p>Take part at no cost, with printable activities and student workbooks that bring your class plant into science lessons.</p></li>
+<li><h3>Updates from the farmer</h3><p>Follow your plant as it grows, with dated photos and field notes shared directly by the farmer in your class journal.</p></li>
+<li><h3>Plant care certificate</h3><p>Once your school accepts a plant, download a personalised certificate recognising your school as an Official School Care Partner.</p></li>
+<li><h3>Future school visits</h3><p>We plan to welcome classes for guided tours so students can see where their coffee plant grows, once the farm is ready for school groups.</p></li>
+</ul>
+</section>
 <section class="explore shell" id="rows" aria-labelledby="rows-heading" tabindex="-1">
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
 <p>Choose a tree in the school pilot, or explore the magnolia lanes planned for autumn 2027.</p></div>
