@@ -286,6 +286,13 @@ function start(root){
   } catch {return null;}
  }
  function plainLink(label,href){const a=el('a',label);a.href=href;return a;}
+ function codeDeliveryNotice(){
+  const notice=el('p',null,'edu-code-notice');
+  notice.id='teacher-code-delivery';
+  notice.append(el('strong','Check your Junk or Spam folder if the code doesn’t arrive.'),
+   document.createTextNode(' Look for an email from info@theglenolia.com.au.'));
+  return notice;
+ }
  function teacherCodeEntry(preference,plant){
   const box=el('div',null,'plant-panel'),slot=el('div');
   if(plant)box.append(plantIntro());
@@ -293,6 +300,7 @@ function start(root){
   if(plantPosition(preference))box.append(small('Your preference: '+plantPosition(preference)));
   function emailForm(value=''){
    const email=input('email',{type:'email',required:true,maxLength:254,value});email.autocomplete='email';
+   email.setAttribute('aria-describedby','teacher-code-delivery');
    const f=plantForm(form(async values=>{
     const address=String(values.get('email')).trim();
     await api('/auth/request',{email:address,role:'teacher',intent:'signin',consent:true});
@@ -301,11 +309,14 @@ function start(root){
     if(plant)rememberPlantReturn();
     showCode(challenge,true);
    }));
-   addForm(f,field('School email',email),small('By requesting a code you confirm you are an adult educator.'),actions(submit('Email my code')));
+   addForm(f,field('School email',email),codeDeliveryNotice(),small('By requesting a code you confirm you are an adult educator.'),actions(submit('Email my code')));
    slot.replaceChildren(f);
   }
   function showCode(challenge,focus){
    const code=input('code',{required:true,maxLength:6});code.autocomplete='one-time-code';code.inputMode='numeric';code.pattern='[0-9]{6}';code.placeholder='000000';code.classList.add('plant-code');
+   const instructions=el('p','Enter the code sent to '+challenge.email+' within 15 minutes, in the same browser where you requested it.');
+   instructions.id='teacher-code-instructions';
+   code.setAttribute('aria-describedby','teacher-code-instructions teacher-code-delivery');
    const f=plantForm(form(async values=>{
     state.session=await api('/auth/verify',{email:challenge.email,code:String(values.get('code')).trim()});
     identityLoaded=true;teacherPrefs=null;pendingCode(null);takePlantReturn();
@@ -313,10 +324,10 @@ function start(root){
    }));
    const resend=button('Send a new code',async()=>{
     resend.disabled=true;
-    try{await api('/auth/request',{email:challenge.email,role:'teacher',intent:'signin',consent:true});challenge.until=Date.now()+900000;pendingCode(challenge);code.value='';tell('Check your inbox and use the latest code. Allow 90 seconds between requests.');code.focus();}
+    try{await api('/auth/request',{email:challenge.email,role:'teacher',intent:'signin',consent:true});challenge.until=Date.now()+900000;pendingCode(challenge);code.value='';tell('Check your inbox and Junk or Spam folder for the latest code. Allow 90 seconds between requests.');code.focus();}
     catch(error){tell(error.message);}finally{resend.disabled=false;}
    },true);
-   addForm(f,el('h2','Check your inbox'),el('p','Enter the code sent to '+challenge.email+'. It is valid for 15 minutes in this browser.'),field('Six-digit code',code),actions(submit('Sign in'),resend),actions(button('Use another email',()=>{pendingCode(null);emailForm(challenge.email);slot.querySelector('input')?.focus();},true)));
+   addForm(f,el('h2','Check your inbox'),instructions,codeDeliveryNotice(),field('Six-digit code',code),actions(submit('Sign in'),resend),actions(button('Use another email',()=>{pendingCode(null);emailForm(challenge.email);slot.querySelector('input')?.focus();},true)));
    slot.replaceChildren(f);if(focus)code.focus();
   }
   const challenge=pendingCode();
