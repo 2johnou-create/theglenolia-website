@@ -40,7 +40,7 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script><script type="module" src="{assets}/portal.js?v={revision}"></script></head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="mast"><a class="identity" href="{base}/" aria-label="The Glenolia home"><img src="{base}/assets/logos/logo-compact.svg" width="250" height="70" alt="The Glenolia"></a><span class="mast-title">School Plant Portal</span>
-<nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}">Teacher sign in <span aria-hidden="true">↗</span></a><a class="farm-login" id="farmer-login" href="{farmer}" rel="nofollow">Farmer login</a></nav></header>
+<nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}?signin=1">Teacher sign in <span aria-hidden="true">↗</span></a><a class="farm-login" id="farmer-login" href="{farmer}" rel="nofollow">Farmer login</a></nav></header>
 <main id="main" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-weather-url="{escape(teacher_origin, quote=True)}/api/plants/weather" data-atlas-assets="{assets}">
 <section class="welcome" aria-labelledby="invite-heading">
 <div class="welcome-scene"><picture><source media="(max-width: 760px)" srcset="{assets}/two-worker-orchard-small.webp"><img src="{assets}/two-worker-orchard.webp" width="1672" height="941" fetchpriority="high" alt="Two workers tending young coffee plants between magnolia trees in Glenorie."></picture>

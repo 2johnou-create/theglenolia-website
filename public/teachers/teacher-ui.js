@@ -1,6 +1,7 @@
 import {classroomWelcome,classroomLibrary,classroomEditor,libraryHref} from './plant-library.js';
 import {fieldHero,fieldFacts,farmWeather,workshopShelf,schoolAward,companionPrompt,varietyProfile} from './plant-field-home.js';
 import {plantThreadsPanel} from './plant-threads-ui.js';
+import {normaliseTeacherEmail,validTeacherPassword,commonTeacherPassword,TEACHER_MAIL_SENDER,TEACHER_LINK_VALID_MINUTES} from './teacher-sign-in.js';
 /* Teacher-managed education. Private content is requested only from authorised APIs. */
 const STAGES={ES1:'Early Stage 1 · Kindergarten',S1:'Stage 1 · Years 1–2',S2:'Stage 2 · Years 3–4',S3:'Stage 3 · Years 5–6',S4:'Stage 4 · Years 7–8',S5:'Stage 5 · Years 9–10',S6:'Senior extension · Year 11'};
 const MODES={classroom:'Classroom',school_grounds:'School grounds',field:'Farm fieldwork',indoor:'Indoor workshop',home:'Optional home activity'};
@@ -31,6 +32,15 @@ export function plantPhotoPath(path){
 }
 Object.assign(ERRORS,{
  try_later:'Please wait a moment before requesting another code.',
+ code_requested_recently:'A code was requested for this address recently. Wait a moment before requesting another one.',
+ email_confirmation_mismatch:'The two email addresses must match.',
+ teacher_password_required:'Refresh this page to set up your teacher password.',
+ teacher_password_format:'Enter an eight-digit password.',
+ teacher_password_mismatch:'The two passwords must match.',
+ teacher_password_common:'Choose a different password. Avoid common sequences or repeated digits.',
+ teacher_password_incorrect:'That email and password combination didn’t work. Check the details or set up or reset your password.',
+ teacher_link_expired:'This verification link has expired or been used. Request a fresh email.',
+ teacher_link_recent:'A link was requested recently. Check your inbox and Junk or Spam, or wait 90 seconds to request another link.',
  invalid_or_expired_code:'The code could not be verified. Check the six digits in your latest email or request a new code.',
  required_consents:'Read and confirm the privacy and educational use terms to continue.',
  teacher_consent_required:'Confirm the terms in your teaching account to continue.',
@@ -208,12 +218,28 @@ function start(root){
  async function classroomPage(){const collection=await storyLibrary(),box=el('div');box.append(heading('A little more life in the classroom.','Useful printables for noticing, planning, measuring and working together. Choose the right paper size, check the print instructions and make each tool your own.','THE CLASSROOM TOOLKIT',classroomCollectionLinks()));box.append(guide('classroom','A good tool leaves room for your class’s own ideas.','Milla'));const categories=[...new Set(collection.classroomTools.map(t=>t.category))],filter=select('toolCategory',[['all','All classroom tools'],...categories.map(t=>[t,labelKey(t)])],'all'),filters=el('div',null,'edu-tool-filters'),count=small(''),grid=el('div',null,'edu-tool-grid');filters.append(field('Choose a useful tool',filter));count.setAttribute('role','status');count.setAttribute('aria-live','polite');function paint(){motion.results(grid);const matches=collection.classroomTools.filter(t=>filter.value==='all'||t.category===filter.value);count.textContent=matches.length+' '+(matches.length===1?'classroom tool':'classroom tools');grid.replaceChildren();if(!matches.length){grid.append(empty('The collection is taking a little pause.','Please try another category or return a little later.'));return;}for(const tool of matches){const card=el('article',null,'edu-tool-card'),format=el('div',null,'edu-tool-format');format.append(el('span','PDF'),small([tool.paper,tool.pages?tool.pages+' '+(tool.pages===1?'page':'pages'):null].filter(Boolean).join(' · ')));const preview=el('img',null,'edu-tool-preview');preview.src=classroomToolPath(tool.file).replace(/\.pdf$/,'.webp');preview.alt=tool.title+' — first-page preview';preview.loading='lazy';preview.width=600;preview.height=400;preview.addEventListener('error',()=>preview.remove());card.append(preview);card.append(format,el('p',labelKey(tool.category),'edu-kicker'),el('h2',tool.title),el('p',tool.description));if(tool.printNote)card.append(notice('Before you print',tool.printNote));const download=link('Download classroom PDF',classroomToolPath(tool.file),true);download.setAttribute('download',tool.file);card.append(actions(download));grid.append(card);}}filter.addEventListener('change',paint);paint();box.append(filters,count,grid,notice('A place for participation, not public ranking.','Use group names or classroom-created labels. Keep learner identities, private assessment results and health records in your school’s approved systems.'),small('Free for teacher-led educational use with The Glenolia credit. Calendars are planning tools; add your school’s own dates. Classroom materials do not establish official curriculum completion or grades.'));return box;}
  function errorPanel(error,retry){const n=empty('A little pause.',error.message||'We could not load this information just now.',actions(button('Try again',retry,true),link('Return to the library','#library',true),!state.session.user&&!staffMode?link('Teacher sign in','#signin'):null));n.classList.add('edu-error');return n;}
  function loading(){const n=el('div',null,'edu-loading');n.setAttribute('role','status');n.append(el('span',null,'edu-loading-leaf'),el('p','Gathering the latest information…'));return n;}
- async function api(path,body,options={}){const method=options.method||((body!==undefined)?'POST':'GET'),headers={Accept:'application/json'};if(body!==undefined)headers['Content-Type']='application/json';if(method!=='GET'&&!path.startsWith('/auth/'))headers['X-CSRF']=state.session.csrf||'';const response=await fetch(apiBase+path,{method,credentials:'same-origin',cache:'no-store',headers,body:body!==undefined?JSON.stringify(body):undefined,signal:AbortSignal.timeout(45000)});if(!response.headers.get('Content-Type')?.includes('application/json'))throw Error('Please refresh this page and sign in again. Your unsaved edits remain in this tab.');const data=await response.json();if(!response.ok){if(response.status===401)resetIdentity();const error=Error(ERRORS[data.error]||'This could not be completed just now. Your edits remain in this tab. Please try again.');error.status=response.status;error.code=data.error;throw error;}return data;}
+ async function api(path,body,options={}){const method=options.method||((body!==undefined)?'POST':'GET'),headers={Accept:'application/json'};if(body!==undefined)headers['Content-Type']='application/json';if(method!=='GET'&&!path.startsWith('/auth/'))headers['X-CSRF']=state.session.csrf||'';const response=await fetch(apiBase+path,{method,credentials:'same-origin',cache:'no-store',headers,body:body!==undefined?JSON.stringify(body):undefined,signal:AbortSignal.timeout(45000)});if(!response.headers.get('Content-Type')?.includes('application/json'))throw Error('Please refresh this page and sign in again. Your unsaved edits remain in this tab.');const data=await response.json();if(!response.ok){if(response.status===401&&!path.startsWith('/auth/password-'))resetIdentity();const error=Error(ERRORS[data.error]||'This could not be completed just now. Your edits remain in this tab. Please try again.');error.status=response.status;error.code=data.error;throw error;}return data;}
  function gateway(path){return apiBase+path;}
  function input(name,{type='text',value='',maxLength,required=false,min,max,rows}={}){const n=el(type==='textarea'?'textarea':'input');if(type!=='textarea')n.type=type;n.name=name;n.value=value??'';if(maxLength)n.maxLength=maxLength;if(required)n.required=true;if(min!==undefined)n.min=min;if(max!==undefined)n.max=max;if(rows)n.rows=rows;return n;}
  function select(name,options,value){const n=el('select');n.name=name;for(const [v,t]of options){const o=el('option',t);o.value=v;n.append(o);}if(value!==undefined)n.value=value;return n;}
  function field(label,control,hint){const f=el('label',null,'edu-field');f.append(document.createTextNode(label),control);if(hint)f.append(el('small',hint));return f;}
- function form(onSave){const f=el('form'),err=el('p',null,'edu-form-error');err.setAttribute('role','alert');err.tabIndex=-1;f.addEventListener('input',()=>{f.dataset.dirty='true';});f.addEventListener('submit',async event=>{event.preventDefault();if(f.dataset.busy==='true'||!f.reportValidity())return;f.dataset.busy='true';err.textContent='';const controls=[...f.querySelectorAll('button[type=submit]')];controls.forEach(b=>b.disabled=true);try{await onSave(new FormData(f),f);f.dataset.dirty='false';}catch(error){err.textContent=error.message;err.focus();}finally{delete f.dataset.busy;controls.forEach(b=>b.disabled=false);}});f.append(err);return f;}
+ function form(onSave,{validate}={}){
+  const f=el('form'),err=el('p',null,'edu-form-error');err.setAttribute('role','alert');err.tabIndex=-1;
+  if(validate)f.noValidate=true;
+  f.addEventListener('input',()=>{f.dataset.dirty='true';});
+  f.addEventListener('submit',async event=>{
+   event.preventDefault();if(f.dataset.busy==='true')return;
+   err.textContent='';
+   const values=validate?new FormData(f):null;
+   if(!(validate?validate(values):f.reportValidity()))return;
+   f.dataset.busy='true';
+   const controls=[...f.querySelectorAll('button[type=submit]')];controls.forEach(b=>b.disabled=true);
+   try{await onSave(values||new FormData(f),f);f.dataset.dirty='false';}
+   catch(error){err.textContent=error.message;err.focus();}
+   finally{delete f.dataset.busy;controls.forEach(b=>b.disabled=false);}
+  });
+  f.append(err);return f;
+ }
  function submit(label){const b=el('button',label,'edu-button');b.type='submit';return b;}
  function addForm(f,...nodes){const err=f.querySelector('.edu-form-error');for(const n of nodes.flat())if(n)f.insertBefore(n,err);return f;}
  function check(label,name,checked=false){const box=input(name,{type:'checkbox'});box.checked=checked;box.value='yes';const l=el('label',null,'edu-check');l.append(box,el('span',label));return l;}
@@ -234,10 +260,11 @@ function start(root){
  }
  function plantShell(route){
   if(staffMode)return;
-  const mode=route==='plant-classroom'?'classroom':isPlantRoute(route)?'teacher':'';
+  const accountRoute=['signin','teacher-account','teacher-access'].includes(route);
+  const mode=route==='plant-classroom'?'classroom':(isPlantRoute(route)||accountRoute)?'teacher':'';
   root.dataset.plantView=mode;
   const label=$('.edu-brand-label');
-  label.textContent=mode?'PLANT PORTAL':'LEARNING TOGETHER';
+  label.textContent=accountRoute?'TEACHER ACCOUNT':mode?'PLANT PORTAL':'LEARNING TOGETHER';
   if(mode==='classroom'){
    $('[data-workspace-context]').replaceChildren();
    $('[data-account-link]').textContent='';
@@ -253,10 +280,6 @@ function start(root){
   if(route==='plant-library'&&params.get('setup')==='1')allowed.set('setup','1');
   if(plantPosition(params.get('prefer')))allowed.set('prefer',params.get('prefer'));
   return route+(allowed.size?'?'+allowed:'');
- }
- function rememberPlantReturn(){
-  const destination=cleanPlantReturn(location.hash.slice(1))||'plant';
-  document.cookie='__Host-glenolia-plant-return='+encodeURIComponent(destination)+'; Max-Age=900; Path=/; Secure; SameSite=Lax';
  }
  function takePlantReturn(){
   const entry=document.cookie.split('; ').find(item=>item.startsWith('__Host-glenolia-plant-return='));
@@ -275,66 +298,145 @@ function start(root){
  }
  const privacyPage='https://theglenolia.com.au/privacy/#education-privacy';
  const educationalUse='https://theglenolia.com.au/privacy/#educational-use';
- const otpKey='glenolia.educator.pending-code';
- let teacherPrefs=null, learningContent=null;
- function pendingCode(value){
-  try {
-   if(value===null){sessionStorage.removeItem(otpKey);return null;}
-   if(value){sessionStorage.setItem(otpKey,JSON.stringify(value));return value;}
-   const saved=JSON.parse(sessionStorage.getItem(otpKey)||'null');
-   return saved?.until>Date.now() && typeof saved.email==='string'?saved:null;
-  } catch {return null;}
- }
+ let teacherPrefs=null,learningContent=null,teacherPasswordConfigured=null,accessToken=null;
  function plainLink(label,href){const a=el('a',label);a.href=href;return a;}
  function codeDeliveryNotice(){
-  const notice=el('p',null,'edu-code-notice');
-  notice.id='teacher-code-delivery';
-  notice.append(el('strong','Check your Junk or Spam folder if the code doesn’t arrive.'),
-   document.createTextNode(' Look for an email from info@theglenolia.com.au.'));
-  return notice;
+  const note=el('p',null,'edu-code-notice');note.id='teacher-code-delivery';
+  note.append(el('strong','Check Junk or Spam if the email doesn’t arrive.'),
+   document.createTextNode(' Look for an email from '+TEACHER_MAIL_SENDER+'.'));
+  return note;
  }
- function teacherCodeEntry(preference,plant){
+ function accessEmail(name,value='',autocomplete='username'){
+  const control=input(name,{type:'email',required:true,maxLength:254,value});
+  control.autocomplete=autocomplete;control.autocapitalize='none';control.spellcheck=false;
+  return control;
+ }
+ function accessPassword(name,autocomplete){
+  const control=input(name,{type:'password',required:true});
+  control.minLength=8;control.pattern='[0-9]{8}';control.inputMode='numeric';control.autocomplete=autocomplete;
+  control.title='Enter exactly eight digits.';
+  control.setAttribute('aria-describedby','teacher-password-rule');
+  return control;
+ }
+ function revealPasswords(...controls){
+  let visible=false;
+  return button('Show password',event=>{
+   visible=!visible;controls.forEach(control=>{control.type=visible?'text':'password';});
+   event.currentTarget.textContent=visible?'Hide password':'Show password';
+  },true);
+ }
+ function accessValidationError(){
+  const node=el('p',null,'edu-form-error');node.setAttribute('role','alert');node.id='teacher-email-error';
+  return node;
+ }
+ function validateAccessEmail(email,confirm,error){
+  const fields=confirm?[email,confirm]:[email];
+  const clear=()=>{error.textContent='';fields.forEach(field=>field.removeAttribute('aria-invalid'));};
+  for(const control of fields){
+   control.setAttribute('aria-describedby','teacher-email-error');control.addEventListener('input',clear);
+  }
+  return ()=>{
+   clear();const address=normaliseTeacherEmail(email.value);
+   let field=email;
+   if(!address)error.textContent=email.value.trim()?'Enter a complete school email address, such as teacher@school.edu.au.':'Enter your school email address.';
+   else if(confirm&&normaliseTeacherEmail(confirm.value)!==address){
+    field=confirm;error.textContent=confirm.value.trim()?'The two email addresses must match.':'Enter your school email again to confirm it.';
+   }else return true;
+   field.setAttribute('aria-invalid','true');field.focus();return false;
+  };
+ }
+ function accessDestination(plant){return plant?(cleanPlantReturn(location.hash.slice(1))||'plant'):'library';}
+ async function finishTeacherAccess(result){
+  state.session=result;identityLoaded=true;teacherPrefs=null;teacherPasswordConfigured=true;accessToken=null;
+  tell('You’re signed in.');
+  const destination=result.destination==='library'?'library':cleanPlantReturn(result.destination)||'plant';
+  if(location.hash==='#'+destination)await render();else routeTo(destination);
+ }
+ function teacherEntry(preference,plant,initialMode=null){
   const box=el('div',null,'plant-panel'),slot=el('div');
+  const routeQuery=currentRoute().query;
+  const destination=initialMode==='setup'?routeQuery.get('return')==='library'?'library':'plant':accessDestination(plant);
+  let emailValue=state.session.user?.email||'';
+  const initial=initialMode||((plant&&routeQuery.get('signin')!=='1')||routeQuery.get('create')==='1'?'create':'signin');
+  function switchMode(mode,email){
+   if(email)emailValue=email.value;
+   tell('');draw(mode);slot.querySelector('input')?.focus();
+  }
+  function emailSent(address,purpose,mode){
+   const title=el('h2','Check your school email');title.tabIndex=-1;
+   const instructions=purpose==='browser'?'Open Confirm this browser, then enter your password again. Future sign-ins on this browser use your email and password.':'Open Verify email and set password. Choose your eight-digit password, then continue to the portal.';
+   const copy=el('div',null,'edu-form-panel plant-form');
+   copy.append(title,el('p','We sent a link to '+address+'. '+instructions),
+    small('The link is valid for '+TEACHER_LINK_VALID_MINUTES+' minutes.'),codeDeliveryNotice(),
+    actions(button('Change email or request a new link',()=>switchMode(mode),true)));
+   slot.replaceChildren(copy);title.focus();
+  }
+  function draw(mode){
+   const signIn=mode==='signin',email=accessEmail('email',emailValue),error=accessValidationError();
+   const confirm=signIn?null:accessEmail('emailConfirmation','','off');
+   const password=signIn?accessPassword('password','current-password'):null;
+   const entry=plantForm(form(async values=>{
+    const address=normaliseTeacherEmail(values.get('email'));emailValue=address;
+    if(!signIn){
+     await api('/auth/password-email',{email:address,emailConfirmation:normaliseTeacherEmail(values.get('emailConfirmation')),destination,consent:true});
+     emailSent(address,'setup',mode);return;
+    }
+    const value=values.get('password');
+    if(!validTeacherPassword(value))throw Error('Enter exactly eight digits for your password.');
+    const result=await api('/auth/password-login',{email:address,password:value,destination});
+    if(result.checkEmail){emailSent(address,'browser',mode);return;}
+    await finishTeacherAccess(result);
+   },{validate:validateAccessEmail(email,confirm,error)}));
+   const options=el('div',null,'edu-actions edu-access-links');
+   if(signIn)options.append(button('Create an account',()=>switchMode('create',email),true),
+    button('Set up or reset a password',()=>switchMode('setup',email),true));
+   else options.append(button('Already set up? Sign in',()=>switchMode('signin',email),true));
+   const instructions=small(signIn?'Use eight digits.':'We’ll email a verification link first. Open it to choose your eight-digit password.');
+   instructions.id='teacher-password-rule';
+   addForm(entry,field('School email',email),
+    signIn?field('Password',password):field('Confirm school email',confirm),error,instructions,
+    signIn?revealPasswords(password):codeDeliveryNotice(),
+    signIn?null:small('By requesting a link you confirm you are an adult educator.'),
+    actions(submit(signIn?'Sign in':'Email my verification link')));
+   const name=signIn?'Teacher sign in':mode==='setup'?'Set up or reset your password':'Create a teacher account';
+   slot.replaceChildren(heading(name,signIn?'Sign in with your school email and an eight-digit password.':'Use your school email. Existing applications and journals stay with the same email address.',
+    plant?'SCHOOL PLANT PORTAL':'TEACHER WORKSPACE'));
+   append(slot,plantPosition(preference)?small('Your preference: '+plantPosition(preference)):null,entry,options);
+  }
   if(plant)box.append(plantIntro());
-  box.append(heading(plant?'Your school’s coffee plant':'Teacher sign in','Use your school email to receive a six-digit login code.',plant?'SCHOOL PLANT PORTAL':'TEACHER WORKSPACE'));
-  if(plantPosition(preference))box.append(small('Your preference: '+plantPosition(preference)));
-  function emailForm(value=''){
-   const email=input('email',{type:'email',required:true,maxLength:254,value});email.autocomplete='email';
-   email.setAttribute('aria-describedby','teacher-code-delivery');
-   const f=plantForm(form(async values=>{
-    const address=String(values.get('email')).trim();
-    await api('/auth/request',{email:address,role:'teacher',intent:'signin',consent:true});
-    const challenge={email:address,until:Date.now()+900000};
-    pendingCode(challenge);
-    if(plant)rememberPlantReturn();
-    showCode(challenge,true);
-   }));
-   addForm(f,field('School email',email),codeDeliveryNotice(),small('By requesting a code you confirm you are an adult educator.'),actions(submit('Email my code')));
-   slot.replaceChildren(f);
-  }
-  function showCode(challenge,focus){
-   const code=input('code',{required:true,maxLength:6});code.autocomplete='one-time-code';code.inputMode='numeric';code.pattern='[0-9]{6}';code.placeholder='000000';code.classList.add('plant-code');
-   const instructions=el('p','Enter the code sent to '+challenge.email+' within 15 minutes, in the same browser where you requested it.');
-   instructions.id='teacher-code-instructions';
-   code.setAttribute('aria-describedby','teacher-code-instructions teacher-code-delivery');
-   const f=plantForm(form(async values=>{
-    state.session=await api('/auth/verify',{email:challenge.email,code:String(values.get('code')).trim()});
-    identityLoaded=true;teacherPrefs=null;pendingCode(null);takePlantReturn();
-    if(!plant && currentRoute().route==='signin')routeTo('library');else await render();
-   }));
-   const resend=button('Send a new code',async()=>{
-    resend.disabled=true;
-    try{await api('/auth/request',{email:challenge.email,role:'teacher',intent:'signin',consent:true});challenge.until=Date.now()+900000;pendingCode(challenge);code.value='';tell('Check your inbox and Junk or Spam folder for the latest code. Allow 90 seconds between requests.');code.focus();}
-    catch(error){tell(error.message);}finally{resend.disabled=false;}
-   },true);
-   addForm(f,el('h2','Check your inbox'),instructions,codeDeliveryNotice(),field('Six-digit code',code),actions(submit('Sign in'),resend),actions(button('Use another email',()=>{pendingCode(null);emailForm(challenge.email);slot.querySelector('input')?.focus();},true)));
-   slot.replaceChildren(f);if(focus)code.focus();
-  }
-  const challenge=pendingCode();
-  if(challenge)showCode(challenge,false);else emailForm();
-  box.append(slot);return box;
+  box.append(slot);draw(initial);return box;
  }
- function plantSignIn(preference){return teacherCodeEntry(preference,true);}
+ async function teacherAccessLinkPage(query){
+  const supplied=query.get('token');
+  if(supplied){
+   accessToken=/^[a-f0-9]{64}$/.test(supplied)?supplied:null;
+   history.replaceState(null,'','/#teacher-access');
+  }
+  const retry=()=>empty('Request a fresh verification link','Return to account setup to request a fresh email. Look in Junk or Spam for messages from '+TEACHER_MAIL_SENDER+'.',link('Use my school email','#teacher-account'));
+  if(!accessToken)return retry();
+  let detail;
+  try{detail=await api('/auth/password-link',{token:accessToken});}
+  catch(error){if(error.code==='teacher_link_expired')return retry();throw error;}
+  const setup=detail.purpose==='setup',password=accessPassword('password',setup?'new-password':'current-password');
+  const confirmed=setup?accessPassword('passwordConfirmation','new-password'):null;
+  const box=el('div',null,'plant-panel'),linkedEmail=detail.email;
+  const f=plantForm(form(async values=>{
+   const value=values.get('password'),confirmation=values.get('passwordConfirmation');
+   if(!validTeacherPassword(value))throw Error('Enter exactly eight digits for your password.');
+   if(setup&&value!==confirmation)throw Error('The two passwords must match.');
+   if(setup&&commonTeacherPassword(value))throw Error(ERRORS.teacher_password_common);
+   try{
+    const result=await api('/auth/password-redeem',{token:accessToken,password:value,...(setup?{passwordConfirmation:confirmation}:{})});
+    await finishTeacherAccess(result);
+   }catch(error){if(error.code==='teacher_link_expired'){accessToken=null;box.replaceChildren(retry());return;}throw error;}
+  }));
+  box.append(heading(setup?'Choose your password':'Confirm this browser',linkedEmail,'TEACHER WORKSPACE'));
+  const rule=small(setup?'Use exactly eight digits. Avoid common sequences and repeated digits.':'Enter your eight-digit password to finish signing in.');rule.id='teacher-password-rule';
+  addForm(f,rule,field(setup?'New password':'Password',password),confirmed?field('Confirm password',confirmed):null,
+   revealPasswords(...(confirmed?[password,confirmed]:[password])),actions(submit(setup?'Set password and continue':'Confirm browser and sign in')));
+  box.append(f,actions(link('Request a new link','#teacher-account',true)));return box;
+ }
+ function plantSignIn(preference){return teacherEntry(preference,true);}
  function preferencesPage(settings,setup){
   const box=el('div',null,'plant-panel');
   box.append(heading(setup?'Set up your teaching account':'Email preferences',state.session.user.email,'TEACHER ACCOUNT'));
@@ -375,6 +477,7 @@ function start(root){
    const core={preferredKey:selected==='any'?null:selected,consent:values.get('consent')==='yes',requestId};
    const body=organisation?{...core,orgId:organisation.id,reason:String(values.get('reason')||'').trim()}:
     {...core,schoolName:String(values.get('schoolName')).trim(),suburb:String(values.get('suburb')).trim(),schoolType:String(values.get('schoolType')),address:String(values.get('address')).trim(),publicName:values.get('publicName')==='yes'};
+   if(!organisation&&(!body.schoolName||!body.suburb||!body.address))throw Error('Enter your school’s name, suburb and address before submitting.');
    try{const response=await api('/plants/apply',body);
     current.dataset.dirty='false';if(current.isConnected){await refreshAfterMutate('Plant application received.',plantRoute('plant',response.orgId||organisation?.id,response.applicationId||response.id||requestId));}return;
    }catch(error){
@@ -555,7 +658,7 @@ function start(root){
  }
  function plantStatus(application,org,currentCount){
   const box=el('div',null,'plant-panel'),offered=application.status==='offered',pending=application.status==='pending';
-  box.append(plantIntro(),heading(offered?'Your plant is ready':pending?(currentCount>1?'Application received':'School registered'):'Application update',application.schoolName,'SCHOOL PLANT PORTAL'));
+  box.append(plantIntro(),heading(offered?'Your plant is ready':pending?(currentCount>1?'Application received':'School application received'):'Application update',application.schoolName,'SCHOOL PLANT PORTAL'));
   const card=el('section',null,'plant-status');
   if(offered){
    card.append(el('h2',plantPosition(application.plantKey)||'Your coffee plant'),el('p','The farm has offered this plant to your class. Accept to open your free journal.'));
@@ -768,7 +871,7 @@ function start(root){
  function updateAccount(){const user=state.session.user,a=$('[data-account-link]');if(staffMode){a.href='#';a.textContent='Open teacher workspace';a.onclick=async event=>{event.preventDefault();try{const result=await api('/owner-workspace',{}),url=new URL(result.url);if(url.origin!=='https://glenolia-education.theglenolia.workers.dev'||url.pathname!=='/auth/verify')throw Error('The teacher workspace link could not be verified.');openDialog('Your teacher workspace.',notice('Open the working teacher portal.','This short-lived link opens your owner account without sending a sign-in email.'));$('[data-dialog-body]').append(actions(link('Open teacher workspace',url.href)));}catch(error){tell(error.message);}};return;}a.href=user?'#profile':'#signin';a.textContent=user?(user.name||user.email):staffMode?'Check staff access':'Teacher sign in';const bar=$('[data-workspace-context]'),school=state.session.school;bar.replaceChildren();bar.hidden=!user;if(user&&school){const text=el('p');text.append(el('strong',school.name||'Private planning workspace'),document.createTextNode(' · '+(school.evidenceEnabled?'School observations enabled':school.kind==='personal'?'Personal planning · no learner records':'Planning access · learner observations not enabled')));bar.append(text);const a=el('a','School and account');a.href='#profile';bar.append(a);}}
  async function workspace(force=false){if(!state.session.user)return null;if(!state.workspace||force)state.workspace=await api('/workspace');return state.workspace;}
  function resetIdentity(){
-  state.session={user:null};teacherPrefs=null;pendingCode(null);state.workspace=null;state.resourceCache.clear();state.resources=[];resourcesLoaded=false;
+  state.session={user:null};teacherPasswordConfigured=null;teacherPrefs=null;accessToken=null;state.workspace=null;state.resourceCache.clear();state.resources=[];resourcesLoaded=false;
   if(dialog.open)closeDialog();
   $('[data-dialog-body]').replaceChildren();updateAccount();
   const {route,query}=currentRoute();
@@ -808,7 +911,7 @@ function start(root){
  function accordion(title,content){const d=el('details',null,'edu-accordion');d.append(el('summary',title),append(el('div',null,'edu-accordion-body'),content));return d;}
  function resourceFacts(r){const d=el('dl',null,'edu-resource-facts');for(const [label,value]of [['Learning stage',stageLabel(r.stage)],['Term',r.term?'Term '+r.term:'Teacher choice'],['Edition','Version '+r.version],['Language','English']]){const n=el('div');n.append(el('dt',label),el('dd',value));d.append(n);}return d;}
  async function detailPage(id,query){const version=query?.get('version');const r=await getResource(id,version&&/^\d+$/.test(version)?Number(version):null);let scenes=[];if(r.storyScenes?.length){try{scenes=(await storyLibrary(3500)).scenes;}catch{tell('The teaching resource is available. Its character illustrations are taking a little pause.');}}if(state.session.user)await workspace();const box=el('div'),back=el('a','← Learning library','edu-back');back.href='#library';box.append(back,heading(r.title,r.summary,'A QUESTION TO GROW WITH'));const grid=el('div',null,'edu-detail-grid'),body=el('div'),aside=el('aside',null,'edu-detail-aside'),panel=el('div',null,'edu-note-panel');panel.append(resourceFacts(r),actions(link('Download teacher & learner PDF',gateway('/resources/'+encodeURIComponent(r.id)+'/pdf?version='+r.version))),actions(button('Assign to a group',()=>assignmentDialog(r),true),button('Private planning note',()=>noteDialog(r),true)),small('Free for authorised teaching use. Keep downloaded copies in line with your school’s records and resource licence.'));aside.append(panel);chapterMoments(r,scenes,'opening',body);if(r.question)body.append(el('p',r.question,'edu-detail-intro'));if(r.curriculumNote)body.append(notice('Curriculum context',r.curriculumNote));if(r.learningIntentions?.length)body.append(section('The learning intention',list(r.learningIntentions)));if(r.successCriteria?.length)body.append(section('What learners can show',list(r.successCriteria)));if(r.equipment?.length)body.append(section('Have these ready',list(r.equipment)));const lessons=section('Your lesson sequence');for(const [i,lesson]of (r.lessons||[]).entries()){const inner=el('div');chapterMoments(r,scenes,'lesson-'+(i+1),inner);if(lesson.duration)inner.append(small(durationLabel(lesson.duration)));for(const [key,label]of [['model','Model it'],['guided','Try it together'],['independent','Try it with your group'],['checks','Look for this evidence'],['answers','Teacher answer guidance']])if(lesson[key])inner.append(el('h3',label),rich(lesson[key]));lessons.append(accordion((i+1)+'. '+(lesson.title||'Learning lesson'),inner));}if(r.lessons?.length)body.append(lessons);chapterMoments(r,scenes,'reflection',body);if(r.studentSheets?.length){const sheets=section('Learner sheets');for(const sheet of r.studentSheets){const inner=el('div');if(sheet.prompt)inner.append(el('p',sheet.prompt));const columns=sheet.columns||sheet.tableColumns;if(columns?.length)inner.append(small('Record: '+columns.join(' · ')));if(sheet.answerGuidance)inner.append(el('h3','Teacher guidance'),rich(sheet.answerGuidance));sheets.append(accordion(sheet.title||'Learner sheet',inner));}body.append(sheets);}if(r.rubric?.length){const rubric=section('Teacher observation guide');for(const criterion of r.rubric){const inner=el('div');for(const [level,text]of Object.entries(criterion.descriptors||{}))inner.append(el('h3',LEVELS[level]||labelKey(level)),el('p',text));rubric.append(accordion(criterion.criterion,inner));}rubric.append(small('These are programme observation descriptors, not NESA grades. Use relevant evidence and your professional judgement.'));body.append(rubric);}const alternatives=section('Choose the right learning setting');for(const [key,label]of [['classroomAlternative','In the classroom'],['fieldAlternative','Optional field learning'],['homeAlternative','Optional home connection']])if(r[key])alternatives.append(el('h3',label),rich(r[key]));if(alternatives.children.length>1)body.append(alternatives);if(r.safety?.length)body.append(section('Care and safety',list(r.safety)));if(r.adjustments)body.append(section('Welcome different learners',rich(r.adjustments)));if(r.teacherMisconceptions?.length)body.append(section('Useful teacher checks',rich(r.teacherMisconceptions)));if(r.outcomes?.length){const mapped=section('Curriculum connections');for(const o of r.outcomes){mapped.append(el('h3',o.code||o.title||'Selected outcome'));if(o.partialLimit)mapped.append(el('p',o.partialLimit));if(o.source&&!/^https?:/.test(o.source))mapped.append(small(o.source));if(safeLink(o.url||o.source)){const a=el('a','Read the official outcome');a.href=safeLink(o.url||o.source);a.target='_blank';a.rel='noopener noreferrer';mapped.append(a);}}mapped.append(small('Check the edition and teaching year with your school. Selected outcome connections do not establish full syllabus coverage or NESA endorsement.'));body.append(mapped);}if(r.sources?.length){const sources=section('Sources and further reading');const ul=el('ul');for(const source of r.sources){const href=safeLink(source.url||source.source);if(!href)continue;const li=el('li'),a=el('a',source.title||'Source');a.href=href;a.target='_blank';a.rel='noopener noreferrer';li.append(a);if(source.accessedOn)li.append(document.createTextNode(' · Checked '+source.accessedOn));ul.append(li);}sources.append(ul);body.append(sources);}if(!r.storyScenes?.length&&r.characterPrompts?.length){const prompt=r.characterPrompts[0];body.prepend(guide(THEMES[r.id.match(/u\d+$/)?.[0]]||'observe',prompt.prompt||prompt.text,prompt.character||'Pip'));}grid.append(body,aside);box.append(grid);return box;}
- function signInPage(){return staffMode?authNeeded('Open the protected Education staff workspace from the owner admin.'):teacherCodeEntry(null,false);}
+ function signInPage(){return staffMode?authNeeded('Open the protected Education staff workspace from the owner admin.'):teacherEntry(null,false);}
  async function groupsPage(){if(!state.session.user)return authNeeded();const ws=await workspace(true),box=el('div');box.append(heading('A group, a question, a plan.','Keep a class or teaching rotation together. Group labels should describe the learning, without learner names.',undefined,actions(button('Create a group',newGroupDialog))));const groups=ws.groups||[];if(!groups.length)box.append(empty('Your first group can start small.','Create a class or rotation, then assign a particular resource edition.',button('Create your first group',newGroupDialog,true)));else{const grid=el('div',null,'edu-info-grid');for(const g of groups){const c=el('article',null,'edu-group-card');c.append(el('span',stageLabel(g.stage),'edu-tag'),el('h2',g.name),small(g.status==='closed'?'Closed group':'Active group'));const counts=el('div',null,'edu-group-counters');for(const [value,label]of [[g.assignmentCount,'assignments'],[g.learnerCount,'learner aliases']])if(Number.isFinite(Number(value))){const s=el('span');s.append(el('strong',value),document.createTextNode(label));counts.append(s);}c.append(counts,actions(link('Open group','#group/'+encodeURIComponent(g.id),true)));grid.append(c);}box.append(grid);}return box;}
  function newGroupDialog(){const f=form(async data=>{const result=await api('/groups',{name:String(data.get('name')||''),stage:String(data.get('stage')||'')});state.workspace=null;f.dataset.dirty='false';closeDialog();tell('Group created. Choose a resource to start planning.');routeTo('group/'+result.group.id);});addForm(f,field('Class or group label',input('name',{required:true,maxLength:100}),'Use a teaching label such as “Garden investigators”. Keep learner names out of the group label.'),field('Learning stage',select('stage',Object.entries(STAGES))),actions(submit('Create group')));openDialog('A place for your group.',f);}
  function evidenceGate(){return notice('Planning is ready. Learner records come later.','Your school needs an approved processing agreement and an explicit learner-records grant before aliases, observations or reports can be added. Keep learner work in your school’s approved system while you plan here.');}
@@ -823,19 +926,29 @@ function start(root){
  function localDownloadURL(value){try{const u=new URL(value,location.href);return u.origin===location.origin&&u.pathname.startsWith(apiBase+'/')?u.href:null;}catch{return null;}}
  async function reportsPage(){if(!state.session.user)return authNeeded();const ws=await workspace(true),box=el('div');box.append(heading('Tell the learning story carefully.','Create a teacher-reviewed group or learner summary from the observations in an approved school workspace.'));if(!state.session.school?.evidenceEnabled||!state.session.school?.canAssess){box.append(evidenceGate());return box;}const groups=ws.groups||[];if(!groups.length)box.append(empty('A group comes first.','Create a group and record relevant learning observations before preparing a report.',link('Go to My groups','#groups',true)));else{const listEl=el('ul',null,'edu-list');for(const g of groups){const li=el('li');li.append(el('strong',g.name),small(stageLabel(g.stage)),actions(link('Review observations','#group/'+g.id,true),button('Review group report',()=>createReport(g.id))));listEl.append(li);}box.append(listEl);}box.append(notice('Teacher judgement stays with the school.','These summaries support programme learning. They do not create NESA grades, credentials, diagnoses or automated assessment decisions.'));return box;}
  async function visitPage(){const box=el('div');box.append(heading('A future visit starts with a question.','Tell us what your class is exploring. We can discuss a future learning experience as school and site readiness take shape.'),guide('community','Some good conversations start with “What if we tried…?”','Milla'));box.append(notice('An expression of interest, not a booking.','School visits are in preparation. Dates, access, facilities, programme fit and school approvals need to be confirmed before any visit is agreed.'));if(!state.session.user){box.append(authNeeded('Sign in with your work email to send a school learning enquiry. No student details are needed.'));return box;}const f=form(async data=>{await api('/interests',{stage:String(data.get('stage')),mode:String(data.get('mode')),preferredTerm:String(data.get('preferredTerm')),approximateCount:Number(data.get('approximateCount')),message:String(data.get('message')||'')});f.dataset.dirty='false';f.replaceChildren(notice('Thank you for sharing your idea.','Your enquiry is saved for the Glenolia team. This is not a booking confirmation. We will discuss the next practical step with your school.'));});f.className='edu-form-panel';addForm(f,field('Learning stage',select('stage',Object.entries(STAGES))),field('Preferred learning setting',select('mode',[['field','Future farm visit'],['indoor','Indoor learning workshop'],['classroom','Classroom resources / conversation']])),field('Preferred term or period',input('preferredTerm',{maxLength:80,required:true}),'For example, “Term 4, 2027”. Availability is subject to confirmation.'),field('Approximate learner count',input('approximateCount',{type:'number',min:1,max:500,required:true})),field('What would make the learning useful?',input('message',{type:'textarea',rows:5,maxLength:2000}),'Please leave out learner names, health information and other personal records.'),actions(submit('Send learning enquiry')));box.append(f);return box;}
- async function profilePage(){if(!state.session.user)return authNeeded();const u=state.session.user,school=state.session.school,box=el('div');box.append(heading('Your place in the learning.','Manage your adult teacher account and see the status of your school workspace.'));const profile=el('div',null,'edu-form-panel');profile.append(el('h2',u.name||'Teacher account'),el('p',u.email),small('Work email verified · Adult teaching account'));if(school)profile.append(notice(school.name,school.kind==='personal'?'This is your private planning workspace. It does not hold learner records.':school.evidenceEnabled?'Your school has learner observations enabled. Use only school-approved alias-based records.':'Your school planning workspace is available. Learner observations remain off until its agreement and access are approved.'));if(state.session.memberships?.length>1){const selector=select('schoolId',state.session.memberships.map(m=>[m.id,m.name]),school?.id),switchForm=form(async value=>{state.session=await api('/school/select',{schoolId:String(value.get('schoolId'))});state.workspace=null;state.resourceCache.clear();const latest=await api('/resources');state.resources=normalisedResources(latest.resources);switchForm.dataset.dirty='false';updateAccount();tell('Workspace changed. Only the selected school’s records are available.');await render();});addForm(switchForm,field('Active school or planning workspace',selector),actions(submit('Switch workspace')));profile.append(switchForm);}profile.append(actions(link('School plant settings','#plant-settings',true),link('Email preferences','#plant-preferences',true)),actions(link('Export my account data',gateway('/profile/export'),true),button('Sign out',async()=>{try{await api('/logout',{});resetIdentity();try{localStorage.setItem('glenolia-educator-signout',String(Date.now()));}catch{}tell('You have signed out.');routeTo('library');}catch(error){tell(error.message);}},true)),small('Portal messages serve your account and enquiries. A teacher account does not subscribe you to marketing.'));box.append(profile);return box;}
+ async function profilePage(){if(!state.session.user)return authNeeded();const u=state.session.user,school=state.session.school,box=el('div');box.append(heading('Your place in the learning.','Manage your adult teacher account and see the status of your school workspace.'));const profile=el('div',null,'edu-form-panel');profile.append(el('h2',u.name||'Teacher account'),el('p',u.email),small('Work email verified · Adult teaching account'));if(school)profile.append(notice(school.name,school.kind==='personal'?'This is your private planning workspace. It does not hold learner records.':school.evidenceEnabled?'Your school has learner observations enabled. Use only school-approved alias-based records.':'Your school planning workspace is available. Learner observations remain off until its agreement and access are approved.'));if(state.session.memberships?.length>1){const selector=select('schoolId',state.session.memberships.map(m=>[m.id,m.name]),school?.id),switchForm=form(async value=>{state.session=await api('/school/select',{schoolId:String(value.get('schoolId'))});state.workspace=null;state.resourceCache.clear();const latest=await api('/resources');state.resources=normalisedResources(latest.resources);switchForm.dataset.dirty='false';updateAccount();tell('Workspace changed. Only the selected school’s records are available.');await render();});addForm(switchForm,field('Active school or planning workspace',selector),actions(submit('Switch workspace')));profile.append(switchForm);}profile.append(actions(link('School plant settings','#plant-settings',true),link('Email preferences','#plant-preferences',true),link('Set up or reset a password','#teacher-account?return=library',true)),actions(link('Export my account data',gateway('/profile/export'),true),button('Sign out',async()=>{try{await api('/logout',{});resetIdentity();try{localStorage.setItem('glenolia-educator-signout',String(Date.now()));}catch{}tell('You have signed out.');routeTo('library');}catch(error){tell(error.message);}},true)),small('Portal messages serve your account and enquiries. A teacher account does not subscribe you to marketing.'));box.append(profile);return box;}
  async function render(){motion.cancel();const token=++state.render,{route,query}=currentRoute();if(!staffMode){updateAccount();plantShell(route);}main.replaceChildren(loading());for(const a of root.querySelectorAll('[data-edu-route]')){const active=route===a.dataset.eduRoute||(route==='plant-classroom'&&a.dataset.eduRoute==='plant')||(route.startsWith('resource/')&&a.dataset.eduRoute==='library')||(route.startsWith('group/')&&a.dataset.eduRoute==='groups');if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');}motion.selection();try{
   if(!staffMode&&route!=='plant-classroom'&&!identityLoaded){
    const session=await api('/session');if(token!==state.render)return;state.session=session;identityLoaded=true;updateAccount();
   }
-  if(!staffMode&&route!=='plant-classroom'&&state.session.user){
+  if(!staffMode&&!['plant-classroom','teacher-account','teacher-access'].includes(route)&&state.session.user){
    if(!teacherPrefs){const prefs=await api('/teacher/preferences');if(token!==state.render)return;teacherPrefs=prefs;}
    if(teacherPrefs.required){const entry=preferencesPage(teacherPrefs,true);main.replaceChildren(entry);motion.enter(entry);main.focus({preventScroll:true});document.title='Set up your teaching account | The Glenolia';return;}
   }
-  if(!staffMode&&!isPlantRoute(route)&&!resourcesLoaded){
+  if(!staffMode&&!['signin','teacher-account','teacher-access'].includes(route)&&!isPlantRoute(route)&&!resourcesLoaded){
    const result=await api('/resources');if(token!==state.render)return;state.resources=normalisedResources(result.resources);resourcesLoaded=true;
   }
-  let page;if(!staffMode&&isPlantRoute(route))page=await plantPage(route,query);else if(route==='library')page=await libraryPage(query);else if(route==='stories'&&!staffMode)page=await storiesPage(query);else if(route==='classroom'&&!staffMode)page=await classroomPage();else if(route.startsWith('resource/'))page=await detailPage(decodeURIComponent(route.slice(9)),query);else if(route==='signin')page=await signInPage();else if(route==='groups')page=await groupsPage();else if(route.startsWith('group/'))page=await groupPage(decodeURIComponent(route.slice(6)));else if(route==='reports')page=await reportsPage();else if(route==='visit')page=await visitPage();else if(route==='profile')page=await profilePage();else if(route.startsWith('staff-'))page=await staffPage(route);else page=await libraryPage(query);if(token!==state.render)return;main.replaceChildren(page);motion.enter(page);document.title=(main.querySelector('h1')?.textContent||'Teacher workspace')+' | The Glenolia';main.focus({preventScroll:true});}catch(error){if(token!==state.render)return;main.replaceChildren(errorPanel(error,render));}}
+  let page;if(!staffMode&&route==='teacher-access')page=await teacherAccessLinkPage(query);else if(!staffMode&&route==='teacher-account')page=teacherEntry(null,false,'setup');else if(!staffMode&&isPlantRoute(route))page=await plantPage(route,query);else if(route==='library')page=await libraryPage(query);else if(route==='stories'&&!staffMode)page=await storiesPage(query);else if(route==='classroom'&&!staffMode)page=await classroomPage();else if(route.startsWith('resource/'))page=await detailPage(decodeURIComponent(route.slice(9)),query);else if(route==='signin')page=await signInPage();else if(route==='groups')page=await groupsPage();else if(route.startsWith('group/'))page=await groupPage(decodeURIComponent(route.slice(6)));else if(route==='reports')page=await reportsPage();else if(route==='visit')page=await visitPage();else if(route==='profile')page=await profilePage();else if(route.startsWith('staff-'))page=await staffPage(route);else page=await libraryPage(query);if(token!==state.render)return;
+  if(!staffMode&&state.session.user&&!['plant-classroom','teacher-account','teacher-access'].includes(route)){
+   if(teacherPasswordConfigured===null)try{teacherPasswordConfigured=(await api('/auth/password-status')).passwordConfigured;}catch{}
+   if(token!==state.render)return;
+   if(teacherPasswordConfigured===false){
+    const migration=notice('Set up your new teacher sign-in','Use the same school email to keep access to your school, applications and journals.');
+    migration.classList.add('edu-access-invite');migration.append(link('Set up my password','#teacher-account?return='+(isPlantRoute(route)?'plant':'library'),true));
+    page.prepend(migration);
+   }
+  }
+  main.replaceChildren(page);motion.enter(page);document.title=(main.querySelector('h1')?.textContent||'Teacher workspace')+' | The Glenolia';main.focus({preventScroll:true});}catch(error){if(token!==state.render)return;main.replaceChildren(errorPanel(error,render));}}
  async function dashboard(force=false){if(!staffMode)throw Error('Staff access is required.');if(!state.staffDashboard||force)state.staffDashboard=await api('/dashboard');return state.staffDashboard;}
  function staffTable(headers,rows){const wrap=el('div',null,'edu-table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',headers.join(', '));const table=el('table',null,'edu-table'),head=el('thead'),tr=el('tr');for(const text of headers){const th=el('th',text);th.scope='col';tr.append(th);}head.append(tr);table.append(head);const body=el('tbody');for(const row of rows){const tr=el('tr');for(const value of row){const td=el('td');append(td,value);tr.append(td);}body.append(tr);}table.append(body);wrap.append(table);return wrap;}
  async function schoolDialog(school=null){const data=await dashboard();if(!school){const teachers=(data.teachers||[]).filter(u=>!u.disabled),f=form(async value=>{await api('/schools',{name:String(value.get('name')||''),ownerEmail:String(value.get('ownerEmail')||'')});state.staffDashboard=null;f.dataset.dirty='false';closeDialog();tell('School created with planning access. Learner observations remain off.');render();});addForm(f,field('School name',input('name',{required:true,maxLength:160})),field('Verified school coordinator',select('ownerEmail',teachers.map(u=>[u.email,(u.name||u.email)+' · '+u.email]))),small('The adult coordinator must sign in once before a school can be created. Verify their school authority before granting access. Creating a school does not enable learner records.'),actions(submit('Create school planning workspace')));openDialog('A school to learn with.',f);return;}
@@ -856,8 +969,18 @@ function start(root){
   const publish=form(async value=>{if(hasUnsaved())throw Error('Save your resource edits before reviewing publication. Your edits remain in the editor.');if(!original.pdfAvailable)throw Error('Attach the reviewed PDF to this draft before publishing.');if(value.get('reviewed')!=='yes')throw Error('Complete the review confirmation before publishing.');const payload={version,expectedRevision:savedRevision,availability:String(value.get('availability')),schoolIds:value.getAll('schoolIds'),teacherIds:value.getAll('teacherIds'),reviewNote:String(value.get('reviewNote')||'').trim()};if(payload.availability==='selected'&&!payload.schoolIds.length&&!payload.teacherIds.length)throw Error('Choose at least one approved school or verified teacher for selected access.');const confirmation=notice('Publish version '+version+'?',payload.availability==='public'?'This full resource and its PDF will be accessible publicly. Confirm that it is intended as a public sample.':payload.availability==='selected'?'This edition will be available only to the selected approved schools and teachers.':'This edition will be free to verified adult teacher accounts.');confirmation.append(small('Publication replaces the current resource for new use. Existing assignments keep their selected version and downloaded files remain on devices.'),actions(button('Publish this edition',async event=>{const b=event.currentTarget;b.disabled=true;try{await api('/resources/'+id+'/publish',payload);state.staffDashboard=null;state.resourceCache.clear();publish.dataset.dirty='false';closeDialog();tell('Resource edition published.');await render();}catch(error){tell(error.message);b.disabled=false;}}),button('Keep as private draft',closeDialog,true)));openDialog('Ready for teachers?',confirmation);});publish.className='edu-form-panel';const access=select('availability',[['teacher','Free for verified adult teachers'],['selected','Selected schools or teachers'],['public','Public sample']],meta.availability);const grants=el('div',null,'edu-resource-picker');for(const school of (data.schools||[]).filter(s=>s.status==='approved')){const c=check('School · '+school.name,'schoolIds',detail.grants?.some(g=>g.school_id===school.id));c.querySelector('input').value=school.id;grants.append(c);}for(const teacher of (data.teachers||[]).filter(u=>!u.disabled)){const c=check('Teacher · '+(teacher.name||teacher.email)+' · '+teacher.email,'teacherIds',detail.grants?.some(g=>g.user_id===teacher.id));c.querySelector('input').value=teacher.id;grants.append(c);}const grantLabel=el('p','Select access recipients','edu-small');function toggle(){grants.hidden=grantLabel.hidden=access.value!=='selected';}access.addEventListener('change',toggle);toggle();addForm(publish,field('Publish access',access),grantLabel,grants,field('Review record',input('reviewNote',{type:'textarea',maxLength:1500,required:true,rows:4}),'Name the completed curriculum, factual, safety, rights and accessibility checks. This records a review; it is not a NESA endorsement.'),check('I checked the resource and PDF for this audience, edition and access level.','reviewed'),actions(submit('Review publication')));publish.querySelector('[name=reviewed]').required=true;box.append(section('Publish when ready',publish));
   const history=el('ul',null,'edu-list');for(const item of detail.versions||[]){const li=el('li');li.append(el('strong','Version '+item.version),small((item.publishedAt?'Published '+item.publishedAt:'Private draft')+' · '+(item.pdfAvailable?'PDF attached':'No PDF attached')));if(item.reviewNote)li.append(el('p',item.reviewNote));history.append(li);}box.append(section('Edition history',history));if(meta.status==='published')box.append(actions(button('Withdraw from new use',()=>{if(hasUnsaved()){tell('Save your resource edits before withdrawing the published resource.');return;}const n=notice('Withdraw this published resource?','New access will be blocked. Existing copies already downloaded cannot be recalled. Keep a clear replacement and correction plan for affected teachers.');n.append(actions(button('Withdraw resource',async()=>{try{await api('/resources/'+id+'/withdraw',{expectedRevision:savedRevision});state.staffDashboard=null;closeDialog();tell('Resource withdrawn from new use.');render();}catch(error){tell(error.message);}}),button('Keep resource available',closeDialog,true)));openDialog('A careful withdrawal.',n);},true)));return box;
  }
+ function teacherSetupDraft(user){
+  const destination='https://glenolia-education.theglenolia.workers.dev/#teacher-account?return=plant';
+  const subject='Set up your Glenolia teacher password';
+  const message=['Hello '+(user.name||'there')+',','You can now sign in to The Glenolia with your school email and an eight-digit password.',
+   'Open '+destination+' and enter the same school email you already use. You’ll receive a link from '+TEACHER_MAIL_SENDER+' to verify it and set your password.',
+   'Your school, applications and plant journals stay with your existing account.','Kind regards,\nJohn Ou\nThe Glenolia'].join('\n\n');
+  const draft=el('div',null,'edu-notice');draft.append(el('p','Review the email before sending it from '+TEACHER_MAIL_SENDER+'.'),el('pre',message));
+  const mail='mailto:'+encodeURIComponent(user.email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(message);
+  draft.append(actions(link('Open email draft',mail)));openDialog('Invite a teacher to set up a password',draft);
+ }
  async function staffPage(route){if(!staffMode||!state.staffAuthenticated)return authNeeded('Open the protected Education staff workspace from the owner admin.');if(route==='staff-classroom')return classroomEditor({data:await api('/classroom-monthly'),api});const data=await dashboard();if(route.startsWith('staff-resource/'))return staffResourceEditor(decodeURIComponent(route.slice(15)));if(route==='staff-new-resource')return staffResourceEditor();const box=el('div');if(route==='staff-schools'){box.append(heading('School access, thoughtfully managed.','Create checked school workspaces, approve their processing arrangements and keep learner-record permissions specific.','OWNER EDUCATION TOOLS',actions(button('Create school',()=>schoolDialog()))));const schools=data.schools||[];if(!schools.length)box.append(empty('No school workspaces yet.','Teachers can use their personal planning space. Create a school workspace after its coordinator has signed in and its contact is checked.'));else{const grid=el('div',null,'edu-info-grid');for(const s of schools){const c=el('article',null,'edu-group-card');c.append(el('span',labelKey(s.status),'edu-tag'),el('h2',s.name),small((s.evidence_enabled?'Learner observations enabled':'Planning access only')+' · '+(s.retention_days||90)+'-day service retention after closure'),actions(button('Manage school',()=>schoolDialog(s),true)));grid.append(c);}box.append(grid);}box.append(notice('Email verification is not school approval.','Only enable learner observations after the school’s applicable privacy, processing, permission and retention requirements are recorded. No learner records are shown in these owner administration lists.'));}
-  else if(route==='staff-teachers'){box.append(heading('Teachers in the learning community.','Manage adult school memberships and assessor access. A school role and learner-record permission are separate.','OWNER EDUCATION TOOLS'));const teachers=data.teachers||[];if(!teachers.length)box.append(empty('No verified teacher accounts yet.','Adult teachers appear here after they verify their email.'));else box.append(staffTable(['Teacher','Work email','School requested','Memberships','Manage'],teachers.map(u=>[u.name,u.email,u.requested_school||'—',String((u.memberships||[]).filter(m=>m.active).length),actions(button('School access',()=>membershipDialog(u),true))])));}
+  else if(route==='staff-teachers'){box.append(heading('Teachers in the learning community.','Manage adult school memberships and assessor access. A school role and learner-record permission are separate.','OWNER EDUCATION TOOLS'));const teachers=data.teachers||[];if(!teachers.length)box.append(empty('No verified teacher accounts yet.','Adult teachers appear here after they verify their email.'));else box.append(staffTable(['Teacher','Work email','School requested','Memberships','Manage'],teachers.map(u=>[u.name,u.email,u.requested_school||'—',String((u.memberships||[]).filter(m=>m.active).length),actions(button('School access',()=>membershipDialog(u),true),u.disabled?null:button('Prepare setup invitation',()=>teacherSetupDraft(u),true))])));}
   else if(route==='staff-resources'){box.append(heading('A library worth returning to.','Edit teaching resources privately, check their PDF and publish a version with clear access.','OWNER CONTENT TOOLS',actions(link('Create a resource','#staff-new-resource'))));const resources=data.resources||[];if(!resources.length)box.append(empty('The first resource can start here.','Create an original teaching resource, attach its checked PDF and publish when ready.'));else box.append(staffTable(['Resource','Stage / term','State / version','Access','Edit'],resources.map(r=>[r.title,stageLabel(r.stage)+' · Term '+r.term,(r.status||'Draft')+' · v'+(r.version||0),r.availability||'teacher',link('Edit resource','#staff-resource/'+r.id,true)])));}
   else if(route==='staff-enquiries'){box.append(heading('Conversations about future learning.','Review teacher enquiries and record the next contact step. These requests do not reserve dates or create bookings.','OWNER EDUCATION TOOLS'));const interests=data.interests||[];if(!interests.length)box.append(empty('No learning enquiries yet.','Teacher expressions of interest appear here after submission.'));else{const items=el('ul',null,'edu-list');for(const interest of interests){const li=el('li');li.append(el('h2',(interest.teacher_name||'Teacher')+' · '+(interest.school_name||'Planning workspace')),el('p',interest.email),small(stageLabel(interest.stage)+' · '+(MODES[interest.mode]||interest.mode)+' · '+interest.preferred_term+' · Approx. '+interest.approximate_count+' learners'));if(interest.message)li.append(el('p',interest.message));const f=form(async value=>{await api('/interests/'+interest.id,{status:String(value.get('status'))});f.dataset.dirty='false';state.staffDashboard=null;tell('Enquiry status saved.');render();});addForm(f,field('Follow-up status',select('status',[['new','New'],['contacted','Contacted'],['closed','Closed']],interest.status)),actions(submit('Save status')));li.append(f);items.append(li);}box.append(items);}}
   else return staffPage('staff-schools');return box;

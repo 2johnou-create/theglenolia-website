@@ -1,6 +1,7 @@
 import {secureEqual,readBody,emailValue,text,encode,digest,json,keys,dateValue,EducationError} from './education-common.mjs';
 import {STAGE_NAMES} from '../public/assets/plant-portal/stages.js';
 import {plantIllustration} from '../public/assets/plant-portal/plant-illustration.js';
+import {TEACHER_MAIL_SENDER,TEACHER_LINK_VALID_MINUTES} from '../public/teachers/teacher-sign-in.js';
 
 const origin='https://glenolia-education.theglenolia.workers.dev';
 const logo='https://theglenolia.com.au/assets/email/logo-compact.png';
@@ -28,6 +29,20 @@ function signIn(body){
  const html=frame(label,'TEACHER WORKSPACE',`<p>Hello ${encode(name)},</p><p>${copy}</p>${panel}${code?`<p style="font-size:14px"><a style="color:#2F4A3C" href="${encode(link)}">Use the sign-in link instead</a></p>`:button('Sign in to your workspace',link)}`,'Your sign-in is private. If you did not request this message, you can ignore it.');
  return {email,name,identity:body.token,subject:'Your Glenolia teacher sign-in '+(code?'code':'link'),htmlContent:html,
   textContent:`Hello ${name},\n\n${label}${code?'\n'+code:''}\n${copy}\n\nSign-in link: ${link}\n\nIgnore this message if you did not request it.\nThe Glenolia · ${help}`};
+}
+function accessLink(body){
+ keys(body,['email','purpose','token','origin']);
+ const email=emailValue(body.email);
+ if(!['setup','browser'].includes(body.purpose)||typeof body.token!=='string'||!secretFormat.test(body.token))throw Error('invalid');
+ const setup=body.purpose==='setup';
+ const title=setup?'Set up your Glenolia teacher password':'Confirm your browser for The Glenolia';
+ const next=setup?'Verify your school email, then choose an eight-digit password. If you already use the portal, your school applications and journals stay with this email address.':'Confirm this browser, then enter your eight-digit password to finish signing in.';
+ const expiry='This link is valid for '+TEACHER_LINK_VALID_MINUTES+' minutes. If you did not request it, you can ignore this email.';
+ const link=origin+'/#teacher-access?token='+body.token;
+ const label=setup?'Verify email and set password':'Confirm this browser';
+ return {email,identity:'teacher-access:'+body.token,subject:title,
+  htmlContent:frame(title,'TEACHER WORKSPACE','<p>'+next+'</p>'+button(label,link)+'<p>'+expiry+'</p>'),
+  textContent:title+'\n\n'+next+'\n\n'+label+': '+link+'\n\n'+expiry};
 }
 function plantNumber(value){
  if(typeof value!=='string'||!/^P[1-9]\d{0,2}$/.test(value)||Number(value.slice(1))>228)throw Error('invalid');
@@ -106,21 +121,21 @@ function plantMessage(body){
 }
 export async function handleEducationMail(request,env,fetcher=globalThis.fetch){
  const path=new URL(request.url).pathname;
- if(!['/internal/education/sign-in','/internal/education/plant-message'].includes(path))return null;
+ if(!['/internal/education/sign-in','/internal/education/access-link','/internal/education/plant-message'].includes(path))return null;
  if(request.method!=='POST'||!env.EDUCATION_MAIL_SECRET||!secureEqual(request.headers.get('Authorization'),'Bearer '+env.EDUCATION_MAIL_SECRET))return json({error:'not_found'},404);
  if(!env.BREVO_API_KEY?.trim()||env.EDUCATION_ORIGIN!==origin)return json({error:'delivery_unavailable'},503);
  let message;
  try{
   const body=await readBody(request,path.endsWith('sign-in')?2048:4096);
   if(!body||body.origin!==origin)return json({error:'invalid'},400);
-  message=path.endsWith('/sign-in')?signIn(body):plantMessage(body);
+  message=path.endsWith('/access-link')?accessLink(body):path.endsWith('/sign-in')?signIn(body):plantMessage(body);
  }catch(error){return json({error:'invalid'},error instanceof EducationError&&error.status===413?413:400);}
  try{
   const headers={idempotencyKey:(await digest(message.identity)).slice(0,32)};
   if(message.unsubscribe){headers['List-Unsubscribe']='<'+message.unsubscribe+'>';headers['List-Unsubscribe-Post']='List-Unsubscribe=One-Click';}
   const response=await fetcher('https://api.brevo.com/v3/smtp/email',{method:'POST',redirect:'manual',
    headers:{'api-key':env.BREVO_API_KEY,'Content-Type':'application/json',Accept:'application/json'},
-   body:JSON.stringify({sender:{email:help,name:'The Glenolia'},to:[message.name?{email:message.email,name:message.name}:{email:message.email}],
+   body:JSON.stringify({sender:{email:TEACHER_MAIL_SENDER,name:'The Glenolia'},to:[message.name?{email:message.email,name:message.name}:{email:message.email}],
     subject:message.subject,htmlContent:message.htmlContent,textContent:message.textContent,headers}),signal:AbortSignal.timeout(12000)});
   if(response.ok)return json({accepted:true});
   return json({error:'delivery_rejected'},path.endsWith('/plant-message')&&response.status===429?429:503);

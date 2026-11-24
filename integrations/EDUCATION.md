@@ -57,13 +57,31 @@ disables that email category immediately without requiring a login.
 
 ## Teacher and school boundaries
 
-The primary teacher sign-in is a six-digit emailed code, valid for 15 minutes in
-the requesting browser. Five attempts are allowed per challenge. Its optional
-email link and any previously issued link work once in the requesting browser. The host-only secure session expires after eight hours or
-30 minutes of inactivity. Mutation endpoints require same-origin requests and a
-session-bound CSRF value. The verified adult account starts with a personal
-planning workspace. It can save favourites, private notes, groups and pinned
-resource assignments, but it cannot store learner evidence.
+Teacher account setup starts with two matching school-email fields. A one-use
+email link is valid for 60 minutes. After opening the link, choose and confirm an
+eight-digit password. Sign in with the school email and password on a verified
+browser. An unfamiliar browser requires a separate email link and the password.
+The secure browser cookie expires after 30 days. The host-only session expires
+after eight hours or 30 minutes of inactivity. Sign out when sharing a computer.
+New typed-code requests are retired. Previously issued links and owner handoff
+links retain their existing validation until they expire.
+
+An existing teacher uses the same email address to set a password and keeps the
+same user ID, school access, applications and journals. In the owner workspace,
+use **Education → Teachers → Prepare setup invitation** to review a draft.
+Teachers can also request a link through **Set up or reset a password**.
+A password reset revokes the account's previous sessions and verified browsers.
+
+Apply `teacher-password-schema.sql` before deploying the teacher Worker. Keep
+the existing `info@theglenolia.com.au` Brevo sender. Deploy the newsletter relay
+first, then the education and owner Workers and the public Pages build. Send
+one internal verification email and check the received link before sending
+existing teachers their invitations.
+
+Mutation endpoints require same-origin requests and a session-bound CSRF value.
+The verified adult account starts with a personal planning workspace. It can
+save favourites, private notes, groups and pinned resource assignments. Learner
+evidence requires the separately approved school access described below.
 
 The owner checks school authority, records an appropriate processing agreement
 and activates specific memberships before learner-code observations are allowed.

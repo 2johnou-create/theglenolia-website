@@ -1,4 +1,5 @@
 import {json,fail,readBody,keys,text,emailValue,token,digest,cookie,browserCookie,sessionCookie,sameOrigin,rate,id,nowISO,publicActor,loadActor,requireCSRF,secureEqual,all} from './education-common.mjs';
+import {normaliseTeacherEmail,TEACHER_CODE_VALID_MS,TEACHER_CODE_RESEND_MS} from '../public/teachers/teacher-sign-in.js';
 const generic='Check your inbox for a six-digit sign-in code. Enter it here within 15 minutes. Signing in does not subscribe you to email updates.';
 function loginCode(){
  const value=new Uint32Array(1),limit=Math.floor(0x100000000/1000000)*1000000;
@@ -19,27 +20,43 @@ async function consumeCode(request,env,body,now){
  if(!challenge||!secureEqual(challenge.verifier,await codeVerifier(challenge.token_hash,body.code,env.SESSION_KEY)))fail(400,'invalid_or_expired_code');
  return challenge.token_hash;
 }
+async function reserveCodeRequest(db,email,now){
+ const key='email:'+await digest(email);
+ const next=await db.prepare(`INSERT INTO edu_rate_limits(key,period,count) VALUES(?,?,1)
+  ON CONFLICT(key) DO UPDATE SET period=excluded.period,count=1
+  WHERE edu_rate_limits.period<=? RETURNING period`).bind(key,now+TEACHER_CODE_RESEND_MS,now).first();
+ if(next)return 0;
+ const current=await db.prepare('SELECT period FROM edu_rate_limits WHERE key=?').bind(key).first();
+ return Math.max(1,Math.ceil((current.period-now)/1000));
+}
 export async function authRoutes(request,env,path){
  if(path==='/api/session'&&request.method==='GET')return json(publicActor(await loadActor(request,env,{required:false})));
  if(path==='/api/auth/request'&&request.method==='POST'){
-  sameOrigin(request);const b=keys(await readBody(request,4096),['email','name','schoolName','role','consent','website','intent']);
+  if(env.LEGACY_TEACHER_CODES!=='true')fail(410,'teacher_password_required');
+  sameOrigin(request);const b=keys(await readBody(request,4096),['email','emailConfirmation','name','schoolName','role','consent','website','intent']);
   if(b.website||b.consent!==true)fail(400,'educator_confirmation_required');
-  const email=emailValue(b.email),name=text(b.name||'Educator',80),schoolName=text(b.schoolName||'',160,{empty:true});
+  const email=normaliseTeacherEmail(b.email);
+  if(!email)fail(400,'invalid_email');
+  if(Object.hasOwn(b,'emailConfirmation')&&normaliseTeacherEmail(b.emailConfirmation)!==email)fail(400,'email_confirmation_mismatch');
+  const name=text(b.name||'Educator',80),schoolName=text(b.schoolName||'',160,{empty:true});
   const now=Date.now(),ipKey=await digest((request.headers.get('CF-Connecting-IP')||'unknown')+env.SESSION_KEY);
   if(!await rate(env.EDU_DB,'ip:'+ipKey,8,3600000,now))fail(429,'try_later');
-  if(!await rate(env.EDU_DB,'email:'+await digest(email),1,90000,now))return json({message:generic},202);
+  const retryAfter=await reserveCodeRequest(env.EDU_DB,email,now);
+  if(retryAfter)return json({error:'code_requested_recently'},429,{'Retry-After':String(retryAfter)});
   if(!env.MAILER||!env.MAIL_SECRET||!env.SESSION_KEY)fail(503,'sign_in_temporarily_unavailable');
   const max=Number(env.MAX_AUTH_EMAILS_DAILY||20);if(!Number.isInteger(max)||max<1||max>25||!await rate(env.EDU_DB,'daily-auth',max,86400000,now))fail(429,'daily_sign_in_allowance');
   const secret=token(),browser=cookie(request,'__Host-glenolia-login')||token(),hash=await digest(secret);
   const code=loginCode();
   await env.EDU_DB.batch([
-   env.EDU_DB.prepare('INSERT INTO edu_auth_tokens(hash,browser_hash,email,name,school_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)').bind(hash,await digest(browser),email,name,schoolName,now,now+900000),
+   env.EDU_DB.prepare('INSERT INTO edu_auth_tokens(hash,browser_hash,email,name,school_name,created_at,expires_at) VALUES(?,?,?,?,?,?,?)').bind(hash,await digest(browser),email,name,schoolName,now,now+TEACHER_CODE_VALID_MS),
    env.EDU_DB.prepare('INSERT INTO edu_auth_codes(token_hash,verifier) VALUES(?,?)').bind(hash,await codeVerifier(hash,code,env.SESSION_KEY))
   ]);
   let response;try{response=await env.MAILER.fetch(new Request('https://internal/internal/education/sign-in',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+env.MAIL_SECRET},body:JSON.stringify({email,name,token:secret,code,origin:env.APP_ORIGIN}),signal:AbortSignal.timeout(15000)}));}catch{await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='needs_review' WHERE hash=?").bind(hash).run();fail(503,'sign_in_temporarily_unavailable');}
   if(!response.ok){await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='rejected' WHERE hash=?").bind(hash).run();fail(503,'sign_in_temporarily_unavailable');}
   await env.EDU_DB.prepare("UPDATE edu_auth_tokens SET mail_state='accepted' WHERE hash=?").bind(hash).run();
-  return json({message:generic},202,{'Set-Cookie':browserCookie(browser)});
+  const elapsed=Date.now()-now;
+  return json({message:generic,expiresInSeconds:Math.max(1,Math.floor((TEACHER_CODE_VALID_MS-elapsed)/1000)),
+   resendAfterSeconds:Math.max(0,Math.ceil((TEACHER_CODE_RESEND_MS-elapsed)/1000))},202,{'Set-Cookie':browserCookie(browser)});
  }
  if(path==='/api/auth/verify'&&request.method==='POST'){
   sameOrigin(request);const b=keys(await readBody(request,2048),['token','email','code']),now=Date.now();

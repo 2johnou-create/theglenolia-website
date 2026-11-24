@@ -47,8 +47,12 @@
 .plant-form {max-width:42rem}
 .plant-form .edu-field,.plant-form .edu-check {margin-block:10px}
 .plant-form .edu-field input,.plant-form .edu-field select,.plant-form .edu-field textarea {min-width:0;width:100%;font-size:16px}
+.plant-form .edu-field input[aria-invalid="true"]{border:2px solid var(--edu-copper)}
 .plant-form .edu-code-notice{margin-block:1rem;padding:.75rem 1rem;border-inline-start:3px solid var(--edu-green);border-radius:4px;background:var(--edu-sage);color:var(--edu-green);font-size:.925rem;line-height:1.5}
 .edu-code-notice strong{display:block}
+.edu-access-links{margin-top:1.15rem}
+.edu-access-invite{margin-bottom:1.5rem}
+.edu-access-invite .edu-button{margin-top:.65rem}
 .plant-form .edu-check {align-items:flex-start}
 .plant-form .edu-check input {flex:0 0 auto}
 .plant-field-pair {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}

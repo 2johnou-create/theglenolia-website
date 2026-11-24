@@ -18,7 +18,7 @@ function setup(t){
    async all(){return {results:sql.prepare(query).all(...this.args)};},async run(){const {changes}=sql.prepare(query).run(...this.args);return {meta:{changes:Number(changes)}};}};
  },async batch(statements){sql.exec('BEGIN');try{const values=[];for(const s of statements)values.push({meta:{changes:Number(sql.prepare(s.query).run(...s.args).changes)}});sql.exec('COMMIT');return values;}catch(e){sql.exec('ROLLBACK');throw e;}}};
  const emails=[],transport=[],uid=()=>crypto.randomUUID(),past='2026-01-01T05:00:00.000Z';
- const env={EDU_DB:db,SESSION_KEY:'test-session-only',MAIL_SECRET:'test-mail-secret',APP_ORIGIN:origin,MAILER:{async fetch(req){
+ const env={EDU_DB:db,LEGACY_TEACHER_CODES:'true',SESSION_KEY:'test-session-only',MAIL_SECRET:'test-mail-secret',APP_ORIGIN:origin,MAILER:{async fetch(req){
   emails.push(await req.clone().json());
   return handleEducationMail(req,relayEnv,async(url,opts)=>{assert.equal(url,'https://api.brevo.com/v3/smtp/email');transport.push(JSON.parse(opts.body));return new Response('{}',{status:201});});
  }}};

@@ -3,6 +3,7 @@ import {plantWorkshopManifest,servePlantWorkshop} from './plant-workshops.mjs';
 import {publicPlantWeather} from './plant-weather.mjs';
 import {EducationError,json,fail,readBody,loadActor,requireCSRF,secureEqual,SECURITY,all,nowISO} from './education-common.mjs';
 import {authRoutes} from './education-auth.mjs';
+import {teacherPasswordRoutes} from './teacher-password.mjs';
 import {preferencesRoute, requireTeacherConsent, processPlantMail, unsubscribeRoute} from './plant-notifications.mjs';
 import {releaseDueAdoptions} from './plant-organisation.mjs';
 import {listResources,getResource,pdfResponse,printablePage,printableResource} from './education-resources.mjs';
@@ -36,7 +37,7 @@ export async function handleEducation(request,env,ctx={}){
    if(path==='/api/plants/weather'&&request.method==='GET')return await publicPlantWeather(request,env);
    if(path==='/api/plants/map'&&request.method==='GET')return await publicPlantMap(request,env);
    if(/^\/api\/plants\/stage-photo\/r(?:[1-9]|1[0-2])-p(?:[1-9]|1[0-9])$/.test(path)&&request.method==='GET')return await publicStagePhoto(request,env);
-   const auth=await authRoutes(request,env,path);if(auth)return auth;
+   const auth=await teacherPasswordRoutes(request,env,path)||await authRoutes(request,env,path);if(auth)return auth;
    if(path==='/api/resources'&&request.method==='GET'){
     const actor=await loadActor(request,env,{required:false}),headers=request.headers.get('Origin')==='https://theglenolia.com.au'?{'Access-Control-Allow-Origin':'https://theglenolia.com.au','Vary':'Origin'}:{};return json({resources:await listResources(env.EDU_DB,actor),stages:['ES1','S1','S2','S3','S4','S5','S6'],language:'en'},200,headers);
    }
@@ -82,6 +83,13 @@ export async function purgeEducation(env,now=Date.now()){
   db.prepare('DELETE FROM edu_learners WHERE school_id=? AND group_id=?').bind(g.school_id,g.id)
  ]);
  await db.batch([db.prepare('DELETE FROM edu_sessions WHERE expires_at<? OR last_seen<?').bind(now,now-1800000),db.prepare('DELETE FROM edu_auth_tokens WHERE expires_at<?').bind(now-86400000),db.prepare("DELETE FROM edu_audit WHERE julianday(?) - julianday(created_at)>365").bind(stamp),db.prepare('DELETE FROM edu_rate_limits WHERE period<? AND key LIKE ?').bind(Math.floor(now/86400000)-7,'daily%')]);
+ await db.batch([
+  db.prepare('DELETE FROM edu_teacher_devices WHERE expires_at<=?').bind(now),
+  db.prepare('DELETE FROM edu_teacher_access_links WHERE expires_at<=?').bind(now),
+  db.prepare("DELETE FROM edu_rate_limits WHERE key LIKE 'teacher-link:%' AND period<?").bind(now-86400000),
+  db.prepare("DELETE FROM edu_rate_limits WHERE key LIKE 'teacher-link-ip:%' AND period<?").bind(Math.floor(now/3600000)-24),
+  db.prepare("DELETE FROM edu_rate_limits WHERE key LIKE 'teacher-password-%' AND period<?").bind(Math.floor(now/900000)-96)
+ ]);
  return {closedGroupsProcessed:expired.length};
 }
 export default {fetch:handleEducation,scheduled(controller,env,ctx){

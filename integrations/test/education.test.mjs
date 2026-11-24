@@ -62,7 +62,7 @@ const atlasMigration=readFileSync(new URL('../plant-atlas-schema.sql',import.met
 function migrateAtlas(db) { db.exec('BEGIN IMMEDIATE;'+atlasMigration+';COMMIT;'); }
 class D1 {
  constructor(){this.sql=new DatabaseSync(':memory:');this.sql.exec(readFileSync(new URL('../education-schema.sql',import.meta.url),'utf8'));this.sql.exec(readFileSync(new URL('../plant-schema.sql',import.meta.url),'utf8'));migrateAtlas(this.sql);
-  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql','plant-classroom-schema.sql'])
+  for(const name of ['plant-adoption-schema.sql','plant-weather-schema.sql','plant-notifications-schema.sql','plant-field-report-schema.sql','plant-stage-photo-schema.sql','plant-threads-schema.sql','plant-thread-mail-schema.sql','plant-recognition-schema.sql','plant-classroom-schema.sql','teacher-password-schema.sql'])
    this.sql.exec('BEGIN IMMEDIATE;'+readFileSync(new URL('../'+name,import.meta.url),'utf8')+';COMMIT;');
   this.sql.exec(readFileSync(new URL('../plant-varieties-schema.sql',import.meta.url),'utf8').split('-- John confirmed')[0]);
   this.sql.exec(readFileSync(new URL('../plant-variety-review-schema.sql',import.meta.url),'utf8'));
@@ -79,7 +79,7 @@ const stamp=()=>new Date().toISOString();
 const pack=(id='test-pack',version=1)=>({id,title:`Test learning pack v${version}`,stage:'S2',years:'Years 3–4',term:1,question:'What can this fabricated record show?',summary:'A fabricated classroom resource for security tests.',outcomes:[{code:'ST2-DAT-01',source:'https://curriculum.nsw.edu.au/learning-areas/science/science-and-technology-k-6-2024/outcomes',partialLimit:'Selected contribution only.'}],learningIntentions:['Interpret a supplied record.'],successCriteria:['I label a record.'],equipment:['Paper'],safety:['Teacher supervised.'],adjustments:'Oral response accepted.',lessons:[{id:'lesson-one',title:'Lesson one',duration:'40 minutes',model:'Teacher modelling.',guided:'Student task: inspect the supplied table.',independent:'Record a labelled explanation.',checks:['Check the source.'],answers:['SECRET_LESSON_ANSWER']}],fieldAlternative:'Optional school grounds.',classroomAlternative:'Paper task.',homeAlternative:'Optional paper task.',studentSheets:[{id:'sheet-one',title:'Student sheet',prompt:'Write a supported observation.',tableColumns:['Source','Observation'],lines:4,answerGuidance:['SECRET_SHEET_ANSWER']},{id:'sheet-two',title:'Second student sheet',prompt:'Explain a limitation.',lines:4,answerGuidance:['SECRET_SECOND_ANSWER']}],rubric:[{criterion:'Evidence',descriptors:{starting:'Prompted.',developing:'Supported.',secure:'Accurate.',extending:'Qualified.'}}],teacherMisconceptions:['A record is not a guarantee.'],characterPrompts:{Pip:['What do you notice?'],Milla:['Where is the source?'],Dot:['What is missing?']},sources:[{title:'Official curriculum',url:'https://curriculum.nsw.edu.au',accessedOn:'2026-11-02'}]});
 async function fixture(t){
  const db=new D1();t.after(()=>db.close());const assetCalls=[],mailCalls=[];
- const env={EDU_DB:db,WEATHER_FETCH:async()=>new Response(null,{status:503}),SESSION_KEY:'fabricated-session-secret',STAFF_TOKEN:'fabricated-staff-secret',ADMIN_EMAIL:'owner@example.test',APP_ORIGIN:ORIGIN,MAIL_SECRET:'fabricated-mail-secret',MAX_AUTH_EMAILS_DAILY:'20',ASSETS:{async fetch(req){assetCalls.push(new URL(req.url).pathname);return new Response(new URL(req.url).pathname.startsWith('/private/')?'%PDF-1.4\nTEST\n%%EOF':'<html>fabricated shell</html>',{headers:{'Content-Type':'text/html'}});}},MAILER:{async fetch(req){mailCalls.push(await req.json());return new Response('{}',{status:202});}}};
+ const env={EDU_DB:db,LEGACY_TEACHER_CODES:'true',WEATHER_FETCH:async()=>new Response(null,{status:503}),SESSION_KEY:'fabricated-session-secret',STAFF_TOKEN:'fabricated-staff-secret',ADMIN_EMAIL:'owner@example.test',APP_ORIGIN:ORIGIN,MAIL_SECRET:'fabricated-mail-secret',MAX_AUTH_EMAILS_DAILY:'20',ASSETS:{async fetch(req){assetCalls.push(new URL(req.url).pathname);return new Response(new URL(req.url).pathname.startsWith('/private/')?'%PDF-1.4\nTEST\n%%EOF':'<html>fabricated shell</html>',{headers:{'Content-Type':'text/html'}});}},MAILER:{async fetch(req){mailCalls.push(await req.json());return new Response('{}',{status:202});}}};
  async function user(name='Teacher A'){const uid=uuid(),email=uid+'@example.test';await db.prepare('INSERT INTO edu_users(id,email,name,created_at,verified_at) VALUES(?,?,?,?,?)').bind(uid,email,name,stamp(),stamp()).run();await db.prepare("INSERT INTO edu_teacher_preferences(user_id,privacy_version,education_version,immediate,monthly,updated_at,source) VALUES(?,'plant-privacy-2026-11-21','educational-use-2026-11-21',0,0,?,'fixture')").bind(uid,stamp()).run();return {id:uid,email,name};}
  async function school(owner,{name='Fabricated School',kind='school',status='approved',enabled=1,agreement='TEST-AGREEMENT',assess=1,retention=90}={}){const sid=uuid();await db.prepare('INSERT INTO edu_schools(id,name,kind,owner_id,status,evidence_enabled,agreement_reference,retention_days,created_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(sid,name,kind,owner.id,status,enabled,agreement,retention,stamp()).run();await db.prepare('INSERT INTO edu_memberships(school_id,user_id,role,can_assess) VALUES(?,?,?,?)').bind(sid,owner.id,'teacher',assess).run();return sid;}
  async function session(u,sid,{lastSeen=Date.now(),expires=Date.now()+3600000}={}){const raw=token();await db.prepare('INSERT INTO edu_sessions(hash,user_id,school_id,created_at,last_seen,expires_at) VALUES(?,?,?,?,?,?)').bind(await digest(raw),u.id,sid,Date.now(),lastSeen,expires).run();return {raw,cookie:'__Host-glenolia-edu='+raw,csrf:await digest('csrf:'+raw+':'+env.SESSION_KEY),user:u,schoolId:sid};}
@@ -115,6 +115,166 @@ test('expired, unaccepted and wrong-browser magic links cannot be consumed',asyn
 test('authentication is unavailable without required binding secrets and ambiguous mail is not retried',async t=>{const f=await fixture(t);for(const key of ['SESSION_KEY','APP_ORIGIN','EDU_DB']){const env={...f.env,[key]:undefined};const r=await handleEducation(new Request(ORIGIN+'/api/session'),env);await code(r,503,'portal_unavailable');}let calls=0;f.env.MAILER={async fetch(){calls++;throw new Error('ambiguous timeout');}};await code(await f.post('/api/auth/request',{email:'ambiguous@example.test',consent:true}),503,'sign_in_temporarily_unavailable');assert.equal(calls,1);const row=await f.db.prepare("SELECT mail_state FROM edu_auth_tokens WHERE email='ambiguous@example.test'").first();assert.equal(row.mail_state,'needs_review');});
 
 test('auth request enforces JSON, body limit, consent and honeypot',async t=>{const f=await fixture(t);await code(await f.post('/api/auth/request',{email:'test@example.test',consent:false}),400,'educator_confirmation_required');await code(await f.post('/api/auth/request',{email:'test@example.test',consent:true,website:'spam'}),400,'educator_confirmation_required');await code(await f.post('/api/auth/request',{email:'test@example.test',consent:true,extra:'injection'}),400,'invalid_fields');await code(await f.post('/api/auth/request',{email:'x'.repeat(5000),consent:true}),413,'too_large');const r=await handleEducation(new Request(ORIGIN+'/api/auth/request',{method:'POST',headers:{Origin:ORIGIN,'Content-Type':'text/plain'},body:'{}'}),f.env);await code(r,415,'json_required');});
+
+test('malformed and mismatched school addresses stop before email, token or rate-limit state',async t=>{
+ const f=await fixture(t),request=body=>f.post('/api/auth/request',{consent:true,...body});
+ for(const email of ['', 'teacher', 'teacher@school', 'teacher@school..edu.au', 'teacher@-school.edu.au',
+  'teacher.@school.edu.au', 'teacher..name@school.edu.au', 'teacher\n@school.edu.au', 'x'.repeat(65)+'@school.edu.au']){
+  await code(await request({email,emailConfirmation:email}),400,'invalid_email');
+ }
+ const email='teacher@school.edu.au';
+ for(const emailConfirmation of ['',null,'another@school.edu.au']){
+  await code(await request({email,emailConfirmation}),400,'email_confirmation_mismatch');
+ }
+ assert.equal(f.mailCalls.length,0);
+ assert.equal((await f.db.prepare('SELECT COUNT(*) AS n FROM edu_auth_tokens').first()).n,0);
+ assert.equal((await f.db.prepare('SELECT COUNT(*) AS n FROM edu_rate_limits').first()).n,0);
+});
+
+test('new teacher confirms email, recovers from a wrong code and registers one school application',async t=>{
+ const f=await fixture(t),email='teacher+pilot@school.example.test';
+ const request={email:' Teacher+Pilot@School.Example.Test ',emailConfirmation:email,consent:true};
+ const initial=await f.post('/api/auth/request',request);
+ const browser=initial.headers.get('Set-Cookie').split(';')[0];
+ const timing=await code(initial,202);
+ assert.ok(timing.expiresInSeconds>=895&&timing.expiresInSeconds<=900);
+ assert.ok(timing.resendAfterSeconds>=85&&timing.resendAfterSeconds<=90);
+ assert.equal(f.mailCalls[0].email,email);
+
+ const cooldown=await f.post('/api/auth/request',request,null,{headers:{Cookie:browser}});
+ await code(cooldown,429,'code_requested_recently');
+ assert.ok(Number(cooldown.headers.get('Retry-After'))>0);
+ assert.equal(f.mailCalls.length,1);
+ const emailBucket='email:'+await digest(email);
+ await f.db.prepare('UPDATE edu_rate_limits SET period=? WHERE key=?').bind(Date.now()-1,emailBucket).run();
+ const resend=await f.post('/api/auth/request',request,null,{headers:{Cookie:browser}});
+ await code(resend,202);
+ assert.equal(resend.headers.get('Set-Cookie').split(';')[0],browser);
+ assert.equal(f.mailCalls.length,2);
+
+ const digits=f.mailCalls[1].code,wrong=digits==='000000'?'999999':'000000';
+ const verify=(value,headers)=>f.post('/api/auth/verify',{email,code:value},null,{headers});
+ await code(await verify(digits,{}),400,'invalid_or_expired_code');
+ await code(await verify(wrong,{Cookie:browser}),400,'invalid_or_expired_code');
+ const signedIn=await verify(digits,{Cookie:browser});
+ const session=await code(signedIn,200),actor={cookie:signedIn.headers.get('Set-Cookie').split(';')[0],csrf:session.csrf};
+ assert.equal(session.user.email,email);
+ await code(await verify(digits,{Cookie:browser}),400,'invalid_or_expired_code');
+ assert.equal((await code(await f.req('/api/teacher/preferences',{actor}),200)).required,true);
+
+ const application={requestId:uuid(),schoolName:'Fictional School Signup Test',suburb:'Glenorie',schoolType:'high',
+  address:'1 Fictional Road',preferredKey:null,consent:true,publicName:false};
+ await code(await f.post('/api/plants/apply',application,actor),403,'teacher_consent_required');
+ const preferences=await code(await f.post('/api/teacher/preferences',{privacy:true,education:true,immediate:false,monthly:false},actor),200);
+ assert.deepEqual([preferences.required,preferences.immediate,preferences.monthly],[false,false,false]);
+ await code(await f.post('/api/plants/apply',{...application,consent:false},actor),400,'consent_required');
+ await code(await f.post('/api/plants/apply',application,actor),200);
+ await code(await f.post('/api/plants/apply',application,actor),200);
+ const record=await code(await f.req('/api/plants/me?applicationId='+application.requestId,{actor}),200);
+ assert.equal(record.application.status,'pending');
+ assert.equal(record.applications.length,1);
+ assert.equal(record.application.schoolName,application.schoolName);
+});
+
+const passwordRoutes={
+ send:'/api/auth/password-email',inspect:'/api/auth/password-link',
+ redeem:'/api/auth/password-redeem',login:'/api/auth/password-login'
+};
+const releaseLinkWait=async (f,email)=>f.db.prepare('UPDATE edu_rate_limits SET period=0 WHERE key=?').bind('teacher-link:'+await digest(email)).run();
+const requestSetup=(f,email,destination='plant')=>f.post(passwordRoutes.send,{email,emailConfirmation:email,consent:true,destination});
+const redeemSetup=(f,raw,password)=>f.post(passwordRoutes.redeem,{token:raw,password,passwordConfirmation:password});
+const responseCookies=response=>Object.fromEntries(response.headers.getSetCookie().map(c=>{const pair=c.split(';')[0];return [pair.split('=')[0],pair];}));
+
+test('teacher verification sends no mail for invalid input, and creates one reusable login after a one-time link',async t=>{
+ const f=await fixture(t),email='new+teacher@school.example.test',password='04372819';
+ await code(await f.post(passwordRoutes.send,{email:'name@school',emailConfirmation:'name@school',consent:true}),400,'invalid_email');
+ await code(await f.post(passwordRoutes.send,{email,emailConfirmation:'other@example.test',consent:true}),400,'email_confirmation_mismatch');
+ await code(await f.post(passwordRoutes.send,{email,emailConfirmation:email,consent:false}),400,'educator_confirmation_required');
+ assert.equal(f.mailCalls.length,0);
+ await code(await f.post(passwordRoutes.send,{email:' NEW+Teacher@School.Example.Test ',emailConfirmation:email,consent:true,destination:'plant?prefer=r2-p7&next=https://outside.test'}),202);
+ assert.deepEqual([f.mailCalls[0].email,f.mailCalls[0].purpose],[email,'setup']);
+ const raw=f.mailCalls[0].token;
+ assert.equal((await f.db.prepare('SELECT hash FROM edu_teacher_access_links').first()).hash,await digest(raw));
+ assert.equal((await f.db.prepare('SELECT COUNT(*) AS n FROM edu_users WHERE email=?').bind(email).first()).n,0);
+ await code(await requestSetup(f,email),429,'teacher_link_recent');
+ assert.equal(f.mailCalls.length,1);
+ assert.equal((await code(await f.post(passwordRoutes.inspect,{token:raw}),200)).email,email);
+ await code(await redeemSetup(f,raw,'123456789012'),400,'teacher_password_format');
+ await code(await redeemSetup(f,raw,'12345678'),400,'teacher_password_common');
+ await code(await f.post(passwordRoutes.redeem,{token:raw,password,passwordConfirmation:'63728491'}),400,'teacher_password_mismatch');
+ const result=await redeemSetup(f,raw,password),cookies=responseCookies(result),actor=await code(result,200);
+ assert.equal(actor.user.email,email);assert.equal(actor.destination,'plant?prefer=r2-p7');
+ assert.ok(cookies['__Host-glenolia-edu']&&cookies['__Host-glenolia-teacher-device']);
+ assert.ok(result.headers.getSetCookie().every(c=>/HttpOnly; Secure; SameSite=Lax/.test(c)));
+ const stored=await f.db.prepare('SELECT salt,verifier FROM edu_teacher_passwords WHERE user_id=?').bind(actor.user.id).first();
+ assert.equal(stored.salt.length,64);assert.equal(stored.verifier.length,64);assert.ok(!stored.verifier.includes(password));
+ await code(await redeemSetup(f,raw,password),400,'teacher_link_expired');
+ const device=cookies['__Host-glenolia-teacher-device'];
+ const remembered=await f.post(passwordRoutes.login,{email,password,destination:'library'},null,{headers:{Cookie:device}});
+ assert.equal((await code(remembered,200)).destination,'library');
+ assert.equal(f.mailCalls.length,1);
+ // A remembered browser still needs the password, and attempts for unknown addresses are indistinguishable.
+ await code(await f.post(passwordRoutes.login,{email,password:'83710426'},null,{headers:{Cookie:device}}),401,'teacher_password_incorrect');
+ await code(await f.post(passwordRoutes.login,{email:'unknown@school.example.test',password},null,{headers:{Cookie:device}}),401,'teacher_password_incorrect');
+});
+
+test('new browsers require a fresh email link and the password; guessing is limited',async t=>{
+ const f=await fixture(t),email='browser@school.example.test',password='83052174';
+ await code(await requestSetup(f,email),202);
+ await code(await redeemSetup(f,f.mailCalls.at(-1).token,password),200);
+ await releaseLinkWait(f,email);
+ await code(await f.post(passwordRoutes.login,{email,password,destination:'plant?prefer=r1-p7'}),202);
+ const message=f.mailCalls.at(-1);
+ assert.equal(message.purpose,'browser');
+ assert.equal((await code(await f.post(passwordRoutes.inspect,{token:message.token}),200)).purpose,'browser');
+ await code(await f.post(passwordRoutes.redeem,{token:message.token,password:'71072485'}),401,'teacher_password_incorrect');
+ const fresh=await f.post(passwordRoutes.redeem,{token:message.token,password});
+ assert.ok(responseCookies(fresh)['__Host-glenolia-teacher-device']);
+ assert.equal((await code(fresh,200)).destination,'plant?prefer=r1-p7');
+ await code(await f.post(passwordRoutes.redeem,{token:message.token,password}),400,'teacher_link_expired');
+ for(let attempt=0;attempt<5;attempt++)await code(await f.post(passwordRoutes.login,{email:'other@school.example.test',password}),401,'teacher_password_incorrect');
+ await code(await f.post(passwordRoutes.login,{email:'other@school.example.test',password}),429,'try_later');
+});
+
+test('existing teacher sets and resets their password on the same account without losing the school application',async t=>{
+ const f=await fixture(t),email=f.a.user.email,oldPassword='24597038',newPassword='21703489';
+ const application={requestId:uuid(),schoolName:'Existing Test School',suburb:'Glenorie',schoolType:'high',
+  address:'1 Sample Road',preferredKey:null,consent:true,publicName:false};
+ await code(await f.post('/api/plants/apply',application,f.a),200);
+ assert.equal((await code(await f.req('/api/auth/password-status',{actor:f.a}),200)).passwordConfigured,false);
+ await code(await requestSetup(f,email),202);
+ const first=await redeemSetup(f,f.mailCalls.at(-1).token,oldPassword),firstCookies=responseCookies(first),firstSession=await code(first,200);
+ assert.equal(firstSession.user.id,f.a.user.id);
+ assert.equal((await code(await f.req('/api/plants/me?applicationId='+application.requestId,{headers:{Cookie:firstCookies['__Host-glenolia-edu']}}),200)).application.schoolName,application.schoolName);
+ await releaseLinkWait(f,email);
+ await code(await requestSetup(f,email),202);
+ const second=await redeemSetup(f,f.mailCalls.at(-1).token,newPassword),secondCookies=responseCookies(second),secondSession=await code(second,200);
+ assert.equal(secondSession.user.id,f.a.user.id);
+ assert.equal((await code(await f.req('/api/session',{headers:{Cookie:firstCookies['__Host-glenolia-edu']}}),200)).user,null);
+ await code(await f.post(passwordRoutes.login,{email,password:oldPassword},null,{headers:{Cookie:firstCookies['__Host-glenolia-teacher-device']}}),401,'teacher_password_incorrect');
+ assert.equal((await code(await f.req('/api/auth/password-status',{headers:{Cookie:secondCookies['__Host-glenolia-edu']}}),200)).passwordConfigured,true);
+ assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_plant_applications WHERE id=?').bind(application.requestId).first()).n,1);
+});
+
+test('expired, concurrent and unconfirmed links fail closed and new legacy code requests are retired',async t=>{
+ const f=await fixture(t),email='race@school.example.test',password='03917462';
+ delete f.env.LEGACY_TEACHER_CODES;
+ await code(await f.post('/api/auth/request',{email,consent:true}),410,'teacher_password_required');
+ await code(await requestSetup(f,email),202);
+ const expired=f.mailCalls.at(-1).token;
+ await f.db.prepare('UPDATE edu_teacher_access_links SET expires_at=0 WHERE hash=?').bind(await digest(expired)).run();
+ await code(await redeemSetup(f,expired,password),400,'teacher_link_expired');
+ await releaseLinkWait(f,email);
+ await code(await requestSetup(f,email),202);
+ const raw=f.mailCalls.at(-1).token;
+ const results=await Promise.all([redeemSetup(f,raw,password),redeemSetup(f,raw,password)]);
+ assert.deepEqual(results.map(r=>r.status).sort(),[200,400]);
+ assert.equal((await f.db.prepare('SELECT COUNT(*) n FROM edu_teacher_devices').first()).n,1);
+ const noMail='unconfirmed@school.example.test';
+ f.env.MAILER={async fetch(){throw Error('test mail timeout');}};
+ await code(await requestSetup(f,noMail),503,'sign_in_temporarily_unavailable');
+ assert.equal((await f.db.prepare('SELECT mail_state FROM edu_teacher_access_links WHERE email=?').bind(noMail).first()).mail_state,'needs_review');
+});
 
 test('school and group isolation blocks another school and an unshared same-school teacher',async t=>{const f=await fixture(t);const g=await f.group(f.a);await code(await f.req('/api/groups/'+g.id,{actor:f.b}),404,'group_not_found');const u=await f.user('Unshared Teacher');await f.db.prepare('INSERT INTO edu_memberships(school_id,user_id) VALUES(?,?)').bind(f.a.schoolId,u.id).run();const c=await f.session(u,f.a.schoolId);await code(await f.req('/api/groups/'+g.id,{actor:c}),404,'group_not_found');assert.deepEqual((await (await f.req('/api/groups',{actor:c})).json()).groups,[]);await f.db.prepare('INSERT INTO edu_group_teachers(school_id,group_id,user_id) VALUES(?,?,?)').bind(f.a.schoolId,g.id,u.id).run();assert.equal((await f.req('/api/groups/'+g.id,{actor:c})).status,200);});
 
@@ -161,6 +321,24 @@ test('safe PDF upload is draft-only, rejects active content and published files 
 const mailRequest=(body,secret='fabricated-relay-secret')=>new Request('https://internal/internal/education/sign-in',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+secret},body:JSON.stringify(body)});
 const relayEnv={EDUCATION_MAIL_SECRET:'fabricated-relay-secret',EDUCATION_ORIGIN:ORIGIN,BREVO_API_KEY:'fabricated-provider-key'};
 const mailBody={email:'teacher@example.test',name:'Teacher <script>',origin:ORIGIN,token:'a'.repeat(64)};
+
+test('account setup and browser confirmation emails retain the Glenolia sender and explain the next step',async()=>{
+ const messages=[],secret=token();
+ for(const purpose of ['setup','browser']){
+  const request=new Request('https://internal/internal/education/access-link',{method:'POST',
+   headers:{'Content-Type':'application/json',Authorization:'Bearer '+relayEnv.EDUCATION_MAIL_SECRET},
+   body:JSON.stringify({email:'educator@school.example.test',purpose,token:secret,origin:ORIGIN})});
+  await code(await handleEducationMail(request,relayEnv,async (_url,options)=>{
+   messages.push(JSON.parse(options.body));return Response.json({messageId:'fictional-result'},{status:201});
+  }),200);
+ }
+ assert.ok(messages.every(message=>message.sender.email==='info@theglenolia.com.au'&&message.to.length===1));
+ assert.match(messages[0].textContent,/eight-digit password/);
+ assert.match(messages[0].textContent,/valid for 60 minutes/);
+ assert.ok(messages[0].htmlContent.includes(ORIGIN+'/#teacher-access?token='+secret));
+ assert.match(messages[1].subject,/Confirm your browser/);
+ assert.notEqual(messages[0].subject,messages[1].subject);
+});
 
 test('mail relay rejects wrong secret, origin or fields before SMTP and never touches contacts/lists',async()=>{const calls=[];const fake=async(url,opts)=>{calls.push([url,opts]);return new Response('{}',{status:201});};await code(await handleEducationMail(mailRequest(mailBody,'wrong'),relayEnv,fake),404,'not_found');for(const body of [{...mailBody,origin:'https://evil.example.test'},{...mailBody,origin:ORIGIN+'.evil.example.test'},{...mailBody,extra:'contact-list'},{...mailBody,token:'bad'}])await code(await handleEducationMail(mailRequest(body),relayEnv,fake),400,'invalid');assert.equal(calls.length,0);const r=await handleEducationMail(mailRequest(mailBody),relayEnv,fake);assert.equal(r.status,200);assert.equal(calls.length,1);assert.equal(calls[0][0],'https://api.brevo.com/v3/smtp/email');assert.equal(calls[0][1].redirect,'manual');const sent=JSON.parse(calls[0][1].body);assert.ok(sent.htmlContent.includes('&lt;script&gt;'));assert.ok(sent.textContent.includes('/auth/verify#token='));assert.match(sent.headers.idempotencyKey,/^[a-f0-9]{32}$/);assert.ok(!('listIds' in sent));assert.ok(!('updateEnabled' in sent));});
 
