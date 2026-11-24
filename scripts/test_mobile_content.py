@@ -545,7 +545,7 @@ class MobileContentTests(unittest.TestCase):
             self.assertFalse((dist / "stale-private-marker.txt").exists())
             self.assertFalse((dist / "api/v1/programme.snapshot.json").exists())
             self.assertTrue((dist / "api/v1/content.schema.json").is_file())
-            self.assertEqual(len(list(dist.rglob("*.html"))), 35)
+            self.assertEqual(len(list(dist.rglob("*.html"))), 36)
             school_portal = (dist / "plant-portal/index.html").read_text()
             self.assertIn('id="world-canvas"', school_portal)
             self.assertIn('id="plant-list"', school_portal)
@@ -554,6 +554,7 @@ class MobileContentTests(unittest.TestCase):
             self.assertNotIn('estate-atlas.webp', school_portal)
             self.assertTrue((dist / "teachers/index.html").is_file())
             self.assertTrue((dist / "plant-portal/index.html").is_file())
+            self.assertTrue((dist / "plant-portal/school-access/index.html").is_file())
             self.assertFalse((dist / "education-catalogue.json").exists())
             for _, prefix in LOCALES.values():
                 for route in ("", "privacy/", "register/", "progress/", "progress/programmes/"):

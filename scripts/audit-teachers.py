@@ -116,6 +116,18 @@ check(any(t == 'a' and a.get('href') == BASE + portal_route for t, a in landing_
 check(locations.count(ORIGIN + portal_route) == 1, 'Plant Portal sitemap entry missing or duplicated')
 check(any(t == 'link' and a.get('rel') == 'canonical' and a.get('href') == ORIGIN + portal_route for t, a in portal_doc.tags), 'Wrong Plant Portal canonical')
 check(any(t == 'a' and a.get('href', '').startswith(PORTAL + '/#plant') for t, a in portal_doc.tags), 'School application must remain reachable without running the selector')
+check(any(t == 'button' and a.get('id') == 'plant-list' and a.get('aria-haspopup') == 'dialog' for t, a in portal_doc.tags),
+      'Plant list needs a discoverable button for its dialog')
+school_access_route = portal_route + 'school-access/'
+access_html, access_doc = read(DIST/'plant-portal/school-access/index.html', 'School access and privacy')
+check(locations.count(ORIGIN + school_access_route) == 1, 'School access guide sitemap entry missing or duplicated')
+check(any(t == 'a' and a.get('href') == BASE + school_access_route for t, a in portal_doc.tags), 'School registration must link to the public guide')
+check(any(t == 'a' and a.get('href') == BASE + '/privacy/#education-privacy' for t, a in access_doc.tags), 'Guide must link to the teacher privacy notice')
+check('id="print-school-access"' in access_html, 'Public guide must have a print button')
+abn_url = 'https://abr.business.gov.au/ABN/View?abn=59688923337'
+for doc in [home_doc, portal_doc, access_doc]:
+    check(any(t == 'a' and a.get('href') == abn_url for t, a in doc.tags), 'Public company details must link to ABN Lookup')
+check('"legalName": "Paxton Australia Pty Ltd"' in home, 'Organisation schema must name the legal operator')
 check(not any(u.startswith(PORTAL) for u in locations), 'Private education account routes do not belong in public sitemap')
 for route in routes:check(locations.count(ORIGIN+route)==1,'English education canonical missing/duplicated in sitemap: '+route)
 check(not any('/zh-hant/teachers/' in u or '/ja/teachers/' in u for u in locations),'Sitemap must not invent translated education routes')

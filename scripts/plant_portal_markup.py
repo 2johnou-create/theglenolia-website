@@ -3,10 +3,40 @@ from hashlib import sha256
 from html import escape
 import json
 from pathlib import Path
-from site_footer import company_details
+from site_footer import OPERATOR_ABN, OPERATOR_ABN_URL, OPERATOR_NAME, company_details
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / 'public' / 'assets' / 'plant-portal'
+SCHOOL_ACCESS_PATH = '/plant-portal/school-access/'
+SCHOOL_ACCESS_TITLE = 'School access and privacy'
+SCHOOL_ACCESS_DESCRIPTION = 'A printable guide for schools covering teacher accounts, classroom access and how The Glenolia handles information.'
+
+
+def school_access():
+    return f'''<article class="section school-access">
+<header class="school-access-intro">
+<a href="/plant-portal/#schools">← School Plant Portal</a>
+<h1>{SCHOOL_ACCESS_TITLE}</h1>
+<p class="lead">A guide for teachers and principals considering The Glenolia’s free coffee plant programme.</p>
+<p class="school-access-operator">Operated by <strong>{OPERATOR_NAME}</strong> in Glenorie, NSW.
+<a href="{OPERATOR_ABN_URL}" aria-label="Verify ABN {OPERATOR_ABN} on ABN Lookup">ABN {OPERATOR_ABN}</a>.</p>
+<button type="button" class="button button-small" id="print-school-access" hidden>Print or save as PDF</button>
+</header>
+<div class="school-access-grid">
+<section><h2>How classes take part</h2>
+<p>An adult teacher registers with a work email and applies on behalf of the school. The farm reviews the application before offering a plant. Teachers can project the journal or print workbooks for students. The programme has no student accounts.</p></section>
+<section><h2>Information we collect</h2>
+<p>We use the teacher’s name and work email, school details, plant preferences and any logo the school chooses to upload to administer the programme. The school can choose whether its name appears on the public map.</p></section>
+<section><h2>Classroom records</h2>
+<p>Learner observations are off by default. An approved school agreement is required to enable them. Use learner codes and keep the key at school. Leave out student names, contact details, health information and photographs.</p></section>
+<section><h2>Hosting and email</h2>
+<p>Cloudflare hosts the teacher workspace and its database. Brevo sends verification links and any programme emails teachers choose. These providers may process information outside Australia. Teacher registration is separate from newsletter consent.</p></section>
+<section><h2>Retention and requests</h2>
+<p>By default we delete learner observations, codes and generated reports 90 days after a group closes. A school agreement can set a different period. Security audit records are retained for up to one year.</p></section>
+<section><h2>Help and school review</h2>
+<p>For access, correction, deletion, school agreements or help opening the portal, email <a href="mailto:info@theglenolia.com.au">info@theglenolia.com.au</a>. Read the <a href="/privacy/#education-privacy">full teacher privacy notice</a> for details.</p></section>
+</div>
+</article>'''
 
 
 def render(origin, base_path='', teacher_origin='https://glenolia-education.theglenolia.workers.dev'):
@@ -41,7 +71,7 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <body><a class="skip" href="#main">Skip to content</a>
 <header class="mast"><a class="identity" href="{base}/" aria-label="The Glenolia home"><img src="{base}/assets/logos/logo-compact.svg" width="250" height="70" alt="The Glenolia"></a><span class="mast-title">School Plant Portal</span>
 <nav aria-label="Plant portal"><a class="resources" href="{base}/teachers/">Teacher resources</a><a class="return-link" href="{teacher}?signin=1">Teacher sign in <span aria-hidden="true">↗</span></a><a class="farm-login" id="farmer-login" href="{farmer}" rel="nofollow">Farmer login</a></nav></header>
-<main id="main" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-weather-url="{escape(teacher_origin, quote=True)}/api/plants/weather" data-atlas-assets="{assets}">
+<main id="main" tabindex="-1" data-teacher="{teacher}" data-map-url="{escape(teacher_origin, quote=True)}/api/plants/map" data-weather-url="{escape(teacher_origin, quote=True)}/api/plants/weather" data-atlas-assets="{assets}">
 <section class="welcome" aria-labelledby="invite-heading">
 <div class="welcome-scene"><picture><source media="(max-width: 760px)" srcset="{assets}/two-worker-orchard-small.webp"><img src="{assets}/two-worker-orchard.webp" width="1672" height="941" fetchpriority="high" alt="Two workers tending young coffee plants between magnolia trees in Glenorie."></picture>
 <a class="hero-marker marker-1" href="#rows" data-preview="1" hidden>P1</a>
@@ -62,19 +92,24 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 </section>
 <section class="explore shell" id="rows" aria-labelledby="rows-heading" tabindex="-1">
 <div class="section-head"><div><p class="eyebrow">The estate atlas</p><h2 id="rows-heading">Choose a class plant.</h2></div>
-<p>Choose a tree in the school pilot, or explore the magnolia lanes planned for autumn 2027.</p></div>
+<div class="plant-browse"><p>Browse the pilot plants or explore the rows planned for autumn 2027.</p>
+<button type="button" class="plant-list-trigger" id="plant-list" aria-haspopup="dialog" hidden>Plant list</button></div></div>
+<dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list" autofocus>Close</button></header>
+<div class="list-body"><p id="list-status" role="status">Loading the planting register…</p>
+<div id="list-controls" hidden><label for="list-row">Planting row</label><select id="list-row"></select><div id="list-options" role="group" aria-label="Choose a position to inspect"></div></div>
+<a id="list-apply" class="sub-link" href="{teacher}" hidden>Apply without a plant preference</a></div></dialog>
 <div id="row-app" hidden>
 
 <div class="atlas-tools"><label for="row-jump"><span class="wide-label">Jump to </span>row</label><select id="row-jump" aria-label="Jump to row"></select>
-<span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button><button type="button" id="plant-list" disabled>Plant list</button>
-<div class="farm-clock" aria-label="Glenorie local time"><span class="clock-face" aria-hidden="true"><i id="clock-hour"></i><i id="clock-minute"></i></span><div><span class="clock-place">Glenorie farm time</span><time id="farm-time">Sydney time</time></div></div></div>
+<span class="atlas-hint">Scroll inside the map ↓</span><button type="button" id="return-selected" hidden></button>
+<div class="farm-clock"><span class="clock-face" aria-hidden="true"><i id="clock-hour"></i><i id="clock-minute"></i></span><div><span class="clock-place">Glenorie farm time</span><time id="farm-time">Sydney time</time></div></div></div>
 <section class="weather-strip" aria-label="Glenorie weather">
 <dl class="weather-readings"><div><dt>Air temperature</dt><dd id="wx-temp">—</dd></div><div><dt>Humidity</dt><dd id="wx-humidity">—</dd></div><div><dt>Wind</dt><dd id="wx-wind">—</dd></div><div><dt>Rain, next hour</dt><dd id="wx-rain">—</dd></div><div class="mean-reading"><dt>14-day avg. temp</dt><dd id="wx-mean-temp">—</dd></div><div><dt>14-day avg. rain</dt><dd id="wx-mean-rain">—</dd></div></dl>
 <details class="weather-notes"><summary>Weather details</summary><div><p id="wx-current-note">Loading the Glenorie area forecast…</p><p id="wx-history-note">Checking the last 14 complete local days…</p><p id="wx-source"></p></div></details></section>
 <div class="map-notice" id="map-notice" role="status"><span id="map-message">Loading the farmer’s planting map…</span><button type="button" id="retry-map" hidden>Try again</button></div>
 <figure class="atlas-sheet"><div id="estate-workspace"><div class="estate-map-column">
 <div id="world-scroll" role="region" tabindex="0" aria-label="3D estate map, scroll between rows" hidden>
-<div id="world-surface"><canvas id="world-canvas" aria-hidden="true"></canvas><div id="world-pins" aria-label="Plants on the map"></div>
+<div id="world-surface"><canvas id="world-canvas" aria-hidden="true"></canvas><div id="world-pins" role="group" aria-label="Plants on the map"></div>
 <div class="world-caption"><small id="world-area"></small><strong id="world-row"></strong></div>
 <button type="button" class="world-pause" id="world-pause" aria-label="Pause farm animation">Ⅱ</button>
 <div class="world-nav"><button type="button" id="world-scale" hidden>Whole field</button><button type="button" id="world-back" hidden>← Back to rows</button><div id="world-pan" hidden><button type="button" id="world-prev" aria-label="Previous positions">←</button><span id="world-range"></span><button type="button" id="world-next" aria-label="Next positions">→</button></div></div></div><div class="world-distance" aria-hidden="true"></div></div><p class="world-notice" id="world-notice" role="status" hidden></p>
@@ -83,8 +118,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <div class="estate-areas" role="group" aria-label="Planting area"><button id="pilot-area" type="button" aria-pressed="true">Pilot rows</button><button id="planned-area" type="button" aria-pressed="false">Autumn 2027</button></div>
 <div id="directory-rows" role="group" aria-label="Rows in this area"></div>
 <p id="directory-summary" role="status">Loading the planting register…</p>
-<section id="plant-card" hidden aria-label="Plant details">
-<button type="button" id="close-card" aria-label="Close plant details">×</button><div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"><button type="button" id="card-photo-toggle" aria-label="Show real plant photograph" aria-pressed="false" hidden><img id="card-photo" alt="Real photograph of this plant"></button></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title"></h3><p id="plant-variety" class="plant-variety"></p></div></div>
+<section id="plant-card" hidden aria-labelledby="plant-title">
+<div class="card-head"><span class="card-art"><img id="card-image" alt="" width="63" height="71"><button type="button" id="card-photo-toggle" aria-label="Show real plant photograph" aria-pressed="false" hidden><img id="card-photo" alt="Real photograph of this plant"></button></span><div><p class="eyebrow" id="card-kind">Coffee plant</p><h3 id="plant-title" tabindex="-1" aria-describedby="plant-variety stage-title plant-status"></h3><p id="plant-variety" class="plant-variety"></p></div></div><button type="button" id="close-card" aria-label="Close plant details">×</button>
 <p class="stage-line"><strong id="stage-title"></strong><span id="stage-number"></span></p>
 <p class="height">Individual height <strong>No reading published</strong></p><p class="cohort">Pilot average <strong>17 cm</strong> · <time datetime="2026-11-01">1 Nov 2026</time></p>
 <p id="plant-status"></p><button type="button" class="cta" id="select-plant"></button><a class="cta" id="request" hidden href="{teacher}">Apply for your class ↗</a>
@@ -102,8 +137,6 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <details class="school-register" id="school-register" hidden><summary id="school-register-title">School adoptions</summary><ul id="school-register-list"></ul></details>
 <a class="sub-link plain-apply" id="no-preference" href="{teacher}">Apply without a preference ↗</a>
 <p id="selection-live" class="sr" role="status"></p>
-<dialog id="plant-dialog" aria-labelledby="list-title"><header><h3 id="list-title">Plant list</h3><button type="button" id="close-list">Close</button></header>
-<div class="list-body"><label for="list-row">Planting row</label><select id="list-row"></select><div id="list-options" role="group" aria-label="Choose a position to inspect"></div></div></dialog>
 </div>
 <noscript><p>The interactive map uses JavaScript. You can register your school directly and the farmer can help match your class to a plant.</p><a class="cta" href="{teacher}">Register your school ↗</a></noscript>
 </section>
@@ -112,7 +145,8 @@ def render(origin, base_path='', teacher_origin='https://glenolia-education.theg
 <li><strong>Meet your plant.</strong> The farm team reviews your application and offers a verified plant when one is available.</li>
 <li><strong>Follow it together.</strong> Invite other teachers to the same journal. Compare the farmer’s dated photos with your class.</li></ol>
 <p class="terms">Your school can apply for up to three plants. Each extra plant needs an educational reason and approval. The farm cares for the plants. Students take part through a teacher.</p>
-<a class="cta" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a></div></section>
+<div class="school-actions"><a class="cta" href="{teacher}">Register your school <span aria-hidden="true">↗</span></a>
+<a class="sub-link" href="{base}{SCHOOL_ACCESS_PATH}">{SCHOOL_ACCESS_TITLE}</a></div></div></section>
 <section class="meet-farmer shell" id="meet-farmer" aria-labelledby="farmer-heading">
 <div class="farmer-intro"><p class="eyebrow">The people behind the plants</p><h2 id="farmer-heading">Meet the Farmer</h2><p>Growing coffee is a journey of observation, care and shared knowledge.</p></div>
 <div class="farmer-layout">

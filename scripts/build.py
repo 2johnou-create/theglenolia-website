@@ -8,7 +8,7 @@ import programme_markup
 import teachers_markup
 import plant_portal_markup
 from coffee_gallery import render_gallery as coffee_gallery
-from site_footer import company_details
+from site_footer import OPERATOR_NAME, company_details
 import export_website_content
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -134,18 +134,26 @@ def footer(c):
 
 def build_page(key, page, resource=None):
     c=CONTENT[key]
-    education_page=page in ['teachers','teacher-sample']
+    education_page=page in ['teachers','teacher-sample','school-access']
     if education_page and key!='en':
         raise ValueError('Education pages are English only')
     if page=='teacher-sample' and resource not in PUBLIC_SAMPLES:
         raise ValueError('Only public sample summaries can be built')
     titles={'home':c['siteTitle'],'about':c['nav'][0], 'making':c['nav'][1], 'coffee':c['coffeeTitle'], 'progress':c['nav'][2], 'programmes':programme_markup.DATA['copy'][key]['metaTitle'], 'register':c['register'],'privacy':c['privacy'],'confirmed':c['confirmTitle'],'admin':c['adminLabel']}
     titles.update(teachers='For teachers — Learning with The Glenolia', **{'teacher-sample':resource['title'] if resource else 'Learning sample'})
+    titles['school-access'] = plant_portal_markup.SCHOOL_ACCESS_TITLE
     page_title=titles[page] if page=='home' else titles[page]+' | The Glenolia'
     descriptions={'programmes':programme_markup.DATA['copy'][key]['metaDescription'],'home':c['description'],'about':c['visionIntro'],'making':c['makingIntro'],'coffee':c['coffeeIntro'],'progress':world_markup.DATA['copy'][key]['currentText'][world_markup.CONFIG['currentStage']],'register':c['signupIntro'] if CONFIG['newsletterReady'] else c['unconnected']+' '+c['signupIntro'],'privacy':c['privacyIntro'],'confirmed':c['confirmText'],'admin':c['adminIntro']}
     descriptions.update(teachers='Free English teaching resources connecting plants, places and people. Explore classroom samples, plan groups and follow a growing farm in Glenorie, NSW.', **{'teacher-sample':resource['summary'] if resource else 'English teacher-led learning sample from The Glenolia.'})
+    descriptions['school-access'] = plant_portal_markup.SCHOOL_ACCESS_DESCRIPTION
     description=descriptions[page]
-    route=('/teachers/' if page=='teachers' else '/teachers/samples/'+resource['id']+'/') if education_page else url(c,page)
+    education_routes = {'teachers': '/teachers/', 'school-access': plant_portal_markup.SCHOOL_ACCESS_PATH}
+    if page == 'teacher-sample':
+        route = '/teachers/samples/' + resource['id'] + '/'
+    elif education_page:
+        route = education_routes[page]
+    else:
+        route = url(c,page)
     canon=ORIGIN+route
     if education_page:
         alternates=f'<link rel="alternate" hreflang="en-AU" href="{canon}"><link rel="alternate" hreflang="x-default" href="{canon}">'
@@ -180,6 +188,8 @@ def build_page(key, page, resource=None):
             body=body.replace(teachers_markup.APP_URL+'/#resource/'+sample['id'], '/teachers/samples/'+sample['id']+'/')
     elif page=='teacher-sample':
         body=teachers_markup.public_resource_page(resource)
+    elif page=='school-access':
+        body=plant_portal_markup.school_access()
     elif page=='admin':
         admin=CONFIG.get('adminUrl','')
         action=button(e(admin),c['adminAction']) if admin else f'<p class="admin-pending" role="status">{e(c["adminPending"])}</p>'
@@ -187,7 +197,7 @@ def build_page(key, page, resource=None):
     else: body=f'<section class="page-intro section prose"><h1>{e(c["confirmTitle"])}</h1><p class="lead">{e(c["confirmText"])}</p>{button(url(c,"home"),c["home"])}</section>'
     if page=='home' and key=='en':
         body=body.replace('<section class="section journal">', teachers_callout()+'<section class="section journal">', 1)
-    schema={'@context':'https://schema.org','@graph':[{'@type':'Organization','@id':ORIGIN+'/#organization','name':'THE GLENOLIA','url':ORIGIN,'logo':ORIGIN+'/assets/logos/logo-en-tagline.svg'}, {'@type':'WebSite','@id':ORIGIN+'/#website','name':'THE GLENOLIA','url':ORIGIN,'inLanguage':['en-AU','zh-Hant','ja']},{'@type':'WebPage','@id':canon,'url':canon,'name':page_title,'description':c['description'],'inLanguage':c['lang'],'isPartOf':{'@id':ORIGIN+'/#website'}}]}
+    schema={'@context':'https://schema.org','@graph':[{'@type':'Organization','@id':ORIGIN+'/#organization','name':'THE GLENOLIA','legalName':OPERATOR_NAME,'url':ORIGIN,'logo':ORIGIN+'/assets/logos/logo-en-tagline.svg'}, {'@type':'WebSite','@id':ORIGIN+'/#website','name':'THE GLENOLIA','url':ORIGIN,'inLanguage':['en-AU','zh-Hant','ja']},{'@type':'WebPage','@id':canon,'url':canon,'name':page_title,'description':c['description'],'inLanguage':c['lang'],'isPartOf':{'@id':ORIGIN+'/#website'}}]}
     result=f'''<!doctype html><html lang="{c['lang']}" data-language="{key}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(page_title)}</title><meta name="description" content="{e(c['description'])}"><meta name="theme-color" content="#F5F1E8"><meta name="color-scheme" content="light"><link rel="canonical" href="{canon}">{alternates}<meta property="og:type" content="website"><meta property="og:title" content="{e(page_title)}"><meta property="og:description" content="{e(c['description'])}"><meta property="og:url" content="{canon}"><meta property="og:image" content="{ORIGIN}/assets/images/social.jpg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:locale" content="{c['lang'].replace('-', '_')}"><meta name="twitter:card" content="summary_large_image"><link rel="icon" type="image/svg+xml" href="/assets/logos/leaf.svg"><link rel="stylesheet" href="/style.css"><link rel="preload" href="/assets/fonts/{'en' if key=='en' else key}-sans.woff2" as="font" type="font/woff2" crossorigin><script src="/app.js" defer></script><script type="application/ld+json">{json.dumps(schema,ensure_ascii=False)}</script>{'<meta name="robots" content="noindex,follow">' if page in ['confirmed','admin'] else ''}</head><body>{header}<main id="main">{body}</main>{footer(c)}</body></html>'''
     result=result.replace('href="/style.css"',f'href="/style.css?v={STYLE_REVISION}"')
     result=result.replace('src="/app.js"',f'src="/app.js?v={APP_REVISION}"')
@@ -198,8 +208,10 @@ def build_page(key, page, resource=None):
             result=result.replace('</head>',f'<script type="module" src="/assets/progress/progress.js?v={WORLD_REVISION}"></script></head>')
     if page=='programmes':
         result=result.replace('</head>',f'<link rel="stylesheet" href="/assets/progress/programme.css?v={WORLD_REVISION}"><script type="module" src="/assets/progress/programmes.js?v={WORLD_REVISION}"></script></head>')
-    if education_page:
+    if page in ['teachers','teacher-sample']:
         result=result.replace('</head>','<link rel="stylesheet" href="/teachers/teacher-ui.css"></head>')
+    if page == 'school-access':
+        result = result.replace('<main id="main">', '<main id="main" tabindex="-1">')
     if BASE_PATH:
         result=result.replace('href="/', f'href="{BASE_PATH}/').replace('src="/', f'src="{BASE_PATH}/').replace('data-desktop="/',f'data-desktop="{BASE_PATH}/').replace('data-mobile="/',f'data-mobile="{BASE_PATH}/').replace('srcset="/',f'srcset="{BASE_PATH}/').replace(', /assets/', f', {BASE_PATH}/assets/')
     result=result.replace('content="'+c['lang'].replace('-', '_')+'"', 'content="'+{'en':'en_AU','zh':'zh_TW','ja':'ja_JP'}[key]+'"')
@@ -216,6 +228,8 @@ for key in CONTENT:
         canon=build_page(key,page)
         if page not in ['confirmed','admin']: urls.append(canon)
 urls.append(build_page('en','teachers'))
+school_access_url = build_page('en','school-access')
+urls.append(school_access_url)
 for sample in PUBLIC_SAMPLES:
     urls.append(build_page('en','teacher-sample',sample))
 portal = DIST / 'plant-portal' / 'index.html'
@@ -223,9 +237,10 @@ portal.parent.mkdir(exist_ok=True)
 portal.write_text(plant_portal_markup.render(ORIGIN, BASE_PATH, teachers_markup.APP_URL))
 urls.append(ORIGIN + '/plant-portal/')
 portal_release_pages = {ORIGIN + path for path in ['/', '/teachers/', '/privacy/', '/plant-portal/']}
+updated_school_pages = {school_access_url, ORIGIN + '/plant-portal/'}
 sitemap_entries = []
 for page_url in urls:
-    lastmod = '2026-11-21' if page_url in portal_release_pages else CONFIG['updated']
+    lastmod = '2026-11-24' if page_url in updated_school_pages else '2026-11-21' if page_url in portal_release_pages else CONFIG['updated']
     sitemap_entries.append(f'<url><loc>{e(page_url)}</loc><lastmod>{lastmod}</lastmod></url>')
 (DIST / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                                  + ''.join(sitemap_entries) + '</urlset>')

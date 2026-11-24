@@ -9,6 +9,9 @@ const main = byId('main');
 const explorer = byId('row-app');
 const card = byId('plant-card');
 const dialog = byId('plant-dialog');
+const listTrigger = byId('plant-list');
+const listControls = byId('list-controls');
+const listStatus = byId('list-status');
 const jumpList = byId('row-jump');
 const dialogRows = byId('list-row');
 const assets = main.dataset.atlasAssets;
@@ -30,6 +33,7 @@ let rows = [];
 let preferred = readPreference();
 let active = null;
 let mode = '';
+let selectedFromList = false;
 let currentRow = 1;
 let lastDrawn = null;
 let fetching = false;
@@ -113,7 +117,7 @@ function inspect(plant, nextMode, focus = false) {
   else request.removeAttribute('href');
   if (focus) {
     card.scrollIntoView({block:'nearest',behavior:'instant'});
-    (select.hidden ? (request.hidden ? byId('close-card') : request) : select).focus({preventScroll:true});
+    (request.hidden ? byId('plant-title') : request).focus({preventScroll:true});
   }
 }
 byId('card-photo-toggle').addEventListener('click',event=>{
@@ -124,12 +128,14 @@ byId('card-photo-toggle').addEventListener('click',event=>{
 function dismiss(restoreFocus = false) {
   if (!active) return;
   const previous = active.key;
+  const returnToList = selectedFromList;
   atlas.unselect();
   active = null;
   mode = '';
+  selectedFromList = false;
   card.hidden = true;
   card.removeAttribute('data-key');
-  if (restoreFocus && !atlas.restore(previous)) byId('plant-list').focus({preventScroll:true});
+  if (restoreFocus && (returnToList || !atlas.restore(previous))) listTrigger.focus();
 }
 document.addEventListener('pointerdown', event => {
   if (active && !event.target.closest('#plant-card,[data-plant-key],#return-selected,#world-surface,#estate-directory')) dismiss();
@@ -145,8 +151,9 @@ byId('select-plant').onclick = () => {
   inspect(active,'pinned',true);
   byId('selection-live').textContent = label(active) + ' selected as your class preference.';
 };
-function showPosition(plant, focus = false) {
+function showPosition(plant, focus = false, fromList = false) {
   if (!plant) return;
+  selectedFromList = fromList;
   inspect(plant,'pinned',focus);
 }
 byId('return-selected').onclick = () => showPosition(register.get(preferred),true);
@@ -187,19 +194,20 @@ function rebuildDialog() {
       btn.append(caption);
     }
     btn.setAttribute('aria-label',[label(plant),plant.variety,STAGE_NAMES[plant.stage-1],adoptionText(plant)].filter(Boolean).join(', '));
-    btn.onclick = () => { dialog.close(); showPosition(plant,true); };
+    btn.onclick = () => { dialog.close(); showPosition(plant,true,true); };
     options.append(btn);
   }
-  if(!options.children.length){
-    const empty=document.createElement('p');empty.className='list-empty';
-    empty.textContent=Number(dialogRows.value)>2?'Planned for autumn 2027. No coffee plants have been enabled in this row.':'No coffee plants are enabled in this row.';
-    options.append(empty);
-  }
+  const count = options.children.length;
+  listStatus.textContent = count
+    ? count + (count === 1 ? ' plant' : ' plants') + ' in Row ' + dialogRows.value + '.'
+    : (Number(dialogRows.value)>2 ? 'Planned for autumn 2027. ' : '') + 'No coffee plants are listed in this row.';
 }
-byId('plant-list').onclick = () => {
+listTrigger.onclick = () => {
   dismiss();
   if (rows.some(r => r.row === currentRow)) dialogRows.value = String(currentRow);
-  rebuildDialog(); dialog.showModal(); dialogRows.focus();
+  if (rows.length) rebuildDialog();
+  dialog.showModal();
+  if (rows.length) dialogRows.focus();
 };
 byId('close-list').onclick = () => dialog.close();
 dialogRows.onchange = rebuildDialog;
@@ -245,6 +253,7 @@ function showAdoptions() {
 function draw(layout,result) {
   const prev = active?.key;
   const prevMode = mode;
+  const previousFromList = selectedFromList;
   const focusedKey = document.activeElement?.closest('[data-plant-key]')?.dataset.plantKey;
   const focusedList = document.activeElement?.dataset.listKey;
   const focusOnCard = card.contains(document.activeElement);
@@ -261,21 +270,22 @@ function draw(layout,result) {
   }
   setRow(rows[currentRow-1] ? currentRow : 1);
   updatePreference();
-  byId('plant-list').disabled = !register.size;
+  listControls.hidden = false;
+  byId('list-apply').hidden = false;
   showAdoptions();
   if (dialog.open) {
-    if (!register.size) dialog.close();
-    else {
-      if (rows.some(r => String(r.row) === prevListRow)) dialogRows.value = prevListRow;
-      rebuildDialog();
-      const previousButton = [...byId('list-options').children].find(b=>b.dataset.listKey===focusedList);
-      (previousButton || dialogRows).focus({preventScroll:true});
-    }
+    if (rows.some(r => String(r.row) === prevListRow)) dialogRows.value = prevListRow;
+    rebuildDialog();
+    const previousButton = [...byId('list-options').children].find(b=>b.dataset.listKey===focusedList);
+    if (focusedList) (previousButton || dialogRows).focus({preventScroll:true});
   }
   if ((focusedKey && !atlas.restore(focusedKey)) || (focusOnCard && !register.has(prev))) {
     jumpList.focus({preventScroll:true});
   }
-  if (prev && register.has(prev) && prevMode !== 'hover') inspect(register.get(prev),prevMode,focusOnCard);
+  if (prev && register.has(prev) && prevMode !== 'hover') {
+    selectedFromList = previousFromList;
+    inspect(register.get(prev),prevMode,focusOnCard);
+  }
   main.querySelectorAll('a.hero-marker[data-preview]').forEach(link => {
     const plant = register.get('r1-p'+link.dataset.preview);
     link.hidden = !plant;
@@ -305,18 +315,23 @@ async function refresh() {
     const signature = JSON.stringify([layout,[...result.values()]]);
     if (signature !== lastDrawn) { draw(layout,result); lastDrawn=signature; }
   } catch {
-    dismiss(); if (dialog.open) dialog.close();
+    dismiss();
     lastDrawn = null; rows=[]; register.clear(); jumpList.replaceChildren();
     atlas.data(rows,register);
     showAdoptions();
     for (const link of main.querySelectorAll('a.hero-marker[data-preview]')) link.hidden = true;
-    updatePreference(); byId('plant-list').disabled=true;
+    updatePreference();
+    if (listControls.contains(document.activeElement)) byId('close-list').focus();
+    listControls.hidden = true;
+    byId('list-apply').hidden = false;
+    listStatus.textContent = 'The planting register is unavailable. Your school can still apply without choosing a plant.';
     notice('The planting register could not be loaded. You can still register your school without a preference.',true);
   } finally { clearTimeout(timeout); fetching=false; jumpList.disabled=!rows.length; }
 }
 byId('retry-map').onclick = refresh;
 installFarmWeather(main.dataset.weatherUrl);
-jumpList.disabled=true; explorer.hidden=false; refresh();
+jumpList.disabled=true; listTrigger.hidden=false;
+explorer.hidden=false; refresh();
 window.addEventListener('pageshow',refresh);
 window.addEventListener('focus',refresh);
 document.addEventListener('visibilitychange',()=>{ if (!document.hidden) refresh(); });

@@ -297,6 +297,7 @@ function start(root){
   return formEl;
  }
  const privacyPage='https://theglenolia.com.au/privacy/#education-privacy';
+ const schoolAccessPage=plantLanding+'school-access/';
  const educationalUse='https://theglenolia.com.au/privacy/#educational-use';
  let teacherPrefs=null,learningContent=null,teacherPasswordConfigured=null,accessToken=null;
  function plainLink(label,href){const a=el('a',label);a.href=href;return a;}
@@ -315,7 +316,7 @@ function start(root){
   const control=input(name,{type:'password',required:true});
   control.minLength=8;control.pattern='[0-9]{8}';control.inputMode='numeric';control.autocomplete=autocomplete;
   control.title='Enter exactly eight digits.';
-  control.setAttribute('aria-describedby','teacher-password-rule');
+  control.setAttribute('aria-describedby','teacher-password-rule teacher-password-error');
   return control;
  }
  function revealPasswords(...controls){
@@ -325,24 +326,46 @@ function start(root){
    event.currentTarget.textContent=visible?'Hide password':'Show password';
   },true);
  }
- function accessValidationError(){
-  const node=el('p',null,'edu-form-error');node.setAttribute('role','alert');node.id='teacher-email-error';
+ function copyAccessValue(label,source,target){
+  return button(label,()=>{
+   if(!source.value){source.focus();return;}
+   target.value=source.value;
+   target.dispatchEvent(new Event('input',{bubbles:true}));
+   target.focus();
+  },true);
+ }
+ function accessValidationError(id){
+  const node=el('p',null,'edu-form-error');node.setAttribute('role','alert');node.id=id;
   return node;
+ }
+ function flagAccessField(control,error,message){
+  error.textContent=message;control.setAttribute('aria-invalid','true');control.focus();return false;
+ }
+ function clearAccessErrorOnEdit(fields,error){
+  const clear=()=>{error.textContent='';fields.forEach(field=>field.removeAttribute('aria-invalid'));};
+  fields.forEach(field=>field.addEventListener('input',clear));
+  return clear;
  }
  function validateAccessEmail(email,confirm,error){
   const fields=confirm?[email,confirm]:[email];
-  const clear=()=>{error.textContent='';fields.forEach(field=>field.removeAttribute('aria-invalid'));};
-  for(const control of fields){
-   control.setAttribute('aria-describedby','teacher-email-error');control.addEventListener('input',clear);
-  }
+  const clear=clearAccessErrorOnEdit(fields,error);
+  fields.forEach(control=>control.setAttribute('aria-describedby',error.id));
   return ()=>{
    clear();const address=normaliseTeacherEmail(email.value);
-   let field=email;
-   if(!address)error.textContent=email.value.trim()?'Enter a complete school email address, such as teacher@school.edu.au.':'Enter your school email address.';
-   else if(confirm&&normaliseTeacherEmail(confirm.value)!==address){
-    field=confirm;error.textContent=confirm.value.trim()?'The two email addresses must match.':'Enter your school email again to confirm it.';
-   }else return true;
-   field.setAttribute('aria-invalid','true');field.focus();return false;
+   if(!address)return flagAccessField(email,error,email.value.trim()?'Enter a complete school email address, such as teacher@school.edu.au.':'Enter your school email address.');
+   if(confirm&&normaliseTeacherEmail(confirm.value)!==address)
+    return flagAccessField(confirm,error,confirm.value.trim()?'The two email addresses must match.':'Confirm your school email. You can use the email above.');
+   return true;
+  };
+ }
+ function validateAccessPassword(password,confirmed,error){
+  const clear=clearAccessErrorOnEdit(confirmed?[password,confirmed]:[password],error);
+  return ()=>{
+   clear();
+   if(!validTeacherPassword(password.value))return flagAccessField(password,error,'Enter exactly eight digits for your password.');
+   if(confirmed&&password.value!==confirmed.value)return flagAccessField(confirmed,error,'The two passwords must match.');
+   if(confirmed&&commonTeacherPassword(password.value))return flagAccessField(password,error,ERRORS.teacher_password_common);
+   return true;
   };
  }
  function accessDestination(plant){return plant?(cleanPlantReturn(location.hash.slice(1))||'plant'):'library';}
@@ -372,9 +395,12 @@ function start(root){
    slot.replaceChildren(copy);title.focus();
   }
   function draw(mode){
-   const signIn=mode==='signin',email=accessEmail('email',emailValue),error=accessValidationError();
-   const confirm=signIn?null:accessEmail('emailConfirmation','','off');
+   const signIn=mode==='signin',email=accessEmail('email',emailValue),error=accessValidationError('teacher-email-error');
+   const confirm=signIn?null:accessEmail('emailConfirmation','','email');
    const password=signIn?accessPassword('password','current-password'):null;
+   const passwordError=signIn?accessValidationError('teacher-password-error'):null;
+   const emailIsValid=validateAccessEmail(email,confirm,error);
+   const passwordIsValid=signIn?validateAccessPassword(password,null,passwordError):null;
    const entry=plantForm(form(async values=>{
     const address=normaliseTeacherEmail(values.get('email'));emailValue=address;
     if(!signIn){
@@ -382,11 +408,10 @@ function start(root){
      emailSent(address,'setup',mode);return;
     }
     const value=values.get('password');
-    if(!validTeacherPassword(value))throw Error('Enter exactly eight digits for your password.');
     const result=await api('/auth/password-login',{email:address,password:value,destination});
     if(result.checkEmail){emailSent(address,'browser',mode);return;}
     await finishTeacherAccess(result);
-   },{validate:validateAccessEmail(email,confirm,error)}));
+   },{validate:()=>emailIsValid()&&(!passwordIsValid||passwordIsValid())}));
    const options=el('div',null,'edu-actions edu-access-links');
    if(signIn)options.append(button('Create an account',()=>switchMode('create',email),true),
     button('Set up or reset a password',()=>switchMode('setup',email),true));
@@ -394,10 +419,11 @@ function start(root){
    const instructions=small(signIn?'Use eight digits.':'We’ll email a verification link first. Open it to choose your eight-digit password.');
    instructions.id='teacher-password-rule';
    addForm(entry,field('School email',email),
-    signIn?field('Password',password):field('Confirm school email',confirm),error,instructions,
+    signIn?null:copyAccessValue('Use the email above',email,confirm),
+    signIn?field('Password',password):field('Confirm school email',confirm),error,passwordError,instructions,
     signIn?revealPasswords(password):codeDeliveryNotice(),
     signIn?null:small('By requesting a link you confirm you are an adult educator.'),
-    actions(submit(signIn?'Sign in':'Email my verification link')));
+    actions(submit(signIn?'Sign in':'Email my verification link'),plainLink('School access and privacy',schoolAccessPage)));
    const name=signIn?'Teacher sign in':mode==='setup'?'Set up or reset your password':'Create a teacher account';
    slot.replaceChildren(heading(name,signIn?'Sign in with your school email and an eight-digit password.':'Use your school email. Existing applications and journals stay with the same email address.',
     plant?'SCHOOL PLANT PORTAL':'TEACHER WORKSPACE'));
@@ -419,20 +445,19 @@ function start(root){
   catch(error){if(error.code==='teacher_link_expired')return retry();throw error;}
   const setup=detail.purpose==='setup',password=accessPassword('password',setup?'new-password':'current-password');
   const confirmed=setup?accessPassword('passwordConfirmation','new-password'):null;
+  const error=accessValidationError('teacher-password-error');
   const box=el('div',null,'plant-panel'),linkedEmail=detail.email;
   const f=plantForm(form(async values=>{
    const value=values.get('password'),confirmation=values.get('passwordConfirmation');
-   if(!validTeacherPassword(value))throw Error('Enter exactly eight digits for your password.');
-   if(setup&&value!==confirmation)throw Error('The two passwords must match.');
-   if(setup&&commonTeacherPassword(value))throw Error(ERRORS.teacher_password_common);
    try{
     const result=await api('/auth/password-redeem',{token:accessToken,password:value,...(setup?{passwordConfirmation:confirmation}:{})});
     await finishTeacherAccess(result);
    }catch(error){if(error.code==='teacher_link_expired'){accessToken=null;box.replaceChildren(retry());return;}throw error;}
-  }));
+  },{validate:validateAccessPassword(password,confirmed,error)}));
   box.append(heading(setup?'Choose your password':'Confirm this browser',linkedEmail,'TEACHER WORKSPACE'));
   const rule=small(setup?'Use exactly eight digits. Avoid common sequences and repeated digits.':'Enter your eight-digit password to finish signing in.');rule.id='teacher-password-rule';
-  addForm(f,rule,field(setup?'New password':'Password',password),confirmed?field('Confirm password',confirmed):null,
+  addForm(f,rule,field(setup?'New password':'Password',password),
+   confirmed?copyAccessValue('Use the password above',password,confirmed):null,confirmed?field('Confirm password',confirmed):null,error,
    revealPasswords(...(confirmed?[password,confirmed]:[password])),actions(submit(setup?'Set password and continue':'Confirm browser and sign in')));
   box.append(f,actions(link('Request a new link','#teacher-account',true)));return box;
  }

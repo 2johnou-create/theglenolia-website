@@ -46,3 +46,27 @@ html[data-reduce-motion=true]{scroll-behavior:auto}html[data-reduce-motion=true]
 .footer-company{font-size:.875rem;line-height:1.5}
 .footer-info .footer-company{margin-top:1.25rem}
 .error-footer{max-width:1000px;margin-inline:auto;padding:0 var(--gutter) 2rem}
+
+.school-access{max-width:76rem;padding-block:clamp(2.5rem,6vw,5.5rem)}
+.school-access-intro{padding-bottom:clamp(1.5rem,4vw,3rem);border-bottom:1px solid var(--sage)}
+.school-access-intro>a{display:inline-flex;align-items:center;min-height:44px;font-size:.9rem;color:var(--green)}
+.school-access h1{font-size:clamp(2.3rem,5vw,4.4rem);margin:.55rem 0 1rem}
+.school-access-operator{margin:1rem 0}
+.school-access-intro button[hidden]{display:none}
+.school-access-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1.25rem 3rem;margin-top:1.5rem}
+.school-access-grid section{padding-block:1.15rem;border-top:1px solid var(--sage)}
+.school-access-grid h2{font-size:clamp(1.4rem,2.6vw,1.85rem);margin-bottom:.65rem}
+.school-access-grid a{overflow-wrap:anywhere}
+@media(max-width:640px){.school-access-grid{grid-template-columns:minmax(0,1fr);gap:0}}
+@media print{
+  body:has(.school-access),body:has(.school-access) main{background:#fff;color:#000}
+  body:has(.school-access)>:is(header,footer,.skip-link),.school-access-intro>a,.school-access-intro button{display:none}
+  .school-access{max-width:none;padding:0;color:#000;font-size:11pt;line-height:1.42}
+  .school-access :is(h1,h2){color:#000}
+  .school-access-intro{padding-bottom:9mm}
+  .school-access h1{margin:0 0 3mm;font-size:26pt}
+  .school-access .lead{font-size:12pt;line-height:1.45}
+  .school-access-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:5mm 9mm;margin-top:5mm}
+  .school-access-grid section{break-inside:avoid;padding-block:3mm 0}
+  .school-access-grid h2{font-size:14pt;margin-bottom:2mm}
+}

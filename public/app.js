@@ -1,6 +1,11 @@
 'use strict';
 (() => {
   const root = document.documentElement;
+  const printSchoolAccess = document.getElementById('print-school-access');
+  if (printSchoolAccess) {
+    printSchoolAccess.hidden = false;
+    printSchoolAccess.addEventListener('click', () => window.print());
+  }
   const base = document.querySelector('meta[name="site-base"]')?.content || '';
   const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   let motionPreference = null;
